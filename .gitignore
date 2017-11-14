@@ -1,0 +1,76 @@
+# neon
+*.sublime-project
+*.sublime-workspace
+*.pyc
+*.pkl
+*.prm
+*.so
+*.swp
+*.swo
+*.swn
+*.swm
+.DS_Store
+neon/version.py
+*@eaDir
+.pkgs
+*.egg-info
+.venv
+venv
+.coverage
+build
+*.gz
+generated
+*.ropeproject
+*.cubin
+*.hdf5
+*.h5
+*.html
+*.txt
+*.log
+neon_help_output.txt
+neon/backends/util/cuda_capability
+neon/backends/kernels/ptx
+neon/backends/kernels/pre
+neon/backends/kernels/dump
+.idea
+*~
+.ipynb_checkpoints
+*.bak
+
+# mxnet
+*.bin
+*.lst
+*.rec
+*.egg
+*.gv
+*.gv.pdf
+.cache
+
+# apple
+*.AppleDouble
+
+# vscode
+.vscode/
+
+# tensorflow
+*.pb
+*.ckpt*
+*.ckpt.meta*
+checkpoint
+
+# test
+coverage_*.xml
+.coverage*
+testout_*.xml
+
+# doc
+doc/source/Graph_Introduction.rst
+doc/source/Logistic_Regression_Part_1.rst
+doc/source/Logistic_Regression_Part_2.rst
+doc/source/walk_throughs.rst
+
+# docker
+contrib/docker/.build*
+contrib/docker/autoflex
+
+codegen.py
