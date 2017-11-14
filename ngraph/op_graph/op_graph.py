@@ -111,7 +111,7 @@ def constant(const, ordered_axes=None, dtype=None, **kwargs):
         A ConstOp for the constant.
     """
 
-    nptensor = np.asarray(const, dtype=dtype)
+    nptensor = np.asarray(const)
     if not ordered_axes:
         ordered_axes = {"ax{}".format(l): l for l in nptensor.shape}
     ordered_axes = OrderedAxes(ordered_axes)
