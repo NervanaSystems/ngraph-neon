@@ -84,30 +84,12 @@ class TensorOp(Op):
         return self.__dtype
 
 
-class AssignableTensorOp(TensorOp):
+class ConstOp(TensorOp):
     def __init__(self,
-                 initial_value=None,
-                 const=None,
-                 is_trainable=False,
-                 is_placeholder=False,
+                 const,
                  **kwargs):
-        super(AssignableTensorOp, self).__init__(**kwargs)
-        self.__is_trainable = is_trainable
-        self.__is_placeholder = is_placeholder
-        self.__initial_value = initial_value
+        super(ConstOp, self).__init__(**kwargs)
         self.__const = const
-
-    @property
-    def is_trainable(self):
-        return self.__is_trainable
-
-    @property
-    def is_placeholder(self):
-        return self.__is_placeholder
-
-    @property
-    def initial_value(self):
-        return self.__initial_value
 
     @property
     def const(self):
@@ -126,7 +108,7 @@ def constant(const, ordered_axes=None, dtype=None, **kwargs):
         axes: The axes for the constant.
         dtype (optional): The dtype to use.
     Returns:
-        An AssignableTensorOp for the constant.
+        A ConstOp for the constant.
     """
 
     nptensor = np.asarray(const, dtype=dtype)
@@ -143,14 +125,11 @@ def constant(const, ordered_axes=None, dtype=None, **kwargs):
     dtype = to_dtype(dtype)
     nptensor = nptensor.astype(dtype.numpy_dtype)
 
-    val = AssignableTensorOp(initial_value=nptensor,
-                             axes=axes,
-                             ordered_axes=ordered_axes,
-                             is_constant=True,
-                             is_persistent=True,
-                             const=nptensor,
-                             dtype=dtype,
-                             **kwargs)
+    val = ConstOp(nptensor,
+                  axes=axes,
+                  ordered_axes=ordered_axes,
+                  dtype=dtype,
+                  **kwargs)
     return val
 
 
