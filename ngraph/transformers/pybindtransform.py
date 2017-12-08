@@ -138,7 +138,7 @@ class PybindComputation(Computation):
         :return: int, op size in bytes
         """
         item_size = op.tensor.dtype.itemsize
-        element_size = (sum(op.axes.lengths)) * item_size
+        element_size = (np.prod(op.axes.lengths)) * item_size
         return element_size
 
 
