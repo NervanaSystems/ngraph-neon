@@ -126,3 +126,21 @@ def test_Add_with_muliple_axis():
             assert np.allclose(d_val, d_val_ref)
     else:
         raise AssertionError("Unable to initialize pybind_translator transformer")
+
+def test_add_with_constant():
+    d = ng.add(20, 50)
+    available_transformer = ngt.transformer_choices()
+
+    if "pybind_translator" in available_transformer:
+        with closing(ngt.make_transformer_factory('pybind_translator',
+                                                  backend="NGVM")()) as pybind_exec:
+            # Define a computation
+            _add = pybind_exec.computation(d)
+            d_val = _add()
+
+            # compute reference through numpy
+            d_val_ref = np.add(np.array([20], dtype=np.float32),
+                               np.array([50], dtype=np.float32))
+            assert (d_val[0] == d_val_ref)
+    else:
+        raise AssertionError("Unable to initialize pybind_translator transformer")

@@ -60,7 +60,7 @@ class PybindComputation(Computation):
             shape = list(self.ngraph_op_result_list[index].axes.lengths)
             # TODO - need to define dtype of numpy array's for results based on result.dtype
             result_arr = np.empty(shape, dtype=np.float32)
-            result.write(Util.numpy_to_c(result_arr), 0, element_size)
+            result.write(Util.numpy_to_c(result_arr), 0, int(element_size))
             self.return_result_list.append(result_arr)
 
         self.cf.call(self.param_primary_tensor_view_list, self.result_primary_tensor_view_list)
@@ -68,7 +68,7 @@ class PybindComputation(Computation):
         # now read the values from the computed result
         for index, result in enumerate(self.result_primary_tensor_view_list):
             element_size = self.get_element_size(self.ngraph_op_result_list[index])
-            result.read(Util.numpy_to_c(self.return_result_list[index]), 0, element_size)
+            result.read(Util.numpy_to_c(self.return_result_list[index]), 0, int(element_size))
 
         return self.return_result_list
 
@@ -128,7 +128,7 @@ class PybindComputation(Computation):
             element_size = self.get_element_size(op)
             # TODO - need to define dtype of numpy array's for *params based on op.dtype
             self.param_primary_tensor_view_list[index].write(Util.numpy_to_c(
-                np.array(args[index], dtype=np.float32)), 0, element_size)
+                np.array(args[index], dtype=np.float32)), 0, int(element_size))
 
     def get_element_size(self, op):
         """
