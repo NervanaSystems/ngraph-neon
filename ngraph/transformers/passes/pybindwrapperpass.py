@@ -61,14 +61,13 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         element_type = TraitedType.TraitedTypeF.element_type()
         # check if the op.args already have Paramterized view type.
         if op.args[0].tensor in self.transformer.ngraph_cpp_op_prameter:
-            op_element_type =  self.transformer.ngraph_cpp_op_prameter[op.args[0].tensor]
+            op_element_type = self.transformer.ngraph_cpp_op_prameter[op.args[0].tensor]
         else:
             op_element_type = Parameter.Parameter(
                 element_type, list(op.args[0].axes.lengths))
         axis_set = list(range(len(op.axes.lengths)))
         self.transformer.ngraph_cpp_op_prameter[op.tensor] = \
             Broadcast.Broadcast(op_element_type, list(op.axes.lengths), set(axis_set))
-
 
     @visit.on_type(TensorValueOp)
     def visit(self, op):
@@ -80,12 +79,11 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                 element_size = (op.tensor.const.size) * item_size
                 constant_tensor.write(Util.numpy_to_c(
                     np.array([op.tensor.const.__abs__()], dtype=np.float32)), 0, element_size)
-                constant_op = ParameterizedConstant.ParameterizedConstantF(list(op.axes.lengths), constant_tensor)
+                constant_op = ParameterizedConstant.ParameterizedConstantF(
+                    list(op.axes.lengths), constant_tensor)
                 self.transformer.ngraph_cpp_op_prameter[op.tensor] = constant_op
             else:
                 element_type = TraitedType.TraitedTypeF.element_type()
                 op_element_type = Parameter.Parameter(
                     element_type, list(op.axes.lengths))
                 self.transformer.ngraph_cpp_op_prameter[op.tensor] = op_element_type
-
-
