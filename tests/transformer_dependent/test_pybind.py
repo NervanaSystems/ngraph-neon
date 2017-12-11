@@ -22,24 +22,23 @@ import numpy as np
 def test_add_with_scalar():
 
     H = ng.make_axis(length=1, name='height')
-    W = ng.make_axis(length=1, name='width')
+    W = ng.make_axis(length=4, name='width')
     a = ng.placeholder(axes=[H, W])
-    b = ng.placeholder(axes=[H, W])
 
-    d = ng.add(a, b)
+    d = ng.add(a, 5)
     available_transformer = ngt.transformer_choices()
 
     if "pybind_translator" in available_transformer:
         with closing(ngt.make_transformer_factory('pybind_translator',
                                                   backend="NGVM")()) as pybind_exec:
             # Define a computation
-            _add = pybind_exec.computation(d, a, b)
-            d_val = _add(10, 20)
+            _add = pybind_exec.computation(d, a)
+            d_val = _add([10, 20, 30, 40])
 
             # compute reference through numpy
-            d_val_ref = np.add(np.full([1, 1], 10, dtype=np.float32),
-                               np.full([1, 1], 20, dtype=np.float32))
-            assert(d_val[0] == d_val_ref)
+            d_val_ref = np.add(np.array([10, 20, 30, 40], dtype=np.float32).reshape(1, 4),
+                               np.array([5], dtype=np.float32))
+            assert np.allclose(d_val[0], d_val_ref)
     else:
         raise AssertionError("Unable to initialize pybind_translator transformer")
 
@@ -127,20 +126,25 @@ def test_Add_with_muliple_axis():
     else:
         raise AssertionError("Unable to initialize pybind_translator transformer")
 
-def test_add_with_constant():
-    d = ng.add(20, 50)
+def test_broadcast():
+    M = ng.make_axis(length=1)
+    N = ng.make_axis(length=4)
+
+    np_a = np.array([[1, 2, 3, 4]], dtype=np.float32)
+    np_c = np.add(np_a, 2)
+
+    a = ng.constant(np_a, [M, N])
+    c = ng.add(a, 2)
+
     available_transformer = ngt.transformer_choices()
 
     if "pybind_translator" in available_transformer:
         with closing(ngt.make_transformer_factory('pybind_translator',
                                                   backend="NGVM")()) as pybind_exec:
             # Define a computation
-            _add = pybind_exec.computation(d)
-            d_val = _add()
+            _add = pybind_exec.computation(c)
+            result = _add()
 
-            # compute reference through numpy
-            d_val_ref = np.add(np.array([20], dtype=np.float32),
-                               np.array([50], dtype=np.float32))
-            assert (d_val[0] == d_val_ref)
+            assert np.allclose(result, np_c)
     else:
         raise AssertionError("Unable to initialize pybind_translator transformer")
