@@ -38,33 +38,12 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         super(PybindWrapperGenerator, self).__init__(**kwargs)
         self.transformer = tranformer
 
-    def generate_ngraph_parameter_op(self, op):
-        # TODO - need to define TraitedType based on op.dtype instead of deafulting to float32
-        for op_input in op.args:
-            if op_input not in self.transformer.ngraph_cpp_op_prameter:
-                if not(op_input.tensor.is_constant):
-                    element_type = TraitedType.TraitedTypeF.element_type()
-                    op_element_type = Parameter.Parameter(
-                        element_type, list(op_input.axes.lengths))
-                    self.transformer.ngraph_cpp_op_prameter[op_input.tensor] = op_element_type
-
-                else:
-                    constant_tensor = Utils.make_tensor(list(op.axes.lengths))
-                    item_size = op.tensor.dtype.itemsize
-                    element_size = (op_input.tensor.const.size) * item_size
-                    constant_tensor.write(Util.numpy_to_c(
-                        np.array([op_input.tensor.const.__abs__()], dtype=np.float32)), 0, element_size)
-                    constant_op = ParameterizedConstant.ParameterizedConstantF(list(op.axes.lengths), constant_tensor)
-                    self.transformer.ngraph_cpp_op_prameter[op_input.tensor] = constant_op
-
-
     @generic_method(dispatch_base_type=Op)
     def visit(self, op, *args):
         pass
 
     @visit.on_type(Add)
     def visit(self, op, x, y):
-        self.generate_ngraph_parameter_op(op)
         ngraph_cpp_add_op = self.transformer.ngraph_cpp_op_prameter[x.tensor] \
             + self.transformer.ngraph_cpp_op_prameter[y.tensor]
 
@@ -72,7 +51,6 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(Multiply)
     def visit(self, op, x, y):
-        self.generate_ngraph_parameter_op(op)
         ngraph_cpp_mul_op = self.transformer.ngraph_cpp_op_prameter[x.tensor] \
             * self.transformer.ngraph_cpp_op_prameter[y.tensor]
 
@@ -81,16 +59,33 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     @visit.on_type(BroadcastOp)
     def visit(self, op, input):
         element_type = TraitedType.TraitedTypeF.element_type()
-        op_element_type = Parameter.Parameter(
-            element_type, list(op.args[0].axes.lengths))
+        # check if the op.args already have Paramterized view type.
+        if op.args[0].tensor in self.transformer.ngraph_cpp_op_prameter:
+            op_element_type =  self.transformer.ngraph_cpp_op_prameter[op.args[0].tensor]
+        else:
+            op_element_type = Parameter.Parameter(
+                element_type, list(op.args[0].axes.lengths))
+        axis_set = list(range(len(op.axes.lengths)))
         self.transformer.ngraph_cpp_op_prameter[op.tensor] = \
-            Broadcast.Broadcast(op_element_type, op.axes.lengths, {0, 1})
+            Broadcast.Broadcast(op_element_type, list(op.axes.lengths), set(axis_set))
 
-    # @visit.on_type(TensorValueOp)
-    # def visit(self, op):
-    #     element_type = TraitedType.TraitedTypeF.element_type()
-    #     op_element_type = Parameter.Parameter(
-    #         element_type, list(op.axes.lengths))
-    #     self.transformer.ngraph_cpp_op_prameter[op.tensor] = op_element_type
+
+    @visit.on_type(TensorValueOp)
+    def visit(self, op):
+
+        if op.tensor not in self.transformer.ngraph_cpp_op_prameter:
+            if op.tensor.is_constant:
+                constant_tensor = Utils.make_tensor(list(op.axes.lengths))
+                item_size = op.tensor.dtype.itemsize
+                element_size = (op.tensor.const.size) * item_size
+                constant_tensor.write(Util.numpy_to_c(
+                    np.array([op.tensor.const.__abs__()], dtype=np.float32)), 0, element_size)
+                constant_op = ParameterizedConstant.ParameterizedConstantF(list(op.axes.lengths), constant_tensor)
+                self.transformer.ngraph_cpp_op_prameter[op.tensor] = constant_op
+            else:
+                element_type = TraitedType.TraitedTypeF.element_type()
+                op_element_type = Parameter.Parameter(
+                    element_type, list(op.axes.lengths))
+                self.transformer.ngraph_cpp_op_prameter[op.tensor] = op_element_type
 
 
