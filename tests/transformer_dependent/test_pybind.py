@@ -154,28 +154,17 @@ def test_broadcast():
 def test_dot():
     H = ng.make_axis(length=1)
     W = ng.make_axis(length=4)
-    # M = ng.make_axis(length=2)
-    # N = ng.make_axis(length=4)
-
     np_a = np.array([[1, 2, 3, 4]], dtype=np.float32)
     np_b = np.array(3, dtype=np.float32)
-
-    # tensor_1 = [[1, 2, 3, 4], [5, 6, 7, 8]]
-    # tensor_2 = [[1, 2], [3, 4], [5, 6], [7, 8]]
-    # np_x = np.array(tensor_1, dtype=np.float32)
-    # np_y = np.array(tensor_2, dtype=np.float32)
-    #
-    # x = ng.placeholder(axes=(M, N))
-    # y = ng.placeholder(axes=(N, M))
-    # z = ng.dot(x, y)
 
     a = ng.constant(np_a, [H, W])
     b = ng.constant(np_b, [])
     c = ng.dot(a, b)
 
     available_transformer = ngt.transformer_choices()
-    if "cpu" in available_transformer:
-        with closing(ngt.make_transformer_factory('cpu')()) as pybind_exec:
+    if "pybind_translator" in available_transformer:
+        with closing(ngt.make_transformer_factory('pybind_translator',
+                                                  backend="NGVM")()) as pybind_exec:
             _dot = pybind_exec.computation(c)
             _dot_val = _dot()
 
