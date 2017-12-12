@@ -37,7 +37,7 @@ class PybindComputation(Computation):
         self.param_primary_tensor_view_list = []
         self.result_primary_tensor_view_list = []
         self.ngraph_op_result_list = []
-        self.return_result_list = []
+        self.return_result_list = dict()
 
         self.ngraph_op_result_list.append(results)
         self.initialize_cpp_backend(results, *parameters)
@@ -56,21 +56,31 @@ class PybindComputation(Computation):
         self.get_ngraph_cpp_param_list(*args)
 
         for index, result in enumerate(self.result_primary_tensor_view_list):
-            element_size = self.get_element_size(self.ngraph_op_result_list[index])
-            shape = list(self.ngraph_op_result_list[index].axes.lengths)
+            result_op = self.ngraph_op_result_list[index]
+            element_size = self.get_element_size(result_op)
+            shape = list(result_op.axes.lengths)
             # TODO - need to define dtype of numpy array's for results based on result.dtype
             result_arr = np.empty(shape, dtype=np.float32)
             result.write(Util.numpy_to_c(result_arr), 0, int(element_size))
-            self.return_result_list.append(result_arr)
+            self.return_result_list[result_op] = result_arr
 
         self.cf.call(self.param_primary_tensor_view_list, self.result_primary_tensor_view_list)
 
         # now read the values from the computed result
         for index, result in enumerate(self.result_primary_tensor_view_list):
-            element_size = self.get_element_size(self.ngraph_op_result_list[index])
-            result.read(Util.numpy_to_c(self.return_result_list[index]), 0, int(element_size))
+            result_op = self.ngraph_op_result_list[index]
+            element_size = self.get_element_size(result_op)
+            result.read(Util.numpy_to_c(self.return_result_list[result_op]), 0, int(element_size))
 
-        return self.return_result_list
+        # determine whether the value to be retruned is a list, dict or an op.
+        if isinstance(self.computation_op.returns, Op):
+            return self.return_result_list[self.computation_op.returns]
+        elif isinstance(self.computation_op.returns, (collections.Sequence, OrderedSet)):
+            return tuple(self.return_result_list[op] for op in self.computation_op.returns)
+        elif isinstance(self.computation_op.returns, collections.Set):
+            return self.return_result_list
+        else:
+            return None
 
     def initialize_cpp_backend(self, results, *parameters):
         """

@@ -14,7 +14,8 @@
 # ----------------------------------------------------------------------------
 from ngraph.transformers.passes.passes import PeepholeGraphPass
 from ngraph.util.generics import generic_method
-from ngraph.op_graph.op_graph import Op, Add, Multiply, BroadcastOp, TensorValueOp
+from ngraph.op_graph.op_graph import Op, Add, Multiply, BroadcastOp, TensorValueOp, \
+    DotOp, LogOp, ExpOp, Sum, Greater, ReductionOp, Maximum
 import nwrapper.ngraph.types.TraitedType as TraitedType
 import nwrapper.ngraph.ops.Parameter as Parameter
 import nwrapper.ngraph.runtime.ParameterizedTensorView as ParameterizedTensorView
@@ -22,7 +23,14 @@ import nwrapper.ngraph.Util as Util
 import nwrapper.ngraph.runtime.Utils as Utils
 import nwrapper.ngraph.ops.ParameterizedConstant as ParameterizedConstant
 import numpy as np
+import nwrapper.ngraph.ops.Sum as nSum
+import nwrapper.ngraph.ops.Maximum as nMaximum
+import nwrapper.ngraph.ops.Greater as nGreater
 import nwrapper.ngraph.ops.Broadcast as Broadcast
+import nwrapper.ngraph.ops.Dot as Dot
+import nwrapper.ngraph.ops.Log as Log
+import nwrapper.ngraph.ops.Exp as Exp
+
 
 
 class PybindWrapperGenerator(PeepholeGraphPass):
@@ -87,3 +95,37 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                 op_element_type = Parameter.Parameter(
                     element_type, list(op.axes.lengths))
                 self.transformer.ngraph_cpp_op_prameter[op.tensor] = op_element_type
+
+    @visit.on_type(DotOp)
+    def visit(self, op, input1, input2):
+        ngraph_cpp_dot_op = Dot.Dot(self.transformer.ngraph_cpp_op_prameter[input1.tensor], \
+             self.transformer.ngraph_cpp_op_prameter[input2.tensor])
+        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_dot_op
+
+    @visit.on_type(LogOp)
+    def visit(self, op, input):
+        ngraph_cpp_log_op = Log.Log(self.transformer.ngraph_cpp_op_prameter[input.tensor])
+        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_log_op
+
+    @visit.on_type(ExpOp)
+    def visit(self, op, input):
+        ngraph_cpp_exp_op = Exp.Exp(self.transformer.ngraph_cpp_op_prameter[input.tensor])
+        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_exp_op
+
+    @visit.on_type(Greater)
+    def visit(self, op, input1, input2):
+        ngraph_cpp_greater_op = nGreater.Greater(self.transformer.ngraph_cpp_op_prameter[input1.tensor], \
+        self.transformer.ngraph_cpp_op_prameter[input2.tensor])
+        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_greater_op
+
+    @visit.on_type(Sum)
+    def visit(self, op, input):
+        axis_set = self.np_reduction_axis(op)
+        ngraph_cpp_sum_op = nSum.Sum(self.transformer.ngraph_cpp_op_prameter[input.tensor], set(axis_set))
+        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_sum_op
+
+    @visit.on_type(Maximum)
+    def visit(self, op, input1, input2):
+        ngraph_cpp_maximum_op = nMaximum.Maximum(self.transformer.ngraph_cpp_op_prameter[input1.tensor], \
+                                                 self.transformer.ngraph_cpp_op_prameter[input2.tensor])
+        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_maximum_op

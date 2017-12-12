@@ -149,3 +149,43 @@ def test_broadcast():
             assert np.allclose(result, np_c)
     else:
         raise AssertionError("Unable to initialize pybind_translator transformer")
+
+def test_dot():
+    H = ng.make_axis(length=1)
+    W = ng.make_axis(length=4)
+    M = ng.make_axis(length = 2)
+    N = ng.make_axis(length = 4)
+
+    np_a = np.array([[1, 2, 3, 4]], dtype=np.float32)
+    np_b = np.array( 3, dtype=np.float32)
+
+    tensor_1 = [[1, 2, 3, 4], [5, 6, 7, 8]]
+    tensor_2 = [[1, 2], [3, 4], [5, 6], [7, 8]]
+    np_x = np.array(tensor_1, dtype=np.float32)
+    np_y = np.array(tensor_2, dtype=np.float32)
+
+    x = ng.placeholder(axes = (M, N))
+    y = ng.placeholder(axes = (N, M))
+    z = ng.dot(x, y)
+
+    a = ng.constant(np_a, [H, W])
+    b = ng.constant(np_b, [])
+    c = ng.dot(a, b)
+
+    available_transformer = ngt.transformer_choices()
+    if "cpu" in available_transformer:
+        with closing(ngt.make_transformer_factory('cpu')()) as pybind_exec:
+            _dot = pybind_exec.computation(c)
+            _dot_val = _dot()
+
+            #compute reference
+            _dot_val_ref = np.dot(np_a, np_b)
+
+            # this checks the dot product between scalar and vector, this is equivalent to
+            # elementwise multiplication between scalar and vector
+            assert np.allclose(_dot_val ,_dot_val_ref)
+
+            #compute the dot prodcut between two matrix , to test reduction.
+            _dot_x_y = pybind_exec.computation(z, x, y)
+            _dot_x_y_val = _dot_x_y(tensor_1, tensor_2)
+            _dot_x_y_ref = np.dot(np_x, np_y)
