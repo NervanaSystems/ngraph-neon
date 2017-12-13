@@ -26,6 +26,7 @@ For full training, the number of iterations should be 64000 with batch size 128.
 """
 from __future__ import division, print_function
 from builtins import range
+from contextlib import closing
 import numpy as np
 import neon as ng
 from neon.frontend import Layer, Sequential
@@ -109,23 +110,6 @@ class residual_network(Sequential):
         super(residual_network, self).__init__(layers=layers)
 
 
-def loop_eval(dataset, computation, metric_names):
-    dataset.reset()
-    all_results = None
-    for data in dataset:
-
-        feed_dict = {inputs[k]: data[k] for k in data.keys()}
-        results = computation(feed_dict=feed_dict)
-        if all_results is None:
-            all_results = {name: list(res) for name, res in zip(metric_names, results)}
-        else:
-            for name, res in zip(metric_names, results):
-                all_results[name].extend(list(res))
-
-    reduced_results = {k: np.mean(v[:dataset.ndata]) for k, v in all_results.items()}
-    return reduced_results
-
-
 if __name__ == "__main__":
     parser = NeonArgparser(description='Train deep residual network on cifar10 dataset')
     parser.add_argument('--stage_depth', type=int, default=2,
@@ -169,40 +153,25 @@ if __name__ == "__main__":
     train_loss = ng.cross_entropy_multi(resnet(inputs['image']),
                                         ng.one_hot(label_indices, axis=ax.Y))
     batch_cost = ng.sequential([optimizer(train_loss), ng.mean(train_loss, out_axes=())])
-    train_computation = ng.computation(batch_cost, "all")
+    train_outputs = dict(batch_cost = batch_cost)
 
     with Layer.inference_mode_on():
         inference_prob = resnet(inputs['image'])
-        #errors = ng.not_equal(ng.argmax(inference_prob, out_axes=[ax.N]), label_indices)
+        errors = ng.not_equal(ng.argmax(inference_prob, out_axes=[ax.N]), label_indices)
         eval_loss = ng.cross_entropy_multi(inference_prob, ng.one_hot(label_indices, axis=ax.Y))
-        eval_loss_names = ['cross_ent_loss', 'misclass']
-        #eval_computation = ng.computation([eval_loss, errors], "all")
-        eval_computation = ng.computation([eval_loss], "all")
+        eval_outputs = dict(cross_ent_loss=eval_loss, misclass_pct=errors)
 
     # Now bind the computations we are interested in
-    transformer = ngt.make_transformer()
-    train_function = transformer.add_computation(train_computation)
-    eval_function = transformer.add_computation(eval_computation)
+    with closing(ngt.make_transformer()) as transformer:
+        train_computation = make_bound_computation(transformer, train_outputs, inputs)
+        loss_computation = make_bound_computation(transformer, eval_outputs, inputs)
+        cbs = make_default_callbacks(transformer=transformer,
+                                     output_file=args.output_file,
+                                     frequency=args.iter_interval,
+                                     train_computation=train_computation,
+                                     total_iterations=args.num_iterations,
+                                     eval_set=valid_set,
+                                     loss_computation=loss_computation,
+                                      use_progress_bar=args.progress_bar)
 
-    tpbar = tqdm(unit="batches", ncols=100, total=args.num_iterations)
-    interval_cost = 0.0
-
-    for step, data in enumerate(train_set):
-        data['iteration'] = step
-        feed_dict = {inputs[k]: data[k] for k in inputs.keys()}
-        output = train_function(feed_dict=feed_dict)
-
-        tpbar.update(1)
-        tpbar.set_description("Training {:0.4f}".format(output[()]))
-        interval_cost += output[()]
-        if (step + 1) % args.iter_interval == 0 and step > 0:
-            tqdm.write("Interval {interval} Iteration {iteration} complete. "
-                       "Avg Train Cost {cost:0.4f}".format(
-                           interval=step // args.iter_interval,
-                           iteration=step,
-                           cost=interval_cost / args.iter_interval))
-            interval_cost = 0.0
-            eval_losses = loop_eval(valid_set, eval_function, eval_loss_names)
-            tqdm.write("Avg losses: {}".format(eval_losses))
-
-    print("Training complete.")
+        loop_train(train_set, train_computation, cbs)
