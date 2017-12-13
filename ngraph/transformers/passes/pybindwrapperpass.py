@@ -14,10 +14,22 @@
 # ----------------------------------------------------------------------------
 from ngraph.transformers.passes.passes import PeepholeGraphPass
 from ngraph.util.generics import generic_method
-from ngraph.op_graph.op_graph import Op, Add, Multiply
+from ngraph.op_graph.op_graph import Op, Add, Multiply, BroadcastOp, TensorValueOp, \
+    DotOp, LogOp, ExpOp, Sum, Greater, Maximum, ReductionOp
 import nwrapper.ngraph.types.TraitedType as TraitedType
 import nwrapper.ngraph.ops.Parameter as Parameter
 import nwrapper.ngraph.runtime.ParameterizedTensorView as ParameterizedTensorView
+import nwrapper.ngraph.Util as Util
+import nwrapper.ngraph.runtime.Utils as Utils
+import nwrapper.ngraph.ops.ParameterizedConstant as ParameterizedConstant
+import numpy as np
+import nwrapper.ngraph.ops.Sum as nSum
+import nwrapper.ngraph.ops.Maximum as nMaximum
+import nwrapper.ngraph.ops.Greater as nGreater
+import nwrapper.ngraph.ops.Broadcast as Broadcast
+import nwrapper.ngraph.ops.Dot as Dot
+import nwrapper.ngraph.ops.Log as Log
+import nwrapper.ngraph.ops.Exp as Exp
 
 
 class PybindWrapperGenerator(PeepholeGraphPass):
@@ -33,13 +45,25 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         super(PybindWrapperGenerator, self).__init__(**kwargs)
         self.transformer = tranformer
 
-    def generate_ngraph_parameter_op(self, op):
-        # TODO - need to define TraitedType based on op.dtype instead of deafulting to float32
-        for op_input in op.args:
-            if op_input not in self.transformer.ngraph_cpp_op_prameter:
-                element_type = TraitedType.TraitedTypeF.element_type()
-                op_element_type = Parameter.Parameter(element_type, list(op_input.axes.lengths))
-                self.transformer.ngraph_cpp_op_prameter[op_input.tensor] = op_element_type
+    def np_reduction_axis(self, op):
+        """
+        Returns numpy reduction axis of an op
+
+        Args:
+            op: instance of ReductionOp
+
+        Returns:
+            tuple of numpy reduction axis
+        """
+        if not isinstance(op, ReductionOp):
+            raise ValueError("Op %s must be an instance of ReductionOp" % op)
+        input_axes = op.args[0].axes
+        reduction_axes = op.reduction_axes
+        try:
+            np_axis = tuple([input_axes.index(axis) for axis in reduction_axes])
+        except ValueError:
+            np_axis = tuple([0, ])
+        return np_axis[0] if len(np_axis) == 1 else np_axis
 
     @generic_method(dispatch_base_type=Op)
     def visit(self, op, *args):
@@ -47,7 +71,6 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(Add)
     def visit(self, op, x, y):
-        self.generate_ngraph_parameter_op(op)
         ngraph_cpp_add_op = self.transformer.ngraph_cpp_op_prameter[x.tensor] \
             + self.transformer.ngraph_cpp_op_prameter[y.tensor]
 
@@ -55,8 +78,84 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(Multiply)
     def visit(self, op, x, y):
-        self.generate_ngraph_parameter_op(op)
         ngraph_cpp_mul_op = self.transformer.ngraph_cpp_op_prameter[x.tensor] \
             * self.transformer.ngraph_cpp_op_prameter[y.tensor]
 
         self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_mul_op
+
+    @visit.on_type(BroadcastOp)
+    def visit(self, op, input):
+        element_type = TraitedType.TraitedTypeF.element_type()
+        # check if the op.args already have Paramterized view type.
+        if op.args[0].tensor in self.transformer.ngraph_cpp_op_prameter:
+            op_element_type = self.transformer.ngraph_cpp_op_prameter[op.args[0].tensor]
+        else:
+            op_element_type = Parameter.Parameter(
+                element_type, list(op.args[0].axes.lengths))
+        axis_set = list(range(len(op.axes.lengths)))
+        self.transformer.ngraph_cpp_op_prameter[op.tensor] = \
+            Broadcast.Broadcast(op_element_type, list(op.axes.lengths), set(axis_set))
+
+    @visit.on_type(TensorValueOp)
+    def visit(self, op):
+
+        if op.tensor not in self.transformer.ngraph_cpp_op_prameter:
+            if op.tensor.is_constant:
+                constant_tensor = Utils.make_tensor(list(op.axes.lengths))
+                item_size = op.tensor.dtype.itemsize
+                element_size = (op.tensor.const.size) * item_size
+                constant_tensor.write(Util.numpy_to_c(
+                    np.array([op.tensor.const.__abs__()], dtype=np.float32)), 0, element_size)
+                constant_op = ParameterizedConstant.ParameterizedConstantF(
+                    list(op.axes.lengths), constant_tensor)
+                self.transformer.ngraph_cpp_op_prameter[op.tensor] = constant_op
+            else:
+                element_type = TraitedType.TraitedTypeF.element_type()
+                op_element_type = Parameter.Parameter(
+                    element_type, list(op.axes.lengths))
+                self.transformer.ngraph_cpp_op_prameter[op.tensor] = op_element_type
+
+    @visit.on_type(DotOp)
+    def visit(self, op, input1, input2):
+        ngraph_cpp_dot_op = Dot.Dot(self.transformer.ngraph_cpp_op_prameter[input1.tensor],
+                                    self.transformer.ngraph_cpp_op_prameter[input2.tensor])
+        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_dot_op
+
+    @visit.on_type(LogOp)
+    def visit(self, op, input):
+        ngraph_cpp_log_op = Log.Log(self.transformer.ngraph_cpp_op_prameter[input.tensor])
+        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_log_op
+
+    @visit.on_type(ExpOp)
+    def visit(self, op, input):
+        ngraph_cpp_exp_op = Exp.Exp(self.transformer.ngraph_cpp_op_prameter[input.tensor])
+        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_exp_op
+
+    @visit.on_type(Greater)
+    def visit(self, op, input1, input2):
+        ngraph_cpp_greater_op = nGreater.Greater(
+            self.transformer.ngraph_cpp_op_prameter[
+                input1.tensor], self.transformer.ngraph_cpp_op_prameter[
+                input2.tensor])
+        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_greater_op
+
+    @visit.on_type(Sum)
+    def visit(self, op, input):
+        if isinstance(self.np_reduction_axis(op), tuple):
+            axis_set = self.np_reduction_axis(op)
+        else:
+            axis_set = tuple()
+            axis_set += (self.np_reduction_axis(op),)
+
+        ngraph_cpp_sum_op = nSum.Sum(
+            self.transformer.ngraph_cpp_op_prameter[
+                input.tensor], set(axis_set))
+        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_sum_op
+
+    @visit.on_type(Maximum)
+    def visit(self, op, input1, input2):
+        ngraph_cpp_maximum_op = nMaximum.Maximum(
+            self.transformer.ngraph_cpp_op_prameter[
+                input1.tensor], self.transformer.ngraph_cpp_op_prameter[
+                input2.tensor])
+        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_maximum_op
