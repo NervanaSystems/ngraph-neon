@@ -179,8 +179,8 @@ if(args.inference is not None):
     # Check if file exists. TODO.
     with closing(ngt.make_transformer()) as transformer:
         restore_loss_computation = make_bound_computation(transformer, eval_outputs, input_ops_valid)
-        #weight_saver.setup_restore(transformer=transformer, computation=eval_outputs,
-                                   filename=args.inference)
+        # weight_saver.setup_restore(transformer=transformer, computation=eval_outputs,
+        #                            filename=args.inference)
         # Restore weight
         #weight_saver.restore()
         # Calculate losses
