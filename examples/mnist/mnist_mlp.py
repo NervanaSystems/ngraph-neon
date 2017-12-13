@@ -88,10 +88,9 @@ train_outputs = dict(batch_cost=batch_cost)
 
 with Layer.inference_mode_on():
     inference_prob = seq1(inputs['image'])
-# errors = ng.not_equal(ng.argmax(inference_prob, out_axes=[ax.N]), inputs['label'])
+errors = ng.not_equal(ng.argmax(inference_prob, out_axes=[ax.N]), inputs['label'])
 eval_loss = ng.cross_entropy_binary(inference_prob, ng.one_hot(inputs['label'], axis=ax.Y))
-# eval_outputs = dict(cross_ent_loss=eval_loss, misclass_pct=errors)
-eval_outputs = dict(cross_ent_loss=eval_loss)
+eval_outputs = dict(results=inference_prob, cross_ent_loss=eval_loss)
 
 if (save_file is not None) or (load_file is not None):
     # Instantiate the Saver object to save weights
@@ -116,6 +115,7 @@ if not args.inference:
                                      total_iterations=args.num_iterations,
                                      eval_set=valid_set,
                                      loss_computation=loss_computation,
+                                     enable_top5=True,
                                      use_progress_bar=args.progress_bar)
 
         loop_train(train_set, train_computation, cbs)
@@ -130,3 +130,4 @@ else:
         weight_saver.restore()
         eval_losses = loop_eval(valid_set, eval_computation)
         print("Inference complete.  Avg losses: " + str(eval_losses))
+

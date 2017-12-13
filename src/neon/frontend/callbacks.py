@@ -38,7 +38,7 @@ class CallbackPhase(Enum):
 
 def make_default_callbacks(transformer, output_file, frequency, train_computation,
                            total_iterations, eval_set=None, loss_computation=None,
-                           use_progress_bar=True):
+                           enable_top5=False, use_progress_bar=True):
 
     cbs = CallbackContainer(transformer, output_file, total_iterations)
 
@@ -47,7 +47,7 @@ def make_default_callbacks(transformer, output_file, frequency, train_computatio
     cbs.append(TrainLoggerCallback(frequency))
 
     if eval_set is not None:
-        cbs.append(LossCallback(frequency, eval_set, loss_computation))
+        cbs.append(LossCallback(frequency, eval_set, loss_computation, enable_top5))
 
     if use_progress_bar:
         cbs.append(ProgressCallback())
@@ -195,10 +195,11 @@ class LossCallback(Callback):
         interval_freq (int, optional): how often (in iterations) to log info.
     """
 
-    def __init__(self, frequency, dataset, interval_loss_comp):
+    def __init__(self, frequency, dataset, interval_loss_comp, enable_top5):
         self.frequency = frequency
         self.dataset = dataset
         self.interval_loss_comp = interval_loss_comp
+        self.enable_top5 = enable_top5
 
     def __call__(self, transformer, callback_data, phase, data, idx):
         if phase == CallbackPhase.train_pre_:
@@ -206,15 +207,18 @@ class LossCallback(Callback):
             num_intervals = self.total_iterations // self.frequency
             for loss_name in self.interval_loss_comp.output_keys:
                 callback_data.create_dataset("cost/{}".format(loss_name), (num_intervals,))
+            if self.enable_top5:
+                callback_data.create_dataset("cost/top_1_acc", (num_intervals,))
+                callback_data.create_dataset("cost/top_5_acc", (num_intervals,))
             callback_data.create_dataset("time/loss", (num_intervals,))
         elif phase == CallbackPhase.train_post:
-            losses = loop_eval(self.dataset, self.interval_loss_comp)
+            losses = loop_eval(self.dataset, self.interval_loss_comp, self.enable_top5)
             tqdm.write("Training complete.  Avg losses: {}".format(losses))
         elif phase == CallbackPhase.minibatch_post and ((idx + 1) % self.frequency == 0):
             start_loss = default_timer()
             interval_idx = idx // self.frequency
 
-            losses = loop_eval(self.dataset, self.interval_loss_comp)
+            losses = loop_eval(self.dataset, self.interval_loss_comp, self.enable_top5)
 
             for loss_name, loss in losses.items():
                 callback_data["cost/{}".format(loss_name)][interval_idx] = loss
@@ -233,12 +237,25 @@ def loop_train(dataset, computation, callbacks):
     callbacks(CallbackPhase.train_post)
 
 
-def loop_eval(dataset, computation):
+def loop_eval(dataset, computation, enable_top5):
     dataset.reset()
     all_results = None
+
+    def top_results(inference_prob, data):
+        if inference_prob is not None:
+            top5_sorted = np.argsort(inference_prob, axis=0)[-5:]
+            data_tr = data['label'].T  # true labels
+            top1_results = np.any(np.equal(data_tr, top5_sorted[-1:]), axis=0)
+            top5_results = np.any(np.equal(data_tr, top5_sorted), axis=0)
+            return {'top_1_acc': top1_results, 'top_5_acc': top5_results}
+
     for data in dataset:
         data['iteration'] = 1
         results = computation(data)
+        if enable_top5:
+            if 'results' in results.keys():
+                inference_prob = results.pop('results')
+                results.update(top_results(inference_prob, data))
         if all_results is None:
             all_results = {k: list(rs) for k, rs in results.items()}
         else:
