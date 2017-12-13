@@ -144,7 +144,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         if isinstance(self.np_reduction_axis(op), tuple):
             axis_set = self.np_reduction_axis(op)
         else:
-            axis_set=tuple()
+            axis_set = tuple()
             axis_set += (self.np_reduction_axis(op),)
 
         ngraph_cpp_sum_op = nSum.Sum(

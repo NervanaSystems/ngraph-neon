@@ -175,20 +175,21 @@ def test_dot():
             # elementwise multiplication between scalar and vector
             assert np.allclose(_dot_val, _dot_val_ref)
 
+
 def test_sum():
 
     H = ng.make_axis(length=2)
     W = ng.make_axis(length=2)
     H1 = ng.make_axis(length=1)
-    W1 =  ng.make_axis(length=4)
+    W1 = ng.make_axis(length=4)
 
-    input1 = ng.placeholder(axes = [H, W])
-    input2 = ng.placeholder(axes = [H1, W1])
+    input1 = ng.placeholder(axes=[H, W])
+    input2 = ng.placeholder(axes=[H1, W1])
 
-    #does reduction sum operation along axis[0]:H
+    # does reduction sum operation along axis[0]:H
     sum_op_1 = ng.sum(input1, reduction_axes=H)
 
-    #sum elements across all the axis
+    # sum elements across all the axis
     sum_op_2 = ng.sum(input2)
     available_transformer = ngt.transformer_choices()
     if "pybind_translator" in available_transformer:
