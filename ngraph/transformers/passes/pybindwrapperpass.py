@@ -15,7 +15,7 @@
 from ngraph.transformers.passes.passes import PeepholeGraphPass
 from ngraph.util.generics import generic_method
 from ngraph.op_graph.op_graph import Op, Add, Multiply, BroadcastOp, TensorValueOp, \
-    DotOp, LogOp, ExpOp, Sum, Greater, Maximum
+    DotOp, LogOp, ExpOp, Sum, Greater, Maximum, ReductionOp
 import nwrapper.ngraph.types.TraitedType as TraitedType
 import nwrapper.ngraph.ops.Parameter as Parameter
 import nwrapper.ngraph.runtime.ParameterizedTensorView as ParameterizedTensorView
@@ -44,6 +44,26 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     def __init__(self, tranformer, **kwargs):
         super(PybindWrapperGenerator, self).__init__(**kwargs)
         self.transformer = tranformer
+
+    def np_reduction_axis(self, op):
+        """
+        Returns numpy reduction axis of an op
+
+        Args:
+            op: instance of ReductionOp
+
+        Returns:
+            tuple of numpy reduction axis
+        """
+        if not isinstance(op, ReductionOp):
+            raise ValueError("Op %s must be an instance of ReductionOp" % op)
+        input_axes = op.args[0].axes
+        reduction_axes = op.reduction_axes
+        try:
+            np_axis = tuple([input_axes.index(axis) for axis in reduction_axes])
+        except ValueError:
+            np_axis = tuple([0, ])
+        return np_axis[0] if len(np_axis) == 1 else np_axis
 
     @generic_method(dispatch_base_type=Op)
     def visit(self, op, *args):
@@ -121,7 +141,12 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(Sum)
     def visit(self, op, input):
-        axis_set = self.np_reduction_axis(op)
+        if isinstance(self.np_reduction_axis(op), tuple):
+            axis_set = self.np_reduction_axis(op)
+        else:
+            axis_set=tuple()
+            axis_set += (self.np_reduction_axis(op),)
+
         ngraph_cpp_sum_op = nSum.Sum(
             self.transformer.ngraph_cpp_op_prameter[
                 input.tensor], set(axis_set))
