@@ -227,6 +227,7 @@ class LossCallback(Callback):
 def loop_train(dataset, computation, callbacks):
     callbacks(CallbackPhase.train_pre_)
     for mb_idx, data in enumerate(dataset):
+        data['iteration'] = mb_idx
         callbacks(CallbackPhase.minibatch_pre_, data, mb_idx)
         callbacks(CallbackPhase.minibatch_post, data, mb_idx)
     callbacks(CallbackPhase.train_post)
@@ -236,6 +237,7 @@ def loop_eval(dataset, computation):
     dataset.reset()
     all_results = None
     for data in dataset:
+        data['iteration'] = 1
         results = computation(data)
         if all_results is None:
             all_results = {k: list(rs) for k, rs in results.items()}
