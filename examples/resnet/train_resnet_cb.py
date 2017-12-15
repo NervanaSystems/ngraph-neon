@@ -142,7 +142,6 @@ with ng.metadata(device=device_hetr, device_id=device_id, parallel=ax.N):
 
     # Learning Rate Placeholder
     lr_ph = ng.placeholder(axes=(), initial_value=base_lr)
-    input_ops_train['lr_ph'] = lr_ph
 
     # Optimizer
     # Provided learning policy takes learning rate as input to graph using a placeholder.
@@ -177,12 +176,16 @@ with ng.metadata(device=device_hetr, device_id=device_id, parallel=ax.N):
         # Computation for inference
         eval_outputs = dict(results=inference_prob, cross_ent_loss=eval_loss)
 
+# setup wrapper for additional feed for learning rate (train only)
+input_ops_train['lr_ph'] = lr_ph
 wrapper_kwargs = {'base_lr': base_lr,
                   'learning_schedule': learning_schedule,
                   'gamma': gamma}
 lr_add_wrapper = FeedAddWrapper(wrapper=set_lr,
                                 holder='lr_ph',
                                 wrapper_kwargs=wrapper_kwargs)
+
+# setup feed modifier for HeTr
 clear_wrapper = FeedAddWrapper(clear_feed=True)
 
 if device_backend == 'hetr' and args.num_devices > 1:
@@ -205,7 +208,7 @@ if(args.inference is not None):
         # weight_saver.restore()
         # Calculate losses
 
-        eval_losses = loop_eval(valid_set,
+        eval_losses = loop_eval(master_valid_set,
                                 restore_loss_computation,
                                 en_top5,
                                 eval_feed_wrapper=loss_feed_wrapper)
@@ -228,7 +231,7 @@ with closing(ngt.make_transformer_factory(args.backend, **t_args)()) as transfor
                                  frequency=args.iter_interval,
                                  train_computation=train_computation,
                                  total_iterations=args.num_iterations,
-                                 eval_set=valid_set,
+                                 eval_set=master_valid_set,
                                  eval_feed_wrapper=loss_feed_wrapper,
                                  loss_computation=loss_computation,
                                  enable_top5=True,
