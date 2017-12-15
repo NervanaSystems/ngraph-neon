@@ -29,10 +29,12 @@ from tqdm import tqdm
 from data import make_aeon_loaders
 from ngraph.frontends.neon import GradientDescentMomentum
 from ngraph.frontends.neon import Layer
-from ngraph.frontends.neon import loop_eval, loop_train, make_bound_computation
+from ngraph.frontends.neon import loop_eval, loop_train
+from ngraph.frontends.neon import make_default_callbacks, make_bound_computation
 from resnet import BuildResnet
 from contextlib import closing
-from ngraph.frontends.neon import Saver
+# from ngraph.frontends.neon import TrainSaverCallback
+from ngraph.frontends.neon import Saver, FeedAddWrapper
 from utils import get_network_params, set_lr
 import os
 import logging
@@ -140,6 +142,7 @@ with ng.metadata(device=device_hetr, device_id=device_id, parallel=ax.N):
 
     # Learning Rate Placeholder
     lr_ph = ng.placeholder(axes=(), initial_value=base_lr)
+    input_ops_train['lr_ph'] = lr_ph
 
     # Optimizer
     # Provided learning policy takes learning rate as input to graph using a placeholder.
@@ -162,7 +165,7 @@ with ng.metadata(device=device_hetr, device_id=device_id, parallel=ax.N):
     train_outputs = dict(batch_cost=batch_cost)
 
 # Instantiate the Saver object to save weights
-#weight_saver = Saver()
+# weight_saver = Saver()
 
 with ng.metadata(device=device_hetr, device_id=device_id, parallel=ax.N):
     # Inference
@@ -174,17 +177,38 @@ with ng.metadata(device=device_hetr, device_id=device_id, parallel=ax.N):
         # Computation for inference
         eval_outputs = dict(results=inference_prob, cross_ent_loss=eval_loss)
 
+wrapper_kwargs = {base_lr: base_lr,
+                  learning_schedule: learning_schedule,
+                  gamma: gamma}
+lr_add_wrapper = FeedAddWrapper(wrapper=set_lr,
+                                holder='lr_ph',
+                                wrapper_kwargs=wrapper_kwargs)
+clear_wrapper = FeedAddWrapper(clear_feed=True)
+
+if device_backend == 'hetr' and args.num_devices > 1:
+    train_feed_wrapper = clear_wrapper
+    loss_feed_wrapper = clear_wrapper
+else:
+    train_feed_wrapper = lr_add_wrapper
+    loss_feed_wrapper = None
+
 # Doing inference
 if(args.inference is not None):
     # Check if file exists. TODO.
     with closing(ngt.make_transformer()) as transformer:
-        restore_loss_computation = make_bound_computation(transformer, eval_outputs, input_ops_valid)
+        restore_loss_computation = make_bound_computation(transformer,
+                                                          eval_outputs,
+                                                          input_ops_valid)
         # weight_saver.setup_restore(transformer=transformer, computation=eval_outputs,
         #                            filename=args.inference)
         # Restore weight
-        #weight_saver.restore()
+        # weight_saver.restore()
         # Calculate losses
-        eval_losses = loop_eval(valid_set, restore_loss_computation, en_top5)
+
+        eval_losses = loop_eval(valid_set,
+                                restore_loss_computation,
+                                en_top5,
+                                eval_feed_wrapper=loss_feed_wrapper)
         # Print statistics
         print("From restored weights: Test Avg loss:{tcost}".format(tcost=eval_losses))
         exit()
@@ -197,7 +221,7 @@ with closing(ngt.make_transformer_factory(args.backend, **t_args)()) as transfor
     # Inference
     loss_computation = make_bound_computation(transformer, eval_outputs, input_ops_valid)
     # Set Saver for saving weights
-    #weight_saver.setup_save(transformer=transformer, computation=train_computation)
+    # weight_saver.setup_save(transformer=transformer, computation=train_computation)
 
     cbs = make_default_callbacks(transformer=transformer,
                                  output_file=args.output_file,
@@ -205,13 +229,17 @@ with closing(ngt.make_transformer_factory(args.backend, **t_args)()) as transfor
                                  train_computation=train_computation,
                                  total_iterations=args.num_iterations,
                                  eval_set=valid_set,
+                                 eval_feed_wrapper=loss_feed_wrapper,
                                  loss_computation=loss_computation,
                                  enable_top5=True,
                                  use_progress_bar=args.progress_bar)
-
-    loop_train(train_set, train_computation, cbs)
+    # if(args.save_file is not None):
+    #    cbs.append(TrainSaverCallback(saver=weight_saver,
+    #                                  filename=args.save_file,
+    #                                  frequency=args.iter_interval))
+    loop_train(train_set, train_computation, cbs, train_feed_wrapper=train_feed_wrapper)
 
     print("\nTraining Completed")
     if(args.save_file is not None):
         print("\nSaving Weights")
-        #weight_saver.save(filename=args.save_file)
+        # weight_saver.save(filename=args.save_file)

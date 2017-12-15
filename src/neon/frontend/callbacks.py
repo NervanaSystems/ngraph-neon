@@ -37,7 +37,8 @@ class CallbackPhase(Enum):
 
 
 def make_default_callbacks(transformer, output_file, frequency, train_computation,
-                           total_iterations, eval_set=None, loss_computation=None,
+                           total_iterations, eval_set=None,
+                           eval_feed_wrapper=None, loss_computation=None,
                            enable_top5=False, use_progress_bar=True):
 
     cbs = CallbackContainer(transformer, output_file, total_iterations)
@@ -47,7 +48,11 @@ def make_default_callbacks(transformer, output_file, frequency, train_computatio
     cbs.append(TrainLoggerCallback(frequency))
 
     if eval_set is not None:
-        cbs.append(LossCallback(frequency, eval_set, loss_computation, enable_top5))
+        cbs.append(LossCallback(frequency,
+                                eval_set,
+                                eval_feed_wrapper,
+                                loss_computation,
+                                enable_top5))
 
     if use_progress_bar:
         cbs.append(ProgressCallback())
@@ -135,6 +140,34 @@ class TrainCostCallback(Callback):
             transformer.save_output_statistics_file()
 
 
+class TrainSaverCallback(Callback):
+
+    def __init__(self, saver, filename, frequency):
+        self.saver = saver
+        self.filename = filename
+        self.frequency = frequency
+
+    def __call__(self, transformer, callback_data, phase, data, idx):
+        if phase == CallbackPhase.minibatch_post:
+            if ((idx + 1) % self.frequency == 0):
+                self.saver.save(filename=self.filename + "_" + str(idx))
+
+
+class FeedAddWrapper:
+
+    def __init__(self, wrapper=None, holder=None, wrapper_kwargs=None, clear_feed=False):
+        self.wrapper = wrapper
+        self.holder = holder
+        self.wrapper_kwargs = wrapper_kwargs
+        self.clear_feed = clear_feed
+
+    def __call__(self, data, step):
+        if self.clear_feed:
+            data.clear()
+        if self.wrapper is not None:
+            data[self.holder] = self.wrapper(step=step, **self.wrapper_kwargs)
+
+
 class RunTimerCallback(Callback):
     """
     Callback which tracks the total training time.
@@ -195,9 +228,10 @@ class LossCallback(Callback):
         interval_freq (int, optional): how often (in iterations) to log info.
     """
 
-    def __init__(self, frequency, dataset, interval_loss_comp, enable_top5):
+    def __init__(self, frequency, dataset, eval_feed_wrapper, interval_loss_comp, enable_top5):
         self.frequency = frequency
         self.dataset = dataset
+        self.eval_feed_wrapper = eval_feed_wrapper
         self.interval_loss_comp = interval_loss_comp
         self.enable_top5 = enable_top5
 
@@ -212,13 +246,19 @@ class LossCallback(Callback):
                 callback_data.create_dataset("cost/top_5_acc", (num_intervals,))
             callback_data.create_dataset("time/loss", (num_intervals,))
         elif phase == CallbackPhase.train_post:
-            losses = loop_eval(self.dataset, self.interval_loss_comp, self.enable_top5)
+            losses = loop_eval(dataset=self.dataset,
+                               computation=self.interval_loss_comp,
+                               enable_top5=self.enable_top5,
+                               eval_feed_wrapper=self.eval_feed_wrapper)
             tqdm.write("Training complete.  Avg losses: {}".format(losses))
         elif phase == CallbackPhase.minibatch_post and ((idx + 1) % self.frequency == 0):
             start_loss = default_timer()
             interval_idx = idx // self.frequency
 
-            losses = loop_eval(self.dataset, self.interval_loss_comp, self.enable_top5)
+            losses = loop_eval(dataset=self.dataset,
+                               computation=self.interval_loss_comp,
+                               enable_top5=self.enable_top5,
+                               eval_feed_wrapper=self.eval_feed_wrapper)
 
             for loss_name, loss in losses.items():
                 callback_data["cost/{}".format(loss_name)][interval_idx] = loss
@@ -228,16 +268,18 @@ class LossCallback(Callback):
                 interval_idx + 1, idx + 1, losses))
 
 
-def loop_train(dataset, computation, callbacks):
+def loop_train(dataset, computation, callbacks, train_feed_wrapper=None):
     callbacks(CallbackPhase.train_pre_)
     for mb_idx, data in enumerate(dataset):
+        if train_feed_wrapper is not None:
+            train_feed_wrapper(data=data, step=mb_idx)
         data['iteration'] = mb_idx
         callbacks(CallbackPhase.minibatch_pre_, data, mb_idx)
         callbacks(CallbackPhase.minibatch_post, data, mb_idx)
     callbacks(CallbackPhase.train_post)
 
 
-def loop_eval(dataset, computation, enable_top5):
+def loop_eval(dataset, computation, enable_top5, eval_feed_wrapper=None):
     dataset.reset()
     all_results = None
 
@@ -250,6 +292,8 @@ def loop_eval(dataset, computation, enable_top5):
             return {'top_1_acc': top1_results, 'top_5_acc': top5_results}
 
     for data in dataset:
+        if eval_feed_wrapper is not None:
+            eval_feed_wrapper(data=data, step=1)
         data['iteration'] = 1
         results = computation(data)
         if enable_top5:
