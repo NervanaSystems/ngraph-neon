@@ -177,9 +177,9 @@ with ng.metadata(device=device_hetr, device_id=device_id, parallel=ax.N):
         # Computation for inference
         eval_outputs = dict(results=inference_prob, cross_ent_loss=eval_loss)
 
-wrapper_kwargs = {base_lr: base_lr,
-                  learning_schedule: learning_schedule,
-                  gamma: gamma}
+wrapper_kwargs = {'base_lr': base_lr,
+                  'learning_schedule': learning_schedule,
+                  'gamma': gamma}
 lr_add_wrapper = FeedAddWrapper(wrapper=set_lr,
                                 holder='lr_ph',
                                 wrapper_kwargs=wrapper_kwargs)
