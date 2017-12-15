@@ -293,8 +293,8 @@ def loop_eval(dataset, computation, enable_top5, eval_feed_wrapper=None):
 
     for data in dataset:
         if eval_feed_wrapper is not None:
-            eval_feed_wrapper(data=data, step=1)
-        data['iteration'] = 1
+            eval_feed_wrapper(data=data, step=0)
+        data['iteration'] = 0
         results = computation(data)
         if enable_top5:
             if 'results' in results.keys():
