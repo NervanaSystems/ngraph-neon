@@ -241,8 +241,8 @@ class LossCallback(Callback):
             num_intervals = self.total_iterations // self.frequency
             for loss_name in self.interval_loss_comp.output_keys:
                 callback_data.create_dataset("cost/{}".format(loss_name), (num_intervals,))
+            callback_data.create_dataset("cost/top_1_acc", (num_intervals,))
             if self.enable_top5:
-                callback_data.create_dataset("cost/top_1_acc", (num_intervals,))
                 callback_data.create_dataset("cost/top_5_acc", (num_intervals,))
             callback_data.create_dataset("time/loss", (num_intervals,))
         elif phase == CallbackPhase.train_post:
@@ -283,23 +283,25 @@ def loop_eval(dataset, computation, enable_top5, eval_feed_wrapper=None):
     dataset.reset()
     all_results = None
 
-    def top_results(inference_prob, data):
+    def top_results(inference_prob, data, enable_top5):
         if inference_prob is not None:
             top5_sorted = np.argsort(inference_prob, axis=0)[-5:]
             data_tr = data['label'].T  # true labels
             top1_results = np.any(np.equal(data_tr, top5_sorted[-1:]), axis=0)
-            top5_results = np.any(np.equal(data_tr, top5_sorted), axis=0)
-            return {'top_1_acc': top1_results, 'top_5_acc': top5_results}
+            if enable_top5:
+                top5_results = np.any(np.equal(data_tr, top5_sorted), axis=0)
+                return {'top_1_acc': top1_results, 'top_5_acc': top5_results}
+            else:
+                return {'top_1_acc': top1_results}
 
     for data in dataset:
         if eval_feed_wrapper is not None:
             eval_feed_wrapper(data=data, step=0)
         data['iteration'] = 0
         results = computation(data)
-        if enable_top5:
-            if 'results' in results.keys():
-                inference_prob = results.pop('results')
-                results.update(top_results(inference_prob, data))
+        if 'results' in results.keys():
+            inference_prob = results.pop('results')
+            results.update(top_results(inference_prob, data, enable_top5))
         if all_results is None:
             all_results = {k: list(rs) for k, rs in results.items()}
         else:
