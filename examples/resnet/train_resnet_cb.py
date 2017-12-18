@@ -234,7 +234,7 @@ with closing(ngt.make_transformer_factory(args.backend, **t_args)()) as transfor
                                  eval_set=master_valid_set,
                                  eval_feed_wrapper=loss_feed_wrapper,
                                  loss_computation=loss_computation,
-                                 enable_top5=True,
+                                 enable_top5=False,
                                  use_progress_bar=args.progress_bar)
     # if(args.save_file is not None):
     #    cbs.append(TrainSaverCallback(saver=weight_saver,
