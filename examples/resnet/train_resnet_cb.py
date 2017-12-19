@@ -33,7 +33,7 @@ from ngraph.frontends.neon import loop_eval, loop_train
 from ngraph.frontends.neon import make_default_callbacks, make_bound_computation
 from resnet import BuildResnet
 from contextlib import closing
-# from ngraph.frontends.neon import TrainSaverCallback
+from ngraph.frontends.neon import TrainSaverCallback
 from ngraph.frontends.neon import Saver, FeedAddWrapper
 from utils import get_network_params, set_lr
 import os
@@ -164,7 +164,7 @@ with ng.metadata(device=device_hetr, device_id=device_id, parallel=ax.N):
     train_outputs = dict(batch_cost=batch_cost)
 
 # Instantiate the Saver object to save weights
-# weight_saver = Saver()
+weight_saver = Saver()
 
 with ng.metadata(device=device_hetr, device_id=device_id, parallel=ax.N):
     # Inference
@@ -202,10 +202,10 @@ if(args.inference is not None):
         restore_loss_computation = make_bound_computation(transformer,
                                                           eval_outputs,
                                                           input_ops_valid)
-        # weight_saver.setup_restore(transformer=transformer, computation=eval_outputs,
-        #                            filename=args.inference)
+        weight_saver.setup_restore(transformer=transformer, computation=eval_outputs,
+                                   filename=args.inference)
         # Restore weight
-        # weight_saver.restore()
+        weight_saver.restore()
         # Calculate losses
 
         eval_losses = loop_eval(master_valid_set,
@@ -224,7 +224,7 @@ with closing(ngt.make_transformer_factory(args.backend, **t_args)()) as transfor
     # Inference
     loss_computation = make_bound_computation(transformer, eval_outputs, input_ops_valid)
     # Set Saver for saving weights
-    # weight_saver.setup_save(transformer=transformer, computation=train_computation)
+    weight_saver.setup_save(transformer=transformer, computation=train_outputs)
 
     cbs = make_default_callbacks(transformer=transformer,
                                  output_file=args.output_file,
@@ -236,13 +236,13 @@ with closing(ngt.make_transformer_factory(args.backend, **t_args)()) as transfor
                                  loss_computation=loss_computation,
                                  enable_top5=False,
                                  use_progress_bar=args.progress_bar)
-    # if(args.save_file is not None):
-    #    cbs.append(TrainSaverCallback(saver=weight_saver,
-    #                                  filename=args.save_file,
-    #                                  frequency=args.iter_interval))
+    if(args.save_file is not None):
+        cbs.append(TrainSaverCallback(saver=weight_saver,
+                                      filename=args.save_file,
+                                      frequency=args.iter_interval))
     loop_train(train_set, train_computation, cbs, train_feed_wrapper=train_feed_wrapper)
 
     print("\nTraining Completed")
     if(args.save_file is not None):
         print("\nSaving Weights")
-        # weight_saver.save(filename=args.save_file)
+        weight_saver.save(filename=args.save_file)
