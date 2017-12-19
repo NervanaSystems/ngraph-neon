@@ -115,7 +115,7 @@ if not args.inference:
                                      total_iterations=args.num_iterations,
                                      eval_set=valid_set,
                                      loss_computation=loss_computation,
-                                     enable_top5=True,
+                                     enable_top5=False,
                                      use_progress_bar=args.progress_bar)
 
         loop_train(train_set, train_computation, cbs)
