@@ -106,7 +106,11 @@ if __name__ == "__main__":
     parser.add_argument('--disable_batch_norm', action='store_true')
     parser.add_argument('--save_file', type=str, default=None, help="File to save weights")
     parser.add_argument('--inference', type=str, default=None, help="File to load weights")
+    parser.add_argument('--resume', type=str, default=None, help="Weights file to resume training")
     args = parser.parse_args()
+
+# Initialize seed before any use
+np.random.seed(args.rng_seed)
 
 # Get network parameters
 nw_params = get_network_params(args.dataset, args.size, args.batch_size)
@@ -183,7 +187,6 @@ with Layer.inference_mode_on():
 
 # Doing inference
 if(args.inference is not None):
-    # Check if file exists. TODO.
     with closing(ngt.make_transformer()) as transformer:
         restore_eval_function = transformer.add_computation(eval_computation)
         weight_saver.setup_restore(transformer=transformer, computation=eval_computation,
@@ -205,6 +208,11 @@ with closing(ngt.make_transformer_factory(args.backend, **t_args)()) as transfor
     eval_function = transformer.add_computation(eval_computation)
     # Set Saver for saving weights
     weight_saver.setup_save(transformer=transformer, computation=train_computation)
+    # Resume weights for training from a checkpoint
+    if args.resume is not None:
+        weight_saver.setup_restore(transformer=transformer, computation=train_computation,
+                                   filename=args.resume)
+        weight_saver.restore()
     # Progress bar
     tpbar = tqdm(unit="batches", ncols=100, total=args.num_iterations)
     # Set interval cost to 0.0
