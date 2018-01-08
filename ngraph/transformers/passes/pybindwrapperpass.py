@@ -21,7 +21,7 @@ import nwrapper.ngraph.ops.Parameter as Parameter
 import nwrapper.ngraph.runtime.ParameterizedTensorView as ParameterizedTensorView
 import nwrapper.ngraph.Util as Util
 import nwrapper.ngraph.runtime.Utils as Utils
-import nwrapper.ngraph.ops.ParameterizedConstant as ParameterizedConstant
+import nwrapper.ngraph.ops.Constant as Constant
 import numpy as np
 import nwrapper.ngraph.ops.Sum as nSum
 import nwrapper.ngraph.ops.Maximum as nMaximum
@@ -101,13 +101,9 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
         if op.tensor not in self.transformer.ngraph_cpp_op_prameter:
             if op.tensor.is_constant:
-                constant_tensor = Utils.make_tensor(list(op.axes.lengths))
-                item_size = op.tensor.dtype.itemsize
-                element_size = (op.tensor.const.size) * item_size
-                constant_tensor.write(Util.numpy_to_c(
-                    np.array([op.tensor.const.__abs__()], dtype=np.float32)), 0, element_size)
-                constant_op = ParameterizedConstant.ParameterizedConstantF(
-                    list(op.axes.lengths), constant_tensor)
+                element_type = TraitedType.TraitedTypeF.element_type()
+                constant_op = Constant.Constant(element_type,
+                    list(op.axes.lengths), op.tensor.const.flatten().tolist())
                 self.transformer.ngraph_cpp_op_prameter[op.tensor] = constant_op
             else:
                 element_type = TraitedType.TraitedTypeF.element_type()

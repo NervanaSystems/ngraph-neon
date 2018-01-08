@@ -30,7 +30,7 @@ def test_add_with_scalar():
 
     if "pybind_translator" in available_transformer:
         with closing(ngt.make_transformer_factory('pybind_translator',
-                                                  backend="NGVM")()) as pybind_exec:
+                                                  backend="INTERPRETER")()) as pybind_exec:
             # Define a computation
             _add = pybind_exec.computation(d, a)
             d_val = _add([10, 20, 30, 40])
@@ -56,7 +56,7 @@ def test_add_with_mul():
 
     if "pybind_translator" in available_transformer:
         with closing(ngt.make_transformer_factory('pybind_translator',
-                                                  backend="NGVM")()) as pybind_exec:
+                                                  backend="INTERPRETER")()) as pybind_exec:
             # Define a computation
             _mul = pybind_exec.computation(d, a, b, c)
             d_val = _mul([10], [20], [10])
@@ -83,7 +83,7 @@ def test_multiple_computation():
 
     if "pybind_translator" in available_transformer:
         with closing(ngt.make_transformer_factory('pybind_translator',
-                                                  backend="NGVM")()) as pybind_exec:
+                                                  backend="INTERPRETER")()) as pybind_exec:
             # Define a computation
             _mul_computation = pybind_exec.computation(_mul, a, b)
             _mul_val = _mul_computation([10], [20])
@@ -113,7 +113,7 @@ def test_Add_with_muliple_axis():
 
     if "pybind_translator" in available_transformer:
         with closing(ngt.make_transformer_factory('pybind_translator',
-                                                  backend="NGVM")()) as pybind_exec:
+                                                  backend="INTERPRETER")()) as pybind_exec:
             # Define a computation
             _add = pybind_exec.computation(d, a, b)
             d_val = _add([10, 20, 30, 40], [11, 12, 13, 14])
@@ -141,7 +141,7 @@ def test_broadcast():
 
     if "pybind_translator" in available_transformer:
         with closing(ngt.make_transformer_factory('pybind_translator',
-                                                  backend="NGVM")()) as pybind_exec:
+                                                  backend="INTERPRETER")()) as pybind_exec:
             # Define a computation
             _add = pybind_exec.computation(c)
             result = _add()
@@ -164,7 +164,7 @@ def test_dot():
     available_transformer = ngt.transformer_choices()
     if "pybind_translator" in available_transformer:
         with closing(ngt.make_transformer_factory('pybind_translator',
-                                                  backend="NGVM")()) as pybind_exec:
+                                                  backend="INTERPRETER")()) as pybind_exec:
             _dot = pybind_exec.computation(c)
             _dot_val = _dot()
 
@@ -194,7 +194,7 @@ def test_sum():
     available_transformer = ngt.transformer_choices()
     if "pybind_translator" in available_transformer:
         with closing(ngt.make_transformer_factory('pybind_translator',
-                                                  backend="NGVM")()) as pybind_exec:
+                                                  backend="INTERPRETER")()) as pybind_exec:
             _sum = pybind_exec.computation(sum_op_1, input1)
             _sum_val = _sum([[1, 2], [3, 4]])
             assert np.array_equal(_sum_val, [4, 6])
