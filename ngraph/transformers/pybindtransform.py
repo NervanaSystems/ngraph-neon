@@ -12,14 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ----------------------------------------------------------------------------
-import collections
-import numpy as np
 from ngraph.transformers.base import Computation
 from ngraph.transformers.base import ComputationGraphTransformer
 from ngraph.transformers.base import make_transformer_factory, set_transformer_factory
 from ngraph.op_graph.op_graph import Op, computation
 from orderedset import OrderedSet
 from ngraph.transformers.passes.pybindwrapperpass import PybindWrapperGenerator
+# workaround to load the libngraph.so with RTLD_GLOBAL
+import os
+import sys
+sys.setdlopenflags(os.RTLD_NOW | os.RTLD_GLOBAL)
+import collections
+import numpy as np
 import nwrapper.ngraph.Util as Util
 import nwrapper.ngraph.types.TraitedType as TraitedType
 import nwrapper.ngraph.types.TensorViewType as TensorViewType
@@ -34,12 +38,11 @@ class PybindComputation(Computation):
         self.transformer = transformer
         self.computation_op = computation_op
         self.parameter_list = []
-        self.param_primary_tensor_view_list = []
+        #self.param_primary_tensor_view_list = []
         self.result_primary_tensor_view_list = []
         self.ngraph_op_result_list = []
         self.return_result_list = dict()
 
-        self.ngraph_op_result_list.append(results)
         self.initialize_cpp_backend(results, *parameters)
 
     def __call__(self, *args, **kwargs):
@@ -52,8 +55,9 @@ class PybindComputation(Computation):
         :param kwargs:
         :return: [list of computed results]
         """
+        param_primary_tensor_view_list = []
         args = self.unpack_args_or_feed_dict(args, kwargs)
-        self.get_ngraph_cpp_param_list(*args)
+        self.get_ngraph_cpp_param_list(param_primary_tensor_view_list, *args)
 
         for index, result in enumerate(self.result_primary_tensor_view_list):
             result_op = self.ngraph_op_result_list[index]
@@ -64,7 +68,7 @@ class PybindComputation(Computation):
             result.write(Util.numpy_to_c(result_arr), 0, int(element_size))
             self.return_result_list[result_op] = result_arr
 
-        self.cf.call(self.param_primary_tensor_view_list, self.result_primary_tensor_view_list)
+        self.cf.call(param_primary_tensor_view_list, self.result_primary_tensor_view_list)
 
         # now read the values from the computed result
         for index, result in enumerate(self.result_primary_tensor_view_list):
@@ -92,20 +96,39 @@ class PybindComputation(Computation):
         :return:
         """
         # define the result type
+
         # TODO define element type based on result.dtype instead of deafulting to flaot32
         self.result_element_type = TraitedType.TraitedTypeF.element_type()
-        if not(isinstance(results, list)):
-            self.result_shape = list(results.axes.lengths)
-        value_type = TensorViewType.TensorViewType(self.result_element_type, self.result_shape)
+        result_nodes_list = []
+        result_value_type_list = []
+        result_node_to_shape = dict()
+
+        if isinstance(self.computation_op.returns, Op):
+            self.ngraph_op_result_list.append(results.tensor)
+            result_node_to_shape[results.tensor] = list(results.axes.lengths)
+            result_value_type_list.append(
+                TensorViewType.TensorViewType(
+                    self.result_element_type,
+                    result_node_to_shape[results.tensor]))
+            result_nodes_list.append(self.transformer.ngraph_cpp_op_prameter[results.tensor])
+        else:
+            for node in results:
+                self.ngraph_op_result_list.append(node.tensor)
+                result_node_to_shape[node.tensor] = list(node.axes.lengths)
+                result_value_type_list.append(
+                    TensorViewType.TensorViewType(
+                        self.result_element_type,
+                        result_node_to_shape[node.tensor]))
+                result_nodes_list.append(self.transformer.ngraph_cpp_op_prameter[node.tensor])
 
         # use the ngraph_cpp_op dict to built the parameter list for c++ backend
         for place_holders in parameters:
-            self.parameter_list.append(self.transformer.ngraph_cpp_op_prameter[place_holders])
+            self.parameter_list.append(self.transformer.ngraph_cpp_op_prameter[place_holders.tensor])
 
         # TODO - what's the role of the string argument? for now just passing 'test'
         self.function = Function.Function(
-            self.transformer.ngraph_cpp_op_prameter[results],
-            value_type,
+            result_nodes_list,
+            result_value_type_list,
             self.parameter_list,
             'test')
 
@@ -113,11 +136,20 @@ class PybindComputation(Computation):
         self.external = self.manager.compile(self.function)
         self.backend = self.manager.allocate_backend()
         self.cf = self.backend.make_call_frame(self.external)
-        # create the primary_tensor_view for result's using the ngraph++ initilized backend
-        self.result_primary_tensor_view_list.append(self.backend.make_primary_tensor_view
-                                                    (self.result_element_type, self.result_shape))
 
-    def get_ngraph_cpp_param_list(self, *args):
+        # create the primary_tensor_view for result's using the ngraph++ initilized backend
+        if isinstance(self.computation_op.returns, Op):
+            self.result_primary_tensor_view_list.append(
+                self.backend.make_primary_tensor_view(
+                    self.result_element_type,
+                    result_node_to_shape[results.tensor]))
+        elif isinstance(self.computation_op.returns, (collections.Sequence, OrderedSet)):
+            for node in results:
+                self.result_primary_tensor_view_list.append(
+                    self.backend.make_primary_tensor_view(
+                        self.result_element_type, result_node_to_shape[node.tensor]))
+
+    def get_ngraph_cpp_param_list(self, param_primary_tensor_view_list, *args):
         """
         Builds a list of ngraph++ primary_tensor_view from ngraph *parameters list
 
@@ -128,7 +160,7 @@ class PybindComputation(Computation):
         for op in self.computation_op.parameters:
             # TODO define element type based on op.dtype instead of deafulting to flaot32
             param_element_type = TraitedType.TraitedTypeF.element_type()
-            self.param_primary_tensor_view_list.append(
+            param_primary_tensor_view_list.append(
                 self.backend.make_primary_tensor_view(
                     param_element_type, list(
                         op.axes.lengths)))
@@ -137,7 +169,7 @@ class PybindComputation(Computation):
         for index, op in enumerate(self.computation_op.parameters):
             element_size = self.get_element_size(op)
             # TODO - need to define dtype of numpy array's for *params based on op.dtype
-            self.param_primary_tensor_view_list[index].write(Util.numpy_to_c(
+            param_primary_tensor_view_list[index].write(Util.numpy_to_c(
                 np.array(args[index], dtype=np.float32)), 0, int(element_size))
 
     def get_element_size(self, op):

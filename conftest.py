@@ -43,7 +43,7 @@ def pytest_generate_tests(metafunc):
 @pytest.fixture(scope="module", autouse=True)
 def transformer_factory(request):
     def set_and_get_factory(transformer_name):
-        factory = ngt.make_transformer_factory(transformer_name, backend="NGVM")
+        factory = ngt.make_transformer_factory(transformer_name, backend="INTERPRETER")
         ngt.set_transformer_factory(factory)
         return factory
 
