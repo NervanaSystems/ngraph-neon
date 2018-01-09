@@ -25,7 +25,7 @@ sys.setdlopenflags(os.RTLD_NOW | os.RTLD_GLOBAL)
 import collections
 import numpy as np
 import nwrapper.ngraph.Util as Util
-import nwrapper.ngraph.types.TraitedType as TraitedType
+import nwrapper.ngraph.types.Type as Type
 import nwrapper.ngraph.types.TensorViewType as TensorViewType
 import nwrapper.ngraph.Function as Function
 import nwrapper.ngraph.runtime.Manager as Manager
@@ -98,7 +98,7 @@ class PybindComputation(Computation):
         # define the result type
 
         # TODO define element type based on result.dtype instead of deafulting to flaot32
-        self.result_element_type = TraitedType.TraitedTypeF.element_type()
+        self.result_element_type = Type.f32
         result_nodes_list = []
         result_value_type_list = []
         result_node_to_shape = dict()
@@ -158,7 +158,7 @@ class PybindComputation(Computation):
         # get the primary tensor_view for all the *parameters passed from the user
         for op in self.computation_op.parameters:
             # TODO define element type based on op.dtype instead of deafulting to flaot32
-            param_element_type = TraitedType.TraitedTypeF.element_type()
+            param_element_type = Type.f32
             param_primary_tensor_view_list.append(
                 self.backend.make_primary_tensor_view(
                     param_element_type, list(

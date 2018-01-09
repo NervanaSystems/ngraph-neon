@@ -19,11 +19,10 @@ from ngraph.op_graph.op_graph import Op, Add, Multiply, BroadcastOp, TensorValue
     OneHotOp, Divide, Subtract, NegativeOp, ReciprocalOp, TensorSizeOp, MapRolesOp, Minimum, \
     Less, SequentialOp
 
-import nwrapper.ngraph.types.TraitedType as TraitedType
+import nwrapper.ngraph.types.Type as Type
 import nwrapper.ngraph.ops.Parameter as Parameter
-import nwrapper.ngraph.runtime.ParameterizedTensorView as ParameterizedTensorView
+import nwrapper.ngraph.runtime.TensorView as TensorView
 import nwrapper.ngraph.Util as Util
-import nwrapper.ngraph.runtime.Utils as Utils
 import nwrapper.ngraph.ops.Constant as Constant
 import numpy as np
 import nwrapper.ngraph.ops.Sum as nSum
@@ -145,7 +144,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     @visit.on_type(BroadcastOp)
     def visit(self, op, input):
         axis_set = set()
-        element_type = TraitedType.TraitedTypeF.element_type()
+        element_type = Type.f32
         # check if the op.args already have Paramterized view type.
         if op.args[0].tensor in self.transformer.ngraph_cpp_op_prameter:
             op_element_type = self.transformer.ngraph_cpp_op_prameter[op.args[0].tensor]
@@ -168,12 +167,12 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
         if op.tensor not in self.transformer.ngraph_cpp_op_prameter:
             if op.tensor.is_constant:
-                element_type = TraitedType.TraitedTypeF.element_type()
+                element_type = Type.f32
                 constant_op = Constant.Constant(element_type,
                     list(op.axes.lengths), op.tensor.const.flatten().tolist())
                 self.transformer.ngraph_cpp_op_prameter[op.tensor] = constant_op
             else:
-                element_type = TraitedType.TraitedTypeF.element_type()
+                element_type = Type.f32
                 op_element_type = Parameter.Parameter(
                     element_type, list(op.axes.lengths))
                 self.transformer.ngraph_cpp_op_prameter[op.tensor] = op_element_type
@@ -182,12 +181,12 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     def visit(self, op):
         if op.tensor not in self.transformer.ngraph_cpp_op_prameter:
             if op.tensor.is_constant:
-                element_type = TraitedType.TraitedTypeF.element_type()
+                element_type = Type.f32
                 constant_op = Constant.Constant(element_type,
                     list(op.axes.lengths), op.tensor.const.flatten().tolist())
                 self.transformer.ngraph_cpp_op_prameter[op.tensor] = constant_op
             else:
-                element_type = TraitedType.TraitedTypeF.element_type()
+                element_type = Type.f32
                 op_element_type = Parameter.Parameter(
                     element_type, list(op.axes.lengths))
                 self.transformer.ngraph_cpp_op_prameter[op.tensor] = op_element_type
@@ -250,7 +249,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                 input1.tensor], self.transformer.ngraph_cpp_op_prameter[
                 input2.tensor])
         # convert the element back from bool to float type
-        element_result_type = TraitedType.TraitedTypeF.element_type()
+        element_result_type = Type.f32
         greater_result_op = Convert.Convert(ngraph_cpp_greater_op, element_result_type)
         self.transformer.ngraph_cpp_op_prameter[op.tensor] = greater_result_op
 
@@ -261,7 +260,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                 input1.tensor], self.transformer.ngraph_cpp_op_prameter[
                 input2.tensor])
         # convert the element back from bool to float type
-        element_result_type = TraitedType.TraitedTypeF.element_type()
+        element_result_type = Type.f32
         less_result_op = Convert.Convert(ngraph_cpp_less_op, element_result_type)
         self.transformer.ngraph_cpp_op_prameter[op.tensor] = less_result_op
 
@@ -325,12 +324,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(ReciprocalOp)
     def visit(self, op, input):
-        constant_tensor = Utils.make_tensor([1])
-        element_size = 4
-        constant_tensor.write(Util.numpy_to_c(
-            np.array([1])), 0, element_size)
-        constant_op = ParameterizedConstant.ParameterizedConstantF(
-            list(op.axes.lengths), constant_tensor)
+        constant_op = Constant.Constant(Type.f32,
+            list(op.axes.lengths), list({0.0}))
         ngraph_cpp_reciprocal_op = constant_op \
             / self.transformer.ngraph_cpp_op_prameter[input.tensor]
         self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_reciprocal_op
@@ -338,12 +333,9 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     @visit.on_type(TensorSizeOp)
     def visit(self, op, input):
         # TODO - is treating TensorSizeOp as constants, okay?
-        constant_tensor = Utils.make_tensor([])
-        item_size = op.tensor.dtype.itemsize
-        element_size = 1 * item_size
-        constant_tensor.write(Util.numpy_to_c(
-            np.array([op.reduction_axes.size], dtype=np.float32)), 0, element_size)
-        constant_op = ParameterizedConstant.ParameterizedConstantF(
+        # Construct constant list with number of elements = reduction axes size
+        constant_tensor = [0.0 for x in range(op.reduction_axes.size)]
+        constant_op = Constant.Constant(Type.f32,
             [], constant_tensor)
         self.transformer.ngraph_cpp_op_prameter[op.tensor] = constant_op
 
