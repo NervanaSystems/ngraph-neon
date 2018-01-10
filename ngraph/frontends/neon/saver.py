@@ -16,8 +16,36 @@
 # ******************************************************************************
 from __future__ import division, print_function, absolute_import
 
+import collections
+from operator import itemgetter
 import ngraph as ng
 from ngraph.frontends.neon.saverfile import SaverFile
+
+
+def get_root_ops(computation):
+    """
+    Get list of root Ops from a forest of computation graph
+
+    Arguments:
+        computation : All outputs of computation (An Op, list of Ops or dictionary of Ops)
+    Returns:
+        List of root Ops
+    """
+    # Handle arg to neon.make_bound_computation()
+    if isinstance(computation, dict):
+        computation_keys = tuple(sorted(computation.keys()))
+        outputs = itemgetter(*computation_keys)(computation)
+        outputs = [outputs] if len(computation_keys) == 1 else list(outputs)
+        values = type(outputs)(ng.as_op(output) for output in outputs)
+    # Handle arg to transformer.add_computation()
+    elif isinstance(computation, ng.ComputationOp):
+        values = computation.values
+    # Handle arg to transformer.compuation()
+    elif isinstance(computation, collections.Iterable):
+        values = [*computation]
+    else:
+        raise ValueError()
+    return values
 
 
 class Saver(object):
@@ -66,7 +94,8 @@ class Saver(object):
 
         Arguments:
             transformer : transformer where the weights are stored
-            computation (ComputationOp): A ComputationOp of interest.
+            computation (ComputationOp or dict of Ops):
+                          A ComputationOp or dictionary of output Ops of interest.
         """
         # collect and return a set of all AssignableTensorOp's
         def find_ops(values):
@@ -108,7 +137,7 @@ class Saver(object):
                         frontier.add(arg)
             return nodes
         # Traverse computation graph and extract persistent tensors and unique op instance name
-        save_variables = find_ops(computation.values)
+        save_variables = find_ops(get_root_ops(computation))
         self.getter_op_names, ops = zip(*save_variables.items())
         self.getter = transformer.computation(ops)
 
@@ -121,9 +150,9 @@ class Saver(object):
             compress: specify whether to compress the weights
             transformer : transformer where the weights are stored
                           required only if setup_save is not called
-            computation (ComputationOp): A ComputationOp of interest.
-                                         required only if setup_save
-                                         is not called
+            computation (ComputationOp or dict of Ops):
+                          A ComputationOp or dictionary of output Ops of interest.
+                          required only if setup_save is not called
         """
         if self.getter is None:
             self.setup_save(transformer=transformer,
@@ -142,7 +171,8 @@ class Saver(object):
 
         Arguments:
             transformer : transformer where the weights will be restored
-            computation (ComputationOp): A ComputationOp of interest.
+            computation (ComputationOp or dict of Ops):
+                          A ComputationOp or dictionary of output Ops of interest.
             filename: name of file with saved weights
         """
         def match_ops(tensors, values):
@@ -184,7 +214,7 @@ class Saver(object):
         # load weight from file to tensors
         savefile = SaverFile(filename)
         tensors = savefile.read_values()
-        nodes = match_ops(tensors, computation.values)
+        nodes = match_ops(tensors, get_root_ops(computation))
         restore_ops = []
         for op_to_save, op_value in nodes.items():
             restore_ops.append(ng.AssignOp(op_to_save, op_value))
@@ -196,9 +226,9 @@ class Saver(object):
         Arguments:
             transformer : transformer where the weights will be restored
                           required only if setup_restore is not called
-            computation (ComputationOp): A ComputationOp of interest.
-                                         required only if setup_restore
-                                         is not called
+            computation (ComputationOp or dict of Ops):
+                          A ComputationOp or dictionary of output Ops of interest.
+                          required only if setup_restore is not called
             filename: name of file with saved weights
                       required only if setup_restore is not called
         """
