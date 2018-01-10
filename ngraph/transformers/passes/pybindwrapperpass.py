@@ -334,7 +334,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     def visit(self, op, input):
         # TODO - is treating TensorSizeOp as constants, okay?
         # Construct constant list with number of elements = reduction axes size
-        constant_tensor = [0.0 for x in range(op.reduction_axes.size)]
+        constant_tensor = [op.reduction_axes.size]
         constant_op = Constant.Constant(Type.f32,
             [], constant_tensor)
         self.transformer.ngraph_cpp_op_prameter[op.tensor] = constant_op

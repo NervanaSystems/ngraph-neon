@@ -127,7 +127,7 @@ class PybindComputation(Computation):
 
         # TODO - what's the role of the string argument? for now just passing 'test'
         self.function = Function.Function(
-            [self.transformer.ngraph_cpp_op_prameter[results]],
+            result_nodes_list,
             self.parameter_list,
             'test')
 

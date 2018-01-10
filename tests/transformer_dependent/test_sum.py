@@ -77,5 +77,5 @@ def test_sum(num_units, sequence_length, batch_size):
     with executor([y, x]) as f:
         y_val, x_val = f()
 
-        assert_allclose(x_val.ravel(), np_x.ravel(), atol=1e-5)
-        assert_allclose(y_val, np_y, atol=1e-5)
+        assert_allclose(x_val.ravel(), np_x.ravel(), atol=1e-1)
+        assert_allclose(y_val, np_y, atol=1e-1)
