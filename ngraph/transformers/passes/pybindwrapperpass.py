@@ -17,7 +17,7 @@ from ngraph.util.generics import generic_method
 from ngraph.op_graph.op_graph import Op, Add, Multiply, BroadcastOp, TensorValueOp, \
     DotOp, LogOp, ExpOp, Sum, Greater, Maximum, ReductionOp, AssignableTensorOp, ReorderAxes, \
     OneHotOp, Divide, Subtract, NegativeOp, ReciprocalOp, TensorSizeOp, MapRolesOp, Minimum, \
-    Less
+    Less, Max
 
 from pyngraph import Type
 from pyngraph.op import Parameter
@@ -35,6 +35,8 @@ from pyngraph.op import Reshape as PyngReshape
 from pyngraph.op import OneHot as PyngOneHot
 from pyngraph.op import Negative as PyngNegative
 from pyngraph.op import Convert as PyngConvert
+from pyngraph.op import Reduce as PyngReduce
+from pyngraph import Function as Function
 
 
 class PybindWrapperGenerator(PeepholeGraphPass):
@@ -208,10 +210,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         if (len(input1.axes.names) != 0 and len(input2.axes.names) != 0) \
                 and (input1.axes.names[-1] != input2.axes.names[0]):
 
-            input1_reshape_axes = list(
-                (set(input1.axes.names) ^ set(reduction_axes))) + list(reduction_axes)
-            input2_reshape_axes = list(reduction_axes) + \
-                list(set(input2.axes.names) - set(reduction_axes))
+            input1_reshape_axes = list((op.x_out_axes + op.reduction_axes).names)
+            input2_reshape_axes = list((op.reduction_axes + op.y_out_axes).names)
             input1_axes_order = self.get_axes_order_from_axes_name(
                 input1.axes.names, input1_reshape_axes)
             input1_reorder_op = PyngReshape(
@@ -351,3 +351,26 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         # TODO - made it as workaround, need to check if this acceptable ?
         self.transformer.ngraph_cpp_op_prameter[op.tensor] = \
             self.transformer.ngraph_cpp_op_prameter[op.args[0].tensor]
+
+    @visit.on_type(Max)
+    def visit(self, op, input):
+
+        # Define the reduction function handle
+        element_type = Type.f32
+        shape = []
+        f_a = Parameter(element_type, shape)
+        f_b = Parameter(element_type, shape)
+        ngraph_cpp_min_op = PyngMaximum(f_a, f_b)
+        fn = Function([ngraph_cpp_min_op], [f_a, f_b], "ReductionOp")
+
+        # define the reduction op with the above defined Function handle
+        if isinstance(self.np_reduction_axis(op), tuple):
+            axis_set = self.np_reduction_axis(op)
+        else:
+            axis_set = tuple()
+            axis_set += (self.np_reduction_axis(op),)
+        g_a = self.transformer.ngraph_cpp_op_prameter[input.tensor]
+        const_max_defult_value = [float('-inf')]
+        g_b = Constant(Type.f32, [], const_max_defult_value)
+        self.transformer.ngraph_cpp_op_prameter[op.tensor] = \
+            PyngReduce(g_a, g_b, fn, set(axis_set))
