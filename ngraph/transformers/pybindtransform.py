@@ -12,38 +12,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ----------------------------------------------------------------------------
-from ngraph.transformers.base import Computation
-from ngraph.transformers.base import ComputationGraphTransformer
-from ngraph.transformers.base import make_transformer_factory, set_transformer_factory
-from ngraph.op_graph.op_graph import Op, computation
-from orderedset import OrderedSet
-from ngraph.transformers.passes.pybindwrapperpass import PybindWrapperGenerator
-# workaround to load the libngraph.so with RTLD_GLOBAL
-import os
 import sys
-sys.setdlopenflags(os.RTLD_NOW | os.RTLD_GLOBAL)
 import collections
 import numpy as np
-import nwrapper.ngraph.Util as Util
-import nwrapper.ngraph.types.Type as Type
-import nwrapper.ngraph.types.TensorViewType as TensorViewType
-import nwrapper.ngraph.Function as Function
-import nwrapper.ngraph.runtime.Manager as Manager
+import six
+from ngraph.transformers.base import Computation
+from ngraph.transformers.base import ComputationGraphTransformer
+from ngraph.op_graph.op_graph import Op, computation
+from orderedset import OrderedSet
+# workaround to load the libngraph.so with RTLD_GLOBAL
+if six.PY3:
+    import os
+    flags = os.RTLD_NOW | os.RTLD_GLOBAL
+else:
+    import dl
+    flags = dl.RTLD_NOW | dl.RTLD_GLOBAL
+sys.setdlopenflags(flags)
+from ngraph.transformers.passes.pybindwrapperpass \
+    import PybindWrapperGenerator  # noqa: E402
+import pyngraph.util as util  # noqa: E402
+from pyngraph import Type, Function  # noqa: E402
+from pyngraph.runtime import Manager  # noqa: E402
 
 
 class PybindComputation(Computation):
 
-    def __init__(self, transformer, computation_op, results, *parameters, **kwargs):
+    def __init__(self, transformer, computation_op, **kwargs):
         super(PybindComputation, self).__init__(transformer, computation_op, **kwargs)
         self.transformer = transformer
         self.computation_op = computation_op
         self.parameter_list = []
-        #self.param_primary_tensor_view_list = []
+        # self.param_primary_tensor_view_list = []
         self.result_primary_tensor_view_list = []
         self.ngraph_op_result_list = []
         self.return_result_list = dict()
 
-        self.initialize_cpp_backend(results, *parameters)
+        self.initialize_cpp_backend(self.computation_op.returns, *self.computation_op.parameters)
 
     def __call__(self, *args, **kwargs):
         """
@@ -65,7 +69,7 @@ class PybindComputation(Computation):
             shape = list(result_op.axes.lengths)
             # TODO - need to define dtype of numpy array's for results based on result.dtype
             result_arr = np.empty(shape, dtype=np.float32)
-            result.write(Util.numpy_to_c(result_arr), 0, int(element_size))
+            result.write(util.numpy_to_c(result_arr), 0, int(element_size))
             self.return_result_list[result_op] = result_arr
 
         self.cf.call(param_primary_tensor_view_list, self.result_primary_tensor_view_list)
@@ -74,7 +78,7 @@ class PybindComputation(Computation):
         for index, result in enumerate(self.result_primary_tensor_view_list):
             result_op = self.ngraph_op_result_list[index]
             element_size = self.get_element_size(result_op)
-            result.read(Util.numpy_to_c(self.return_result_list[result_op]), 0, int(element_size))
+            result.read(util.numpy_to_c(self.return_result_list[result_op]), 0, int(element_size))
 
         # determine whether the value to be retruned is a list, dict or an op.
         if isinstance(self.computation_op.returns, Op):
@@ -97,56 +101,49 @@ class PybindComputation(Computation):
         """
         # define the result type
 
-        # TODO define element type based on result.dtype instead of deafulting to flaot32
+        # TODO define element type based on result.dtype instead of defaulting to f32
         self.result_element_type = Type.f32
         result_nodes_list = []
-        result_value_type_list = []
         result_node_to_shape = dict()
 
         if isinstance(self.computation_op.returns, Op):
-            self.ngraph_op_result_list.append(results.tensor)
-            result_node_to_shape[results.tensor] = list(results.axes.lengths)
-            result_value_type_list.append(
-                TensorViewType.TensorViewType(
-                    self.result_element_type,
-                    result_node_to_shape[results.tensor]))
-            result_nodes_list.append(self.transformer.ngraph_cpp_op_prameter[results.tensor])
+            self.ngraph_op_result_list.append(results)
+            result_node_to_shape[results] = list(results.axes.lengths)
+
+            result_nodes_list.append(self.transformer.ngraph_cpp_op_prameter[results])
         else:
             for node in results:
-                self.ngraph_op_result_list.append(node.tensor)
-                result_node_to_shape[node.tensor] = list(node.axes.lengths)
-                result_value_type_list.append(
-                    TensorViewType.TensorViewType(
-                        self.result_element_type,
-                        result_node_to_shape[node.tensor]))
-                result_nodes_list.append(self.transformer.ngraph_cpp_op_prameter[node.tensor])
+                self.ngraph_op_result_list.append(node)
+                result_node_to_shape[node] = list(node.axes.lengths)
+
+                result_nodes_list.append(self.transformer.ngraph_cpp_op_prameter[node])
 
         # use the ngraph_cpp_op dict to built the parameter list for c++ backend
         for place_holders in parameters:
-            self.parameter_list.append(self.transformer.ngraph_cpp_op_prameter[place_holders.tensor])
+            self.parameter_list.append(
+                self.transformer.ngraph_cpp_op_prameter[place_holders.tensor])
 
         # TODO - what's the role of the string argument? for now just passing 'test'
-        self.function = Function.Function(
+        self.function = Function(
             result_nodes_list,
             self.parameter_list,
             'test')
 
-        self.manager = Manager.Manager.get(self.transformer.ngraph_backend)
+        self.manager = Manager.get(self.transformer.ngraph_backend)
         self.external = self.manager.compile(self.function)
         self.backend = self.manager.allocate_backend()
         self.cf = self.backend.make_call_frame(self.external)
-
         # create the primary_tensor_view for result's using the ngraph++ initilized backend
         if isinstance(self.computation_op.returns, Op):
             self.result_primary_tensor_view_list.append(
                 self.backend.make_primary_tensor_view(
                     self.result_element_type,
-                    result_node_to_shape[results.tensor]))
+                    result_node_to_shape[results]))
         elif isinstance(self.computation_op.returns, (collections.Sequence, OrderedSet)):
             for node in results:
                 self.result_primary_tensor_view_list.append(
                     self.backend.make_primary_tensor_view(
-                        self.result_element_type, result_node_to_shape[node.tensor]))
+                        self.result_element_type, result_node_to_shape[node]))
 
     def get_ngraph_cpp_param_list(self, param_primary_tensor_view_list, *args):
         """
@@ -168,7 +165,7 @@ class PybindComputation(Computation):
         for index, op in enumerate(self.computation_op.parameters):
             element_size = self.get_element_size(op)
             # TODO - need to define dtype of numpy array's for *params based on op.dtype
-            param_primary_tensor_view_list[index].write(Util.numpy_to_c(
+            param_primary_tensor_view_list[index].write(util.numpy_to_c(
                 np.array(args[index], dtype=np.float32)), 0, int(element_size))
 
     def get_element_size(self, op):
@@ -188,24 +185,25 @@ class PybindTransformer(ComputationGraphTransformer):
     Transformer for executing graphs to call the pybind wrapper of the ngraph c++.
 
     """
+    """
     transformer_name = "pybind_translator"
+    """
 
     def __init__(self, **kwargs):
+        """
         if "backend" in kwargs:
             self.ngraph_backend = kwargs.pop("backend")
         else:
             raise AssertionError("No backend info found, please provide the backend info \
             while creating the transformer_factory()")
+        """
         super(PybindTransformer, self).__init__(**kwargs)
         self.graph_passes = []
         self.graph_passes += [PybindWrapperGenerator(self)]
         self.computation_op_list = []
         self.ngraph_cpp_op_prameter = dict()
 
-    def computation(self, results, *parameters):
-        return self.add_computation(computation(results, *parameters), results, *parameters)
-
-    def add_computation(self, computation, results, *parameters):
+    def add_computation(self, computation):
         """
         Initilize ngraph++ backend and call's make_computation to generate PybindComputation Obj
 
@@ -220,16 +218,16 @@ class PybindTransformer(ComputationGraphTransformer):
         elif isinstance(computation.returns, Op):
             self.computation_op_list.update(list([computation.returns]))
         self.run_registered_graph_passes(self.computation_op_list)
-        return self.make_computation(computation, results, *parameters)
+        return self.make_computation(computation)
 
-    def make_computation(self, computation, results, *parameters):
+    def make_computation(self, computation):
         """
         creates PybindComputation object
 
         :param computation:
         :return: instance of PybindComputation()
         """
-        pybind_comp = PybindComputation(self, computation, results, *parameters)
+        pybind_comp = PybindComputation(self, computation)
         return pybind_comp
 
     def initialize(self):
@@ -263,5 +261,25 @@ class PybindTransformer(ComputationGraphTransformer):
         pass
 
 
-set_transformer_factory(
-    make_transformer_factory(PybindTransformer.transformer_name))
+class PybindCPUTransformer(PybindTransformer):
+    """
+    Transformer for ngraph c++ with cpu backend.
+
+    """
+    transformer_name = "ngcpu"
+
+    def __init__(self, **kwargs):
+        self.ngraph_backend = "CPU"
+        super(PybindCPUTransformer, self).__init__(**kwargs)
+
+
+class PybindINTERPRETERTransformer(PybindTransformer):
+    """
+    Transformer for ngraph c++ with interpreter backend.
+
+    """
+    transformer_name = "nginterp"
+
+    def __init__(self, **kwargs):
+        self.ngraph_backend = "INTERPRETER"
+        super(PybindINTERPRETERTransformer, self).__init__(**kwargs)

@@ -43,7 +43,7 @@ def pytest_generate_tests(metafunc):
 @pytest.fixture(scope="module", autouse=True)
 def transformer_factory(request):
     def set_and_get_factory(transformer_name):
-        factory = ngt.make_transformer_factory(transformer_name, backend="INTERPRETER")
+        factory = ngt.make_transformer_factory(transformer_name)
         ngt.set_transformer_factory(factory)
         return factory
 
@@ -101,6 +101,7 @@ def pytest_configure(config):
     config.flex_skip = pytest.mark.skipif(config.getvalue("transformer") == "flexgpu",
                                           reason="Randomly failing test for Flex")
     config.argon_skip = pytest.mark.skipif(config.getvalue("transformer") == "argon")
+    config.ngcpu_skip = pytest.mark.skipif(config.getvalue("transformer") == "ngcpu")
     config.flex_skip_now = pytest.skip if config.getvalue("transformer") == "flexgpu" \
         else pass_method
     config.argon_skip_now = pytest.skip if config.getvalue("transformer") == "argon" \

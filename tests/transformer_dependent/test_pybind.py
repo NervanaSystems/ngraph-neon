@@ -12,11 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # ----------------------------------------------------------------------------
-
-from contextlib import closing
-import ngraph as ng
-import ngraph.transformers as ngt
 import numpy as np
+import pytest
+
+import ngraph as ng
+from ngraph.testing import ExecutorFactory, executor
 
 
 def test_add_with_scalar():
@@ -26,21 +26,14 @@ def test_add_with_scalar():
     a = ng.placeholder(axes=[H, W])
 
     d = ng.add(a, -5)
-    available_transformer = ngt.transformer_choices()
+    with executor(d, a) as _add:
+        d_val = _add([10, 20, 30, 40])
 
-    if "pybind_translator" in available_transformer:
-        with closing(ngt.make_transformer_factory('pybind_translator',
-                                                  backend="INTERPRETER")()) as pybind_exec:
-            # Define a computation
-            _add = pybind_exec.computation(d, a)
-            d_val = _add([10, 20, 30, 40])
+        # compute reference through numpy
+        d_val_ref = np.add(np.array([10, 20, 30, 40], dtype=np.float32).reshape(1, 4),
+                           np.array([-5], dtype=np.float32))
 
-            # compute reference through numpy
-            d_val_ref = np.add(np.array([10, 20, 30, 40], dtype=np.float32).reshape(1, 4),
-                               np.array([-5], dtype=np.float32))
-            assert np.allclose(d_val[0], d_val_ref)
-    else:
-        raise AssertionError("Unable to initialize pybind_translator transformer")
+    assert np.allclose(d_val[0], d_val_ref)
 
 
 def test_add_with_mul():
@@ -52,22 +45,14 @@ def test_add_with_mul():
     c = ng.placeholder(axes=[H, W])
     d = ng.multiply(ng.add(a, b), c)
 
-    available_transformer = ngt.transformer_choices()
+    with executor(d, a, b, c) as _mul:
+        d_val = _mul([10], [20], [10])
 
-    if "pybind_translator" in available_transformer:
-        with closing(ngt.make_transformer_factory('pybind_translator',
-                                                  backend="INTERPRETER")()) as pybind_exec:
-            # Define a computation
-            _mul = pybind_exec.computation(d, a, b, c)
-            d_val = _mul([10], [20], [10])
-
-            # compute reference through numpy
-            _add_ref = np.add(np.full([1, 1], 10, dtype=np.float32),
-                              np.full([1, 1], 20, dtype=np.float32))
-            d_val_ref = np.multiply(_add_ref, np.full([1, 1], 10, dtype=np.float32))
-            assert np.allclose(d_val, d_val_ref)
-    else:
-        raise AssertionError("Unable to initialize pybind_translator transformer")
+        # compute reference through numpy
+        _add_ref = np.add(np.full([1, 1], 10, dtype=np.float32),
+                          np.full([1, 1], 20, dtype=np.float32))
+        d_val_ref = np.multiply(_add_ref, np.full([1, 1], 10, dtype=np.float32))
+        assert np.allclose(d_val, d_val_ref)
 
 
 def test_multiple_computation():
@@ -79,52 +64,39 @@ def test_multiple_computation():
     _mul = ng.multiply(a, b)
     _add = ng.add(a, b)
 
-    available_transformer = ngt.transformer_choices()
+    with ExecutorFactory() as ex:
+        # Define computations
+        _mul_computation = ex.executor(_mul, a, b)
+        _mul_val = _mul_computation([10], [20])
+        _add_computation = ex.executor(_add, a, b)
+        _add_val = _add_computation([10], [20])
 
-    if "pybind_translator" in available_transformer:
-        with closing(ngt.make_transformer_factory('pybind_translator',
-                                                  backend="INTERPRETER")()) as pybind_exec:
-            # Define a computation
-            _mul_computation = pybind_exec.computation(_mul, a, b)
-            _mul_val = _mul_computation([10], [-20])
-            _add_computation = pybind_exec.computation(_add, a, b)
-            _add_val = _add_computation([10], [-20])
+        # compute reference value
+        _mul_ref = np.multiply(np.full([1, 1], 10, dtype=np.float32),
+                               np.full([1, 1], 20, dtype=np.float32))
+        _add_ref = np.add(np.full([1, 1], 10, dtype=np.float32),
+                          np.full([1, 1], 20, dtype=np.float32))
 
-            # compute reference vlue
-            _mul_ref = np.multiply(np.full([1, 1], 10, dtype=np.float32),
-                                   np.full([1, 1], -20, dtype=np.float32))
-            _add_ref = np.add(np.full([1, 1], 10, dtype=np.float32),
-                              np.full([1, 1], -20, dtype=np.float32))
-
-            assert np.allclose(_add_val, _add_ref)
-            assert np.allclose(_mul_val, _mul_ref)
-    else:
-        raise AssertionError("Unable to initialize pybind_translator transformer")
+        assert np.allclose(_add_val, _add_ref)
+        assert np.allclose(_mul_val, _mul_ref)
 
 
-def test_Add_with_muliple_axis():
+def test_add_with_muliple_axis():
     H = ng.make_axis(length=1, name='height')
     W = ng.make_axis(length=4, name='width')
     a = ng.placeholder(axes=[H, W])
     b = ng.placeholder(axes=[H, W])
 
     d = ng.add(a, b)
-    available_transformer = ngt.transformer_choices()
 
-    if "pybind_translator" in available_transformer:
-        with closing(ngt.make_transformer_factory('pybind_translator',
-                                                  backend="INTERPRETER")()) as pybind_exec:
-            # Define a computation
-            _add = pybind_exec.computation(d, a, b)
-            d_val = _add([10, 20, 30, 40], [11, 12, 13, 14])
+    with executor(d, a, b) as _add:
+        d_val = _add([10, 20, 30, 40], [11, 12, 13, 14])
 
-            # compute reference through numpy
-            d_val_ref = np.add(np.array([10, 20, 30, 40], dtype=np.float32).reshape(1, 4),
-                               np.array([11, 12, 13, 14], dtype=np.float32).reshape(1, 4))
+        # compute reference through numpy
+        d_val_ref = np.add(np.array([10, 20, 30, 40], dtype=np.float32).reshape(1, 4),
+                           np.array([11, 12, 13, 14], dtype=np.float32).reshape(1, 4))
 
-            assert np.allclose(d_val, d_val_ref)
-    else:
-        raise AssertionError("Unable to initialize pybind_translator transformer")
+        assert np.allclose(d_val, d_val_ref)
 
 
 def test_broadcast():
@@ -137,18 +109,10 @@ def test_broadcast():
     a = ng.constant(np_a, [M, N])
     c = ng.add(a, 2)
 
-    available_transformer = ngt.transformer_choices()
+    with executor(c) as _add:
+        result = _add()
 
-    if "pybind_translator" in available_transformer:
-        with closing(ngt.make_transformer_factory('pybind_translator',
-                                                  backend="INTERPRETER")()) as pybind_exec:
-            # Define a computation
-            _add = pybind_exec.computation(c)
-            result = _add()
-
-            assert np.allclose(result, np_c)
-    else:
-        raise AssertionError("Unable to initialize pybind_translator transformer")
+        assert np.allclose(result, np_c)
 
 
 def test_dot():
@@ -161,21 +125,15 @@ def test_dot():
     b = ng.constant(np_b, [])
     c = ng.dot(a, b)
 
-    available_transformer = ngt.transformer_choices()
-    if "pybind_translator" in available_transformer:
-        with closing(ngt.make_transformer_factory('pybind_translator',
-                                                  backend="INTERPRETER")()) as pybind_exec:
-            _dot = pybind_exec.computation(c)
-            _dot_val = _dot()
+    with executor(c) as _dot:
+        _dot_val = _dot()
 
-            # compute reference
-            _dot_val_ref = np.dot(np_a, np_b)
+        # compute reference
+        _dot_val_ref = np.dot(np_a, np_b)
 
-            # this checks the dot product between scalar and vector, this is equivalent to
-            # elementwise multiplication between scalar and vector
-            assert np.allclose(_dot_val, _dot_val_ref)
-    else:
-        raise AssertionError("Unable to initialize pybind_translator transformer")
+        # this checks the dot product between scalar and vector, this is equivalent to
+        # elementwise multiplication between scalar and vector
+        assert np.allclose(_dot_val, _dot_val_ref)
 
 
 def test_sum():
@@ -193,20 +151,18 @@ def test_sum():
 
     # sum elements across all the axis
     sum_op_2 = ng.sum(input2)
-    available_transformer = ngt.transformer_choices()
-    if "pybind_translator" in available_transformer:
-        with closing(ngt.make_transformer_factory('pybind_translator',
-                                                  backend="INTERPRETER")()) as pybind_exec:
-            _sum = pybind_exec.computation(sum_op_1, input1)
-            _sum_val = _sum([[1, 2], [3, 4]])
-            assert np.array_equal(_sum_val, [4, 6])
 
-            _sum = pybind_exec.computation(sum_op_2, input2)
-            _sum_val = _sum([1, 2, 3, 4])
-            assert np.array_equal(_sum_val, 10)
-    else:
-        raise AssertionError("Unable to initialize pybind_translator transformer")
+    with ExecutorFactory() as ex:
+        _sum = ex.executor(sum_op_1, input1)
+        _sum_val = _sum([[1, 2], [3, 4]])
+        assert np.array_equal(_sum_val, [4, 6])
 
+        _sum = ex.executor(sum_op_2, input2)
+        _sum_val = _sum([1, 2, 3, 4])
+        assert np.array_equal(_sum_val, 10)
+
+
+@pytest.config.ngcpu_skip(reason="Higher rank reshape is not supported yet.")
 def test_tensor_dot_tensor():
     """TODO."""
     C = ng.make_axis().named('C')
@@ -274,19 +230,13 @@ def test_tensor_dot_tensor():
         # compute outputs
         expected_output = np.array(test['expected_output'], dtype=np.float32)
 
-        available_transformer = ngt.transformer_choices()
+        dot = ng.dot(tensor1, tensor2)
 
-        if "pybind_translator" in available_transformer:
-            with closing(ngt.make_transformer_factory('pybind_translator',
-                                                      backend="INTERPRETER")()) as ex:
-                dot = ng.dot(tensor1, tensor2)
+        with executor(dot, tensor1, tensor2) as evaluated_fun:
+            # assert outputs are equal
+            evaluated = evaluated_fun(value1, value2)
+            np.testing.assert_equal(evaluated, expected_output)
 
-                evaluated_fun = ex.computation(dot, tensor1, tensor2)
-                # assert outputs are equal
-                evaluated = evaluated_fun(value1, value2)
-                np.testing.assert_equal(evaluated, expected_output)
-        else:
-            raise AssertionError("Unable to initialize pybind_translator transformer")
 
 def test_binary_op():
     H = ng.make_axis().named('H')
@@ -314,27 +264,22 @@ def test_binary_op():
             test['tensor2'], dtype=np.float32
         )
 
-        available_transformer = ngt.transformer_choices()
-        if "pybind_translator" in available_transformer:
-            with closing(ngt.make_transformer_factory('pybind_translator',
-                                                      backend="INTERPRETER")()) as pybind_exec:
-                _maximum = ng.Maximum(tensor1, tensor2)
-                _greater = ng.Greater(tensor1, tensor2)
+        _maximum = ng.Maximum(tensor1, tensor2)
+        _greater = ng.Greater(tensor1, tensor2)
+        with ExecutorFactory() as ex:
 
-                _max_computation = pybind_exec.computation(_maximum, tensor1, tensor2)
-                _max_val = _max_computation(value1, value2)
-                # TODO- check why greater is failing?
-                _greater_computation = pybind_exec.computation(_greater, tensor1, tensor2)
-                _greater_val = _greater_computation(value1, value2)
+            _max_computation = ex.executor(_maximum, tensor1, tensor2)
+            _max_val = _max_computation(value1, value2)
+            _greater_computation = ex.executor(_greater, tensor1, tensor2)
+            _greater_val = _greater_computation(value1, value2)
 
-                # compute ref output
-                _max_ref = np.maximum(value1, value2)
-                _greater_ref = np.greater(value1, value2)
+            # compute ref output
+            _max_ref = np.maximum(value1, value2)
+            _greater_ref = np.greater(value1, value2)
 
-                np.testing.assert_equal(_max_val, _max_ref)
-                np.testing.assert_equal(_greater_val, _greater_ref)
-        else:
-            raise AssertionError("Unable to initialize pybind_translator transformer")
+            np.testing.assert_equal(_max_val, _max_ref)
+            np.testing.assert_equal(_greater_val, _greater_ref)
+
 
 def test_unary_op():
     H = ng.make_axis().named('H')
@@ -355,23 +300,20 @@ def test_unary_op():
         tensor1 = ng.placeholder(test['tensor1_axes'])
         value1 = np.array(test['tensor1'], dtype=np.float32)
 
-        available_transformer = ngt.transformer_choices()
-        if "pybind_translator" in available_transformer:
-            with closing(ngt.make_transformer_factory('pybind_translator',
-                                                      backend="INTERPRETER")()) as pybind_exec:
-                _exp = ng.exp(tensor1)
-                _exp_computation = pybind_exec.computation(_exp, tensor1)
-                _exp_val = _exp_computation(value1)
+        _exp = ng.exp(tensor1)
 
-                _log = ng.log(tensor1)
-                _log_computation = pybind_exec.computation(_log, tensor1)
-                _log_val = _log_computation(value1)
+        _log = ng.log(tensor1)
 
-                # compute ref values
-                _log_ref = np.log(value1)
-                _exp_ref = np.exp(value1)
+        with ExecutorFactory() as ex:
+            _exp_computation = ex.executor(_exp, tensor1)
+            _exp_val = _exp_computation(value1)
 
-                np.testing.assert_equal(_log_val, _log_ref)
-                np.testing.assert_equal(_exp_val, _exp_ref)
-        else:
-            raise AssertionError("Unable to initialize pybind_translator transformer")
+            _log_computation = ex.executor(_log, tensor1)
+            _log_val = _log_computation(value1)
+
+            # compute ref values
+            _log_ref = np.log(value1)
+            _exp_ref = np.exp(value1)
+
+            np.testing.assert_equal(_log_val, _log_ref)
+            np.testing.assert_equal(_exp_val, _exp_ref)
