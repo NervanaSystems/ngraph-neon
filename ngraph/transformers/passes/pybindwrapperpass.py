@@ -17,7 +17,7 @@ from ngraph.util.generics import generic_method
 from ngraph.op_graph.op_graph import Op, Add, Multiply, BroadcastOp, TensorValueOp, \
     DotOp, LogOp, ExpOp, Sum, Greater, Maximum, ReductionOp, AssignableTensorOp, ReorderAxes, \
     OneHotOp, Divide, Subtract, NegativeOp, ReciprocalOp, TensorSizeOp, MapRolesOp, Minimum, \
-    Less, Max
+    Less, Max, SequentialOp, AssignOp
 
 from pyngraph import Type
 from pyngraph.op import Parameter
@@ -332,7 +332,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(ReciprocalOp)
     def visit(self, op, input):
-        constant_op = Constant(Type.f32, [], [1])
+        input_axes = list(input.axes.lengths)
+        constant_op = Constant(Type.f32, input_axes, [1])
         ngraph_cpp_reciprocal_op = constant_op \
             / self.transformer.ngraph_cpp_op_prameter[input.tensor]
         self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_reciprocal_op
@@ -374,3 +375,11 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         g_b = Constant(Type.f32, [], const_max_defult_value)
         self.transformer.ngraph_cpp_op_prameter[op.tensor] = \
             PyngReduce(g_a, g_b, fn, set(axis_set))
+
+    @visit.on_type(SequentialOp)
+    def visit(self, op, ops):
+        raise RuntimeError("Unsupported Op")
+
+    @visit.on_type(AssignOp)
+    def visit(self, op, lhs, rhs):
+        raise RuntimeError("Unsupported Op")
