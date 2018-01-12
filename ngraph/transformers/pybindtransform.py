@@ -18,7 +18,7 @@ import numpy as np
 import six
 from ngraph.transformers.base import Computation
 from ngraph.transformers.base import ComputationGraphTransformer
-from ngraph.op_graph.op_graph import Op, computation
+from ngraph.op_graph.op_graph import Op
 from orderedset import OrderedSet
 # workaround to load the libngraph.so with RTLD_GLOBAL
 if six.PY3:
@@ -28,6 +28,8 @@ else:
     import dl
     flags = dl.RTLD_NOW | dl.RTLD_GLOBAL
 sys.setdlopenflags(flags)
+from ngraph.transformers.passes.pybindwrapperpass \
+    import PybindPregenPass  # noqa: E402
 from ngraph.transformers.passes.pybindwrapperpass \
     import PybindWrapperGenerator  # noqa: E402
 import pyngraph.util as util  # noqa: E402
@@ -199,6 +201,7 @@ class PybindTransformer(ComputationGraphTransformer):
         """
         super(PybindTransformer, self).__init__(**kwargs)
         self.graph_passes = []
+        self.graph_passes += [PybindPregenPass(self)]
         self.graph_passes += [PybindWrapperGenerator(self)]
         self.computation_op_list = []
         self.ngraph_cpp_op_prameter = dict()

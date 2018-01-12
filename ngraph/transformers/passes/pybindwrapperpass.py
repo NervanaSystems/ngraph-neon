@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ----------------------------------------------------------------------------
-from ngraph.transformers.passes.passes import PeepholeGraphPass
+from ngraph.transformers.passes.passes import GraphRewritePass, PeepholeGraphPass
 from ngraph.util.generics import generic_method
 from ngraph.op_graph.op_graph import Op, Add, Multiply, BroadcastOp, TensorValueOp, \
     DotOp, LogOp, ExpOp, Sum, Greater, Maximum, ReductionOp, AssignableTensorOp, ReorderAxes, \
@@ -37,6 +37,19 @@ from pyngraph.op import Negative as PyngNegative
 from pyngraph.op import Convert as PyngConvert
 from pyngraph.op import Reduce as PyngReduce
 from pyngraph import Function as Function
+
+
+class PybindPregenPass(GraphRewritePass):
+    """
+    Graph pass to rewrite graph to handle AssignOp and SequentionOp
+
+    Arguments
+        transformer (obj:`Transformer`): The associated transformer.
+    """
+
+    def __init__(self, tranformer, **kwargs):
+        super(PybindPregenPass, self).__init__(**kwargs)
+        self.transformer = tranformer
 
 
 class PybindWrapperGenerator(PeepholeGraphPass):
@@ -382,4 +395,5 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(AssignOp)
     def visit(self, op, lhs, rhs):
+        # record all AssignOp's
         raise RuntimeError("Unsupported Op")
