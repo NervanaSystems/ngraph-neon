@@ -29,7 +29,7 @@ PYBIND11_MODULE(Parameter, mod) {
     py::class_<op::Parameter, std::shared_ptr<op::Parameter>, Node> parameter(mod, "Parameter");
 
     parameter.def(py::init<const ngraph::element::Type&, const ngraph::Shape& >());
-    parameter.def("description", &op::Parameter::description);
+    parameter.def_property_readonly("description", &op::Parameter::description);
 }
 
 }  // ngraph
