@@ -17,7 +17,7 @@ from ngraph.util.generics import generic_method
 from ngraph.op_graph.op_graph import Op, Add, Multiply, BroadcastOp, TensorValueOp, \
     DotOp, LogOp, ExpOp, Sum, Greater, Maximum, ReductionOp, AssignableTensorOp, ReorderAxes, \
     OneHotOp, Divide, Subtract, NegativeOp, ReciprocalOp, TensorSizeOp, MapRolesOp, Minimum, \
-    Less, Max, SequentialOp, AssignOp
+    Less, Max, SequentialOp, AssignOp, ParallelOp
 
 from pyngraph import Type
 from pyngraph.op import Parameter
@@ -41,7 +41,7 @@ from pyngraph import Function as Function
 
 class PybindPregenPass(GraphRewritePass):
     """
-    Graph pass to rewrite graph to handle AssignOp and SequentionOp
+    Graph pass to rewrite graph to handle control_dep, AssignOp and SequentionOp
 
     Arguments
         transformer (obj:`Transformer`): The associated transformer.
@@ -50,6 +50,38 @@ class PybindPregenPass(GraphRewritePass):
     def __init__(self, tranformer, **kwargs):
         super(PybindPregenPass, self).__init__(**kwargs)
         self.transformer = tranformer
+
+    # Legal scope check:
+    # - External Def before first use
+    # - AssignOp before first use except use in the RHS of AssignOp
+    # - At most a single assignment to AssignableTensorOp
+    def prepass(self, result_ops):
+        visited = set()
+        assignop_dict = dict()
+        for result_op in result_ops:
+            if result_op not in visited:
+                temp_assignop_set = set()
+                ops_to_visit = Op.ordered_ops(result_op)
+                for op in ops_to_visit:
+                    if op not in visited:
+                        if isinstance(op, AssignOp):
+                            # 1. Add RHS to result list
+                            # 2. Add LHS to temp_assignop_set
+                            # 3. Add LHS, RHS to assignop dict - existing key is a error
+                            pass
+                        elif isinstance(op, SequentialOp):
+                            # 1. Clear Child AssignOp LHS’s from temp_assignop_set
+                            # - set must be empty at the end otherwise it is an error
+                            # 2. Add Child AssignOp LHS to forward_set
+                            # 3. Assert temp_assignop_set is empty at exit
+                            pass
+                        elif isinstance(op, ParallelOp):
+                            # 1. Clear Child AssignOp LHS’s from temp_assignop_set
+                            # - set must be empty at the end otherwise it is an error
+                            # 2. Assert temp_assignop_set is empty at exit
+                            pass
+                        visited.add(op)
+                # 1. clear child AssignOp LHS’s from temp_assignop_set and assert set is empty
 
 
 class PybindWrapperGenerator(PeepholeGraphPass):
