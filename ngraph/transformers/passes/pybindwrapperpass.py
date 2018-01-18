@@ -70,18 +70,18 @@ class PybindPregenPass(GraphRewritePass):
                             # 3. Add LHS, RHS to assignop dict - existing key is a error
                             pass
                         elif isinstance(op, SequentialOp):
-                            # 1. Clear Child AssignOp LHS’s from temp_assignop_set
+                            # 1. Clear Child AssignOp LHS's from temp_assignop_set
                             # - set must be empty at the end otherwise it is an error
                             # 2. Add Child AssignOp LHS to forward_set
                             # 3. Assert temp_assignop_set is empty at exit
                             pass
                         elif isinstance(op, ParallelOp):
-                            # 1. Clear Child AssignOp LHS’s from temp_assignop_set
+                            # 1. Clear Child AssignOp LHS's from temp_assignop_set
                             # - set must be empty at the end otherwise it is an error
                             # 2. Assert temp_assignop_set is empty at exit
                             pass
                         visited.add(op)
-                # 1. clear child AssignOp LHS’s from temp_assignop_set and assert set is empty
+                # 1. clear child AssignOp LHS's from temp_assignop_set and assert set is empty
 
 
 class PybindWrapperGenerator(PeepholeGraphPass):
