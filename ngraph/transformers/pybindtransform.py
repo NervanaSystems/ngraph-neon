@@ -25,8 +25,8 @@ if six.PY3:
     import os
     flags = os.RTLD_NOW | os.RTLD_GLOBAL
 else:
-    import dl
-    flags = dl.RTLD_NOW | dl.RTLD_GLOBAL
+    import ctypes
+    flags = sys.getdlopenflags() | ctypes.RTLD_GLOBAL
 sys.setdlopenflags(flags)
 from ngraph.transformers.passes.pybindwrapperpass \
     import PybindWrapperGenerator  # noqa: E402
