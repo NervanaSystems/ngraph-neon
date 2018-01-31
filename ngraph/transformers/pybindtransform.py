@@ -12,29 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ----------------------------------------------------------------------------
-import sys
 import collections
 import numpy as np
-import six
 from ngraph.transformers.base import Computation
 from ngraph.transformers.base import ComputationGraphTransformer
 from ngraph.op_graph.op_graph import Op
 from orderedset import OrderedSet
-# workaround to load the libngraph.so with RTLD_GLOBAL
-if six.PY3:
-    import os
-    flags = os.RTLD_NOW | os.RTLD_GLOBAL
-else:
-    import ctypes
-    flags = sys.getdlopenflags() | ctypes.RTLD_GLOBAL
-sys.setdlopenflags(flags)
 from ngraph.transformers.passes.pybindwrapperpass \
-    import PybindPregenPass  # noqa: E402
-from ngraph.transformers.passes.pybindwrapperpass \
-    import PybindWrapperGenerator  # noqa: E402
-import pyngraph.util as util  # noqa: E402
-from pyngraph import Type, Function  # noqa: E402
-from pyngraph.runtime import Manager  # noqa: E402
+    import PybindWrapperGenerator
+import pyngraph.util as util
+from pyngraph import Type, Function
+from pyngraph.runtime import Manager
 
 
 class PybindComputation(Computation):
