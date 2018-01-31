@@ -189,7 +189,6 @@ class PybindTransformer(ComputationGraphTransformer):
         """
         super(PybindTransformer, self).__init__(**kwargs)
         self.graph_passes = []
-        self.graph_passes += [PybindPregenPass(self)]
         self.graph_passes += [PybindWrapperGenerator(self)]
         self.computation_op_list = []
         self.ngraph_cpp_op_prameter = dict()

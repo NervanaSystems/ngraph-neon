@@ -40,16 +40,16 @@ from pyngraph.op import Reduce as PyngReduce
 from pyngraph import Function as Function
 
 
-class PybindPregenPass(GraphRewritePass):
+class PybindAssignOpScopePass:
     """
-    Graph pass to rewrite graph to handle control_dep, AssignOp and SequentionOp
+    Graph pass mark Variable version scope
+    Track AssignOp, SequentionOp and ParallelOp
 
     Arguments
         transformer (obj:`Transformer`): The associated transformer.
     """
 
     def __init__(self, tranformer, **kwargs):
-        super(PybindPregenPass, self).__init__(**kwargs)
         self.transformer = tranformer
 
     # Legal scope check:
