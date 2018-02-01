@@ -87,7 +87,7 @@ multinode_prepare:
 	pip install -r multinode_requirements.txt > /dev/null 2>&1
 
 test_prepare:
-	pip install -r test_requirements.txt > /dev/null 2>&1
+	pip install -r test_requirements.txt 
 
 examples_prepare:
 	pip install -r examples_requirements.txt > /dev/null 2>&1
