@@ -40,7 +40,8 @@ class PybindComputation(Computation):
         self.variables = set()
         self.variables_cpp_op = dict()
         self.variables_scope = dict()
-        self.op_order = dict()
+        self.op_rank = dict()
+        self.rank = 0
         self.scopevisited = set()
         self.scopemark = dict()
         self.seqcount = 0
@@ -101,6 +102,11 @@ class PybindComputation(Computation):
                     return self.ngraph_cpp_ops[op.tensor]
         else:
             return self.ngraph_cpp_ops[op]
+
+    def set_op_rank(self, op):
+        self.op_rank[op] = self.rank
+        # print(op.name + " rank is " + str(self.rank))
+        self.rank += 1
 
     def create_function(self):
         computation = self.computation_op

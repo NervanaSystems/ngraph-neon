@@ -171,10 +171,11 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @generic_method(dispatch_base_type=Op)
     def visit(self, op, *args):
-        pass
+        self.computation.set_op_rank(op)
 
     @visit.on_type(Add)
     def visit(self, op, x, y):
+        self.computation.set_op_rank(op)
         ngraph_cpp_add_op = self.computation.ngraph_cpp_ops[x.tensor] \
             + self.computation.ngraph_cpp_ops[y.tensor]
 
@@ -182,6 +183,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(Divide)
     def visit(self, op, x, y):
+        self.computation.set_op_rank(op)
         ngraph_cpp_div_op = self.computation.ngraph_cpp_ops[x.tensor] \
             / self.computation.ngraph_cpp_ops[y.tensor]
 
@@ -189,6 +191,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(Multiply)
     def visit(self, op, x, y):
+        self.computation.set_op_rank(op)
         ngraph_cpp_mul_op = self.computation.ngraph_cpp_ops[x.tensor] \
             * self.computation.ngraph_cpp_ops[y.tensor]
 
@@ -196,6 +199,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(Subtract)
     def visit(self, op, x, y):
+        self.computation.set_op_rank(op)
         ngraph_cpp_sub_op = self.computation.ngraph_cpp_ops[x.tensor] \
             - self.computation.ngraph_cpp_ops[y.tensor]
 
@@ -203,6 +207,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(BroadcastOp)
     def visit(self, op, input):
+        self.computation.set_op_rank(op)
         axis_set = set()
         element_type = Type.f32
         # check if the op.args already have Paramterized view type.
@@ -236,7 +241,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     """
     @visit.on_type(TensorValueOp)
     def visit(self, op):
-
+        self.computation.set_op_rank(op)
         if op.tensor not in self.computation.ngraph_cpp_ops:
             if op.tensor.is_constant:
                 # FIXME: make tensors based on data type
@@ -256,7 +261,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(TensorValueOp)
     def visit(self, op):
-
+        self.computation.set_op_rank(op)
         if op.tensor not in self.computation.ngraph_cpp_ops:
             if op.tensor.is_constant:
                 # FIXME: make tensors based on data type
@@ -271,7 +276,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(AssignableTensorOp)
     def visit(self, op):
-
+        self.computation.set_op_rank(op)
         if op.tensor not in self.computation.ngraph_cpp_ops:
             if op.tensor.is_constant:
                 # FIXME: make tensors based on data type
@@ -286,6 +291,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(DotOp)
     def visit(self, op, input1, input2):
+        self.computation.set_op_rank(op)
         # determine the reduction_axes count
         reduction_axes_count, reduction_axes = self.get_reduction_axis(op)
 
@@ -325,16 +331,19 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(LogOp)
     def visit(self, op, input):
+        self.computation.set_op_rank(op)
         ngraph_cpp_log_op = PyngLog(self.computation.ngraph_cpp_ops[input.tensor])
         self.computation.ngraph_cpp_ops[op.tensor] = ngraph_cpp_log_op
 
     @visit.on_type(ExpOp)
     def visit(self, op, input):
+        self.computation.set_op_rank(op)
         ngraph_cpp_exp_op = PyngExp(self.computation.ngraph_cpp_ops[input.tensor])
         self.computation.ngraph_cpp_ops[op.tensor] = ngraph_cpp_exp_op
 
     @visit.on_type(Greater)
     def visit(self, op, input1, input2):
+        self.computation.set_op_rank(op)
         ngraph_cpp_greater_op = PyngGreater(
             self.computation.ngraph_cpp_ops[
                 input1.tensor], self.computation.ngraph_cpp_ops[
@@ -346,6 +355,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(Less)
     def visit(self, op, input1, input2):
+        self.computation.set_op_rank(op)
         ngraph_cpp_less_op = PyngLess(
             self.computation.ngraph_cpp_ops[
                 input1.tensor], self.computation.ngraph_cpp_ops[
@@ -357,6 +367,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(Sum)
     def visit(self, op, input):
+        self.computation.set_op_rank(op)
         if isinstance(self.np_reduction_axis(op), tuple):
             axis_set = self.np_reduction_axis(op)
         else:
@@ -370,6 +381,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(Maximum)
     def visit(self, op, input1, input2):
+        self.computation.set_op_rank(op)
         ngraph_cpp_maximum_op = PyngMaximum(
             self.computation.ngraph_cpp_ops[
                 input1.tensor], self.computation.ngraph_cpp_ops[
@@ -378,6 +390,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(Minimum)
     def visit(self, op, input1, input2):
+        self.computation.set_op_rank(op)
         ngraph_cpp_minimum_op = PyngMinimum(
             self.computation.ngraph_cpp_ops[
                 input1.tensor], self.computation.ngraph_cpp_ops[
@@ -386,6 +399,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(ReorderAxes)
     def visit(self, op, input):
+        self.computation.set_op_rank(op)
         axis_order = []
         reorder_axes = list(op.axes.lengths)
         input_axes = list(op.args[0].axes.lengths)
@@ -400,6 +414,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(OneHotOp)
     def visit(self, op, input):
+        self.computation.set_op_rank(op)
         onehot_shape = list(op.axes.lengths)
         one_hot_axis = (op.axes).index(op.axis)
         ngraph_cpp_onehot_op = PyngOneHot(
@@ -409,12 +424,14 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(NegativeOp)
     def visit(self, op, input):
+        self.computation.set_op_rank(op)
         ngraph_cpp_neg_op = PyngNegative(
             self.computation.ngraph_cpp_ops[input.tensor])
         self.computation.ngraph_cpp_ops[op.tensor] = ngraph_cpp_neg_op
 
     @visit.on_type(ReciprocalOp)
     def visit(self, op, input):
+        self.computation.set_op_rank(op)
         input_axes = list(input.axes.lengths)
         constant_op = Constant(Type.f32, input_axes, [1])
         ngraph_cpp_reciprocal_op = constant_op \
@@ -423,6 +440,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(TensorSizeOp)
     def visit(self, op, input):
+        self.computation.set_op_rank(op)
         # TODO - is treating TensorSizeOp as constants, okay?
         # Construct constant list with number of elements = reduction axes size
         constant_tensor = [op.reduction_axes.size]
@@ -432,13 +450,14 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(MapRolesOp)
     def visit(self, op, input):
+        self.computation.set_op_rank(op)
         # TODO - made it as workaround, need to check if this acceptable ?
         self.computation.ngraph_cpp_ops[op.tensor] = \
             self.computation.ngraph_cpp_ops[op.args[0].tensor]
 
     @visit.on_type(Max)
     def visit(self, op, input):
-
+        self.computation.set_op_rank(op)
         # Define the reduction function handle
         element_type = Type.f32
         shape = []
@@ -461,10 +480,11 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(SequentialOp)
     def visit(self, op):
-        pass
+        self.computation.set_op_rank(op)
 
     @visit.on_type(AssignOp)
     def visit(self, op, lhs, rhs):
+        self.computation.set_op_rank(op)
         if lhs not in self.transformer.variables:
             self.transformer.variables.append(lhs)
             self.transformer.forward_variables_pybindop[lhs] = \
