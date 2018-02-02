@@ -202,12 +202,13 @@ class LearningRateOptimizer(Optimizer):
             updates = self.variable_update(variable, grad, scale_factor, self.weight_clip_value)
             all_updates.append(updates)
         updates = ng.doall(all_updates)
-        grads = ng.doall(grads)
+        # grads = ng.doall(grads)
         # clips = ng.doall([ng.assign(variable,
         #                             clip_weight_value(variable, self.weight_clip_value))
         #                  for variable in variables])
         # return ng.sequential([grads, updates, clips, 0])
-        return ng.sequential([grads, updates, 0])
+        # return ng.sequential([grads, updates, 0])
+        return ng.sequential([updates, 0])
 
 
 class GradientDescentMomentum(LearningRateOptimizer):
