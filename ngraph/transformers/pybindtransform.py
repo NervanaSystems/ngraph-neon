@@ -40,6 +40,7 @@ class PybindComputation(Computation):
         self.variables = set()
         self.variables_cpp_op = dict()
         self.variables_scope = dict()
+        self.op_order = dict()
         self.scopevisited = set()
         self.scopemark = dict()
         self.seqcount = 0
@@ -136,18 +137,18 @@ class PybindComputation(Computation):
             self.ngraph_op_result_list.append(results)
             result_node_to_shape[results] = list(results.axes.lengths)
 
-            result_nodes_list.append(self.transformer.ngraph_cpp_op_prameter[results])
+            result_nodes_list.append(self.ngraph_cpp_ops[results])
         else:
             for node in results:
                 self.ngraph_op_result_list.append(node)
                 result_node_to_shape[node] = list(node.axes.lengths)
 
-                result_nodes_list.append(self.transformer.ngraph_cpp_op_prameter[node])
+                result_nodes_list.append(self.ngraph_cpp_ops[node])
 
         # use the ngraph_cpp_op dict to built the parameter list for c++ backend
         for place_holders in parameters:
             self.parameter_list.append(
-                self.transformer.ngraph_cpp_op_prameter[place_holders.tensor])
+                self.ngraph_cpp_ops[place_holders.tensor])
 
         # TODO - what's the role of the string argument? for now just passing 'test'
         self.function = Function(
@@ -296,18 +297,6 @@ class PybindTransformer(FunctionTransformer):
             while creating the transformer_factory()")
         """
         super(PybindTransformer, self).__init__(**kwargs)
-        self.ngraph_cpp_op_prameter = dict()
-
-    def add_computation(self, computation):
-        """
-        Initilize ngraph++ backend and call's make_computation to generate PybindComputation Obj
-
-        :param computation:
-        :param results:
-        :param parameters:
-        :return: PybindComputation() object
-        """
-        return self.make_computation(computation)
 
     def make_computation(self, computation):
         """
