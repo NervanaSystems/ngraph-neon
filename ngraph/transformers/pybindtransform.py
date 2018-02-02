@@ -93,15 +93,18 @@ class PybindComputation(Computation):
 
     def lookup_cpp_op(self, op):
         if isinstance(op, TensorValueOp):
-            if op.tensor.is_constant:
-                return self.ngraph_cpp_ops[op.tensor]
-            else:
+            if not op.tensor.is_constant:
                 if self.scopemark[op] == self.variables_scope[op.tensor]:
-                    return self.variables_cpp_op[op.tensor]
-                else:
-                    return self.ngraph_cpp_ops[op.tensor]
-        else:
-            return self.ngraph_cpp_ops[op]
+                    if self.op_rank[op] > self.op_rank[op.tensor]:
+                        return self.variables_cpp_op[op.tensor]
+
+        return self.ngraph_cpp_ops[op.tensor]
+
+    def register_cpp_op(self, op):
+        pass
+
+    def register_forward_variable(self, op):
+        pass
 
     def set_op_rank(self, op):
         self.op_rank[op] = self.rank

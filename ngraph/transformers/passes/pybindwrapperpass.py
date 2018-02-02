@@ -238,27 +238,6 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         else:
             yield container
 
-    """
-    @visit.on_type(TensorValueOp)
-    def visit(self, op):
-        self.computation.set_op_rank(op)
-        if op.tensor not in self.computation.ngraph_cpp_ops:
-            if op.tensor.is_constant:
-                # FIXME: make tensors based on data type
-                constant_op = Constant(Type.f32,
-                                       list(op.axes.lengths),
-                                       list(self.flatten(op.tensor.const.tolist())))
-
-                self.computation.ngraph_cpp_ops[op.tensor] = constant_op
-            else:
-                forward_op = self.transformer.forward_variables_pybindop[op.tensor]
-                if forward_op is None:
-                    op_element_type = Parameter(Type.f32, list(op.axes.lengths))
-                    self.computation.ngraph_cpp_ops[op.tensor] = op_element_type
-                else:
-                    scope = self.transformer.forward_variables_scope[lhs]
-    """
-
     @visit.on_type(TensorValueOp)
     def visit(self, op):
         self.computation.set_op_rank(op)
@@ -276,6 +255,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(AssignableTensorOp)
     def visit(self, op):
+        raise RuntimeError("Should not visit AssignableTensorOp")
         self.computation.set_op_rank(op)
         if op.tensor not in self.computation.ngraph_cpp_ops:
             if op.tensor.is_constant:
@@ -485,11 +465,14 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     @visit.on_type(AssignOp)
     def visit(self, op, lhs, rhs):
         self.computation.set_op_rank(op)
-        if lhs not in self.transformer.variables:
-            self.transformer.variables.append(lhs)
-            self.transformer.forward_variables_pybindop[lhs] = \
+        variable = lhs.tensor
+        self.computation.set_op_rank(variable)
+        if variable not in self.computation.variables:
+            self.computation.variables.add(variable)
+            self.computation.variables_cpp_op[variable] = \
                 self.computation.ngraph_cpp_ops[rhs]
-            self.transformer.forward_variables_scope[lhs] = \
-                self.transformer.scopemark[op]
+            self.computation.variables_scope[variable] = \
+                self.computation.scopemark[op]
         else:
-            raise RuntimeError("Variable updated more than once!")
+            # raise RuntimeError("Variable updated more than once!")
+            pass
