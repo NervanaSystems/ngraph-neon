@@ -15,11 +15,11 @@
 import collections
 import numpy as np
 from ngraph.transformers.base import Computation
-from ngraph.transformers.base import ComputationGraphTransformer
-from ngraph.op_graph.op_graph import Op
+from ngraph.transformers.base import Transformer
+from ngraph.op_graph.op_graph import Op, TensorValueOp
 from orderedset import OrderedSet
 from ngraph.transformers.passes.pybindwrapperpass \
-    import PybindWrapperGenerator
+    import PybindWrapperGenerator, PybindScopePass
 import pyngraph.util as util
 from pyngraph import Type, Function
 from pyngraph.runtime import Manager
@@ -32,11 +32,20 @@ class PybindComputation(Computation):
         self.transformer = transformer
         self.computation_op = computation_op
         self.parameter_list = []
-        # self.param_primary_tensor_view_list = []
         self.result_primary_tensor_view_list = []
         self.ngraph_op_result_list = []
         self.return_result_list = dict()
 
+        self.ngraph_cpp_ops = dict()
+        self.variables = set()
+        self.variables_cpp_op = dict()
+        self.variables_scope = dict()
+        self.scopevisited = set()
+        self.scopemark = dict()
+        self.seqcount = 0
+        self.parcount = 0
+
+        self.create_function()
         self.initialize_cpp_backend(self.computation_op.returns, *self.computation_op.parameters)
 
     def __call__(self, *args, **kwargs):
@@ -79,6 +88,33 @@ class PybindComputation(Computation):
             return self.return_result_list
         else:
             return None
+
+    def lookup_cpp_op(self, op):
+        if isinstance(op, TensorValueOp):
+            if op.tensor.is_constant:
+                return self.ngraph_cpp_ops[op.tensor]
+            else:
+                if self.scopemark[op] == self.variables_scope[op.tensor]:
+                    return self.variables_cpp_op[op.tensor]
+                else:
+                    return self.ngraph_cpp_ops[op.tensor]
+        else:
+            return self.ngraph_cpp_ops[op]
+
+    def create_function(self):
+        computation = self.computation_op
+        self.transformer.graph_passes = []
+        self.transformer.graph_passes += [PybindWrapperGenerator(self.transformer, self)]
+        self.custom_passes = []
+        self.custom_passes += [PybindScopePass(self)]
+        computation_op_list = OrderedSet()
+        if isinstance(computation.returns, collections.Container):
+            computation_op_list.update(list(computation.returns))
+        elif isinstance(computation.returns, Op):
+            computation_op_list.update(list([computation.returns]))
+        for custom_pass in self.custom_passes:
+            custom_pass(computation_op_list)
+        self.transformer.run_registered_graph_passes(computation_op_list)
 
     def initialize_cpp_backend(self, results, *parameters):
         """
@@ -170,7 +206,79 @@ class PybindComputation(Computation):
         return element_size
 
 
-class PybindTransformer(ComputationGraphTransformer):
+class FunctionTransformer(Transformer):
+    def __init__(self, **kwargs):
+        super(FunctionTransformer, self).__init__(**kwargs)
+        self.computations = OrderedSet()
+
+    def run_registered_graph_passes(self, ops, **kwargs):
+        for graph_pass in self.graph_passes:
+            graph_pass.wrapped_do_pass(ops=ops, **kwargs)
+        return ops
+
+    # TODO: update the following methods
+    def initialize_allocations(self):
+        """
+        Inititializes allocation caches.
+
+        """
+        self.op_tensors = dict()
+        self.op_tensor_views = dict()
+        self.device_buffers = OrderedSet()
+
+    def host_to_device(self, computation, parameters, args):
+        """
+        Copy args to parameters in computation.
+
+        Args:
+            computation: The computation.
+            parameters: Parameters of the computation.
+            args: Values for the parameters.
+
+        """
+        for param, arg in zip(parameters, args):
+            self.get_op_tensor_view(param)[...] = arg
+
+    def device_to_host(self, computation, op, tensor=None):
+        """
+        Copy a computation result from the device back to the host.
+
+        Args:
+            computation: The computation.
+            op: The op associated with the value.
+            tensor: Optional tensor for returned value.
+
+        Returns:
+            The value of op.
+
+        """
+        if self.has_op_tensor(op):
+            return self.get_op_tensor_view(op).get(tensor)
+
+    def get_tensor_view_value(self, op, host_tensor=None):
+        """
+        Returns the contents of the tensor view for op.
+
+        Args:
+            op: The computation graph op.
+            host_tensor: Optional tensor to copy value into.
+
+        Returns:
+            A NumPy tensor with the elements associated with op.
+
+        """
+        return self.get_op_tensor_view(op).get(host_tensor)
+
+    @property
+    def use_exop(self):
+        """
+
+        Returns: True if this transformer uses the execution graph.
+
+        """
+        return False
+
+class PybindTransformer(FunctionTransformer):
     """
     Transformer for executing graphs to call the pybind wrapper of the ngraph c++.
 
@@ -188,9 +296,6 @@ class PybindTransformer(ComputationGraphTransformer):
             while creating the transformer_factory()")
         """
         super(PybindTransformer, self).__init__(**kwargs)
-        self.graph_passes = []
-        self.graph_passes += [PybindWrapperGenerator(self)]
-        self.computation_op_list = []
         self.ngraph_cpp_op_prameter = dict()
 
     def add_computation(self, computation):
@@ -202,12 +307,6 @@ class PybindTransformer(ComputationGraphTransformer):
         :param parameters:
         :return: PybindComputation() object
         """
-        self.computation_op_list = OrderedSet()
-        if isinstance(computation.returns, collections.Container):
-            self.computation_op_list.update(list(computation.returns))
-        elif isinstance(computation.returns, Op):
-            self.computation_op_list.update(list([computation.returns]))
-        self.run_registered_graph_passes(self.computation_op_list)
         return self.make_computation(computation)
 
     def make_computation(self, computation):

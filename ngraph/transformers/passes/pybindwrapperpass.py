@@ -40,7 +40,7 @@ from pyngraph.op import Reduce as PyngReduce
 from pyngraph import Function as Function
 
 
-class PybindAssignOpScopePass:
+class PybindScopePass:
     """
     Graph pass mark Variable version scope
     Track AssignOp, SequentionOp and ParallelOp
@@ -49,40 +49,54 @@ class PybindAssignOpScopePass:
         transformer (obj:`Transformer`): The associated transformer.
     """
 
-    def __init__(self, tranformer, **kwargs):
-        self.transformer = tranformer
+    def __init__(self, computation, **kwargs):
+        self.computation = computation
 
-    # Legal scope check:
-    # - External Def before first use
-    # - AssignOp before first use except use in the RHS of AssignOp
-    # - At most a single assignment to AssignableTensorOp
-    def prepass(self, result_ops):
-        visited = set()
-        assignop_dict = dict()
-        for result_op in result_ops:
-            if result_op not in visited:
-                temp_assignop_set = set()
-                ops_to_visit = Op.ordered_ops(result_op)
-                for op in ops_to_visit:
-                    if op not in visited:
-                        if isinstance(op, AssignOp):
-                            # 1. Add RHS to result list
-                            # 2. Add LHS to temp_assignop_set
-                            # 3. Add LHS, RHS to assignop dict - existing key is a error
-                            pass
-                        elif isinstance(op, SequentialOp):
-                            # 1. Clear Child AssignOp LHS's from temp_assignop_set
-                            # - set must be empty at the end otherwise it is an error
-                            # 2. Add Child AssignOp LHS to forward_set
-                            # 3. Assert temp_assignop_set is empty at exit
-                            pass
-                        elif isinstance(op, ParallelOp):
-                            # 1. Clear Child AssignOp LHS's from temp_assignop_set
-                            # - set must be empty at the end otherwise it is an error
-                            # 2. Assert temp_assignop_set is empty at exit
-                            pass
-                        visited.add(op)
-                # 1. clear child AssignOp LHS's from temp_assignop_set and assert set is empty
+    # scope rules:
+    # - Do a pre-order traversal of op_graph
+    #     - Default scope is "root"
+    #     - Other scopes are formed by appending enclosing ParallelOp and SequentialOp
+    #       to default scope like a posix path
+    #     - Tag all ops with the enclosing scope name
+    def recordscope(self, results):
+
+        def extend_scope(scope, leaf):
+            return scope + '/' + leaf
+
+        def new_seq_scope(scope):
+            new_scope = extend_scope(scope, 'seq' + str(self.computation.seqcount))
+            self.computation.seqcount += 1
+            return new_scope
+
+        def new_par_scope(scope):
+            new_scope = extend_scope(scope, 'par' + str(self.computation.parcount))
+            self.computation.parcount += 1
+            return new_scope
+
+        def visit_pre_order(scope, op):
+            if op not in self.computation.scopevisited:
+                if isinstance(op, SequentialOp):
+                    childscope = new_seq_scope(scope)
+                    children = op.ops
+                elif isinstance(op, ParallelOp):
+                    childscope = new_par_scope(scope)
+                    children = op.control_deps
+                else:
+                    childscope = scope
+                    children = op.args
+                self.computation.scopevisited.add(op)
+                self.computation.scopemark[op] = scope
+                for child in children:
+                    visit_pre_order(childscope, child)
+
+        for op in results:
+            visit_pre_order('root', op)
+
+        # for key, val in self.computation.scopemark.items():
+        #    print(key.name, val)
+
+    def __call__(self, results):
+        self.recordscope(results)
 
 
 class PybindWrapperGenerator(PeepholeGraphPass):
@@ -94,9 +108,10 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         transformer (obj:`Transformer`): The associated transformer.
     """
 
-    def __init__(self, tranformer, **kwargs):
+    def __init__(self, transformer, computation, **kwargs):
         super(PybindWrapperGenerator, self).__init__(**kwargs)
-        self.transformer = tranformer
+        self.transformer = transformer
+        self.computation = computation
 
     def np_reduction_axis(self, op):
         """
@@ -218,6 +233,27 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         else:
             yield container
 
+    """
+    @visit.on_type(TensorValueOp)
+    def visit(self, op):
+
+        if op.tensor not in self.transformer.ngraph_cpp_op_prameter:
+            if op.tensor.is_constant:
+                # FIXME: make tensors based on data type
+                constant_op = Constant(Type.f32,
+                                       list(op.axes.lengths),
+                                       list(self.flatten(op.tensor.const.tolist())))
+
+                self.transformer.ngraph_cpp_op_prameter[op.tensor] = constant_op
+            else:
+                forward_op = self.transformer.forward_variables_pybindop[op.tensor]
+                if forward_op is None:
+                    op_element_type = Parameter(Type.f32, list(op.axes.lengths))
+                    self.transformer.ngraph_cpp_op_prameter[op.tensor] = op_element_type
+                else:
+                    scope = self.transformer.forward_variables_scope[lhs]
+    """
+
     @visit.on_type(TensorValueOp)
     def visit(self, op):
 
@@ -235,6 +271,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(AssignableTensorOp)
     def visit(self, op):
+
         if op.tensor not in self.transformer.ngraph_cpp_op_prameter:
             if op.tensor.is_constant:
                 # FIXME: make tensors based on data type
@@ -423,10 +460,16 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             PyngReduce(g_a, g_b, fn, set(axis_set))
 
     @visit.on_type(SequentialOp)
-    def visit(self, op, ops):
-        raise RuntimeError("Unsupported Op")
+    def visit(self, op):
+        pass
 
     @visit.on_type(AssignOp)
     def visit(self, op, lhs, rhs):
-        # record all AssignOp's
-        raise RuntimeError("Unsupported Op")
+        if lhs not in self.transformer.variables:
+            self.transformer.variables.append(lhs)
+            self.transformer.forward_variables_pybindop[lhs] = \
+                self.transformer.ngraph_cpp_op_prameter[rhs]
+            self.transformer.forward_variables_scope[lhs] = \
+                self.transformer.scopemark[op]
+        else:
+            raise RuntimeError("Variable updated more than once!")
