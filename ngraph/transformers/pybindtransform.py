@@ -16,7 +16,7 @@ import collections
 import numpy as np
 from ngraph.transformers.base import Computation
 from ngraph.transformers.base import Transformer
-from ngraph.op_graph.op_graph import Op, TensorValueOp
+from ngraph.op_graph.op_graph import Op, TensorValueOp, SequentialOp
 from orderedset import OrderedSet
 from ngraph.transformers.passes.pybindwrapperpass \
     import PybindWrapperGenerator, PybindScopePass
@@ -38,6 +38,7 @@ class PybindComputation(Computation):
 
         self.ngraph_cpp_ops = dict()
         self.variables_cpp_op = dict()
+        self.variables = []
         self.op_rank = dict()
         self.rank = 0
         self.scopevisited = set()
@@ -96,12 +97,15 @@ class PybindComputation(Computation):
                     if self.scopemark[op] == self.variables_cpp_op[op.tensor][0]:
                         if self.op_rank[op] > self.op_rank[op.tensor]:
                             return self.variables_cpp_op[op.tensor][1]
+        """
             if op.tensor in self.ngraph_cpp_ops:
                 return self.ngraph_cpp_ops[op.tensor]
         else:
             if op in self.ngraph_cpp_ops:
                 return self.ngraph_cpp_ops[op]
-
+        """
+        if op.tensor in self.ngraph_cpp_ops:
+            return self.ngraph_cpp_ops[op.tensor]
         return None
 
     def register_cpp_op(self, op):
@@ -146,17 +150,22 @@ class PybindComputation(Computation):
         result_nodes_list = []
         result_node_to_shape = dict()
 
-        if isinstance(self.computation_op.returns, Op):
-            self.ngraph_op_result_list.append(results)
-            result_node_to_shape[results] = list(results.axes.lengths)
+        if isinstance(results, Op):
+            results = [results]
 
-            result_nodes_list.append(self.ngraph_cpp_ops[results])
-        else:
-            for node in results:
-                self.ngraph_op_result_list.append(node)
-                result_node_to_shape[node] = list(node.axes.lengths)
+        for node in results:
+            if isinstance(node, SequentialOp):
+                node = node.ops[-1]
+            self.ngraph_op_result_list.append(node)
+            result_node_to_shape[node] = list(node.axes.lengths)
+            result_nodes_list.append(self.ngraph_cpp_ops[node])
 
-                result_nodes_list.append(self.ngraph_cpp_ops[node])
+        # Add additional results (updated variable)
+        for variable in self.variables_cpp_op:
+            node = self.variables_cpp_op[variable][2]
+            self.ngraph_op_result_list.append(node)
+            result_node_to_shape[node] = list(node.axes.lengths)
+            result_nodes_list.append(self.variables_cpp_op[variable][1])
 
         # use the ngraph_cpp_op dict to built the parameter list for c++ backend
         for place_holders in parameters:
@@ -174,16 +183,10 @@ class PybindComputation(Computation):
         self.backend = self.manager.allocate_backend()
         self.cf = self.backend.make_call_frame(self.external)
         # create the primary_tensor_view for result's using the ngraph++ initilized backend
-        if isinstance(self.computation_op.returns, Op):
+        for node in results:
             self.result_primary_tensor_view_list.append(
                 self.backend.make_primary_tensor_view(
-                    self.result_element_type,
-                    result_node_to_shape[results]))
-        elif isinstance(self.computation_op.returns, (collections.Sequence, OrderedSet)):
-            for node in results:
-                self.result_primary_tensor_view_list.append(
-                    self.backend.make_primary_tensor_view(
-                        self.result_element_type, result_node_to_shape[node]))
+                    self.result_element_type, result_node_to_shape[node]))
 
     def get_ngraph_cpp_param_list(self, param_primary_tensor_view_list, *args):
         """

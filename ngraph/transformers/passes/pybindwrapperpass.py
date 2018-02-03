@@ -451,6 +451,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         # 3. SequentialOp, (~(AssignOp|SequentialOp|ParallelOp))
 
         # Output node is the last child op
+        self.computation.ngraph_cpp_ops[op.tensor] \
+            = self.computation.lookup_cpp_op(op.ops[-1].tensor)
 
     @visit.on_type(ParallelOp)
     def visit(self, op):
@@ -467,6 +469,6 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         self.computation.set_op_rank(variable)
         if variable not in self.computation.variables_cpp_op:
             self.computation.variables_cpp_op[variable] = \
-                (self.computation.scopemark[op], self.computation.ngraph_cpp_ops[rhs])
+                (self.computation.scopemark[op], self.computation.ngraph_cpp_ops[rhs], rhs)
         else:
             raise RuntimeError("Variable updated more than once!")
