@@ -172,6 +172,11 @@ class PybindComputation(Computation):
             self.parameter_list.append(
                 self.ngraph_cpp_ops[place_holders.tensor])
 
+        # Add additional parameters (variables)
+        for variable in self.variables_cpp_op:
+            self.parameter_list.append(
+                self.ngraph_cpp_ops[variable.tensor])
+
         # TODO - what's the role of the string argument? for now just passing 'test'
         self.function = Function(
             result_nodes_list,
@@ -184,6 +189,8 @@ class PybindComputation(Computation):
         self.cf = self.backend.make_call_frame(self.external)
         # create the primary_tensor_view for result's using the ngraph++ initilized backend
         for node in results:
+            if isinstance(node, SequentialOp):
+                node = node.ops[-1]
             self.result_primary_tensor_view_list.append(
                 self.backend.make_primary_tensor_view(
                     self.result_element_type, result_node_to_shape[node]))
