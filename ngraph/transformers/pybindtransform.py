@@ -46,8 +46,8 @@ class PybindComputation(Computation):
         self.seqcount = 0
         self.parcount = 0
 
-        self.create_function()
-        self.initialize_cpp_backend(self.computation_op.returns, *self.computation_op.parameters)
+        self.build_opgraph()
+        self.build_callframe(self.computation_op.returns, *self.computation_op.parameters)
 
     def __call__(self, *args, **kwargs):
         """
@@ -119,7 +119,7 @@ class PybindComputation(Computation):
         # print(op.name + " rank is " + str(self.rank))
         self.rank += 1
 
-    def create_function(self):
+    def build_opgraph(self):
         computation = self.computation_op
         self.transformer.graph_passes = []
         self.transformer.graph_passes += [PybindWrapperGenerator(self.transformer, self)]
@@ -134,7 +134,7 @@ class PybindComputation(Computation):
             custom_pass(computation_op_list)
         self.transformer.run_registered_graph_passes(computation_op_list)
 
-    def initialize_cpp_backend(self, results, *parameters):
+    def build_callframe(self, results, *parameters):
         """
         Passes result's primary_tensor_view to the ngraph++ Function to generate ngraph ++ op graph
         allocates backend and initilizes ngraph++ call frame.
@@ -173,7 +173,7 @@ class PybindComputation(Computation):
                 self.ngraph_cpp_ops[place_holders.tensor])
 
         # Add additional parameters (variables)
-        for variable in self.variables_cpp_op:
+        for variable in self.variables:
             self.parameter_list.append(
                 self.ngraph_cpp_ops[variable.tensor])
 

@@ -18,7 +18,7 @@ from ngraph.util.generics import generic_method
 from ngraph.op_graph.op_graph import Op, Add, Multiply, BroadcastOp, TensorValueOp, \
     DotOp, LogOp, ExpOp, Sum, Greater, Maximum, ReductionOp, AssignableTensorOp, ReorderAxes, \
     OneHotOp, Divide, Subtract, NegativeOp, ReciprocalOp, TensorSizeOp, MapRolesOp, Minimum, \
-    Less, Max, SequentialOp, AssignOp, ParallelOp
+    Less, Max, NotEqual, SequentialOp, AssignOp, ParallelOp
 
 from pyngraph import Type
 from pyngraph.op import Parameter
@@ -28,6 +28,7 @@ from pyngraph.op import Maximum as PyngMaximum
 from pyngraph.op import Minimum as PyngMinimum
 from pyngraph.op import Greater as PyngGreater
 from pyngraph.op import Less as PyngLess
+from pyngraph.op import NotEqual as PyngNotEqual
 from pyngraph.op import Broadcast as PyngBroadcast
 from pyngraph.op import Dot as PyngDot
 from pyngraph.op import Log as PyngLog
@@ -172,6 +173,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     @generic_method(dispatch_base_type=Op)
     def visit(self, op, *args):
         self.computation.set_op_rank(op)
+        raise RuntimeError("Unsupported op " + str(type(op)))
 
     @visit.on_type(Add)
     def visit(self, op, x, y):
@@ -252,6 +254,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             else:
                 op_element_type = Parameter(Type.f32, list(op.axes.lengths))
                 self.computation.ngraph_cpp_ops[op.tensor] = op_element_type
+                if not op.tensor.is_placeholder:
+                    self.computation.variables.append(op.tensor)
 
     @visit.on_type(AssignableTensorOp)
     def visit(self, op):
@@ -322,6 +326,17 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     def visit(self, op, input1, input2):
         self.computation.set_op_rank(op)
         ngraph_cpp_less_op = PyngLess(
+            self.computation.lookup_cpp_op(input1.tensor),
+            self.computation.lookup_cpp_op(input2.tensor))
+        # convert the element back from bool to float type
+        element_result_type = Type.f32
+        less_result_op = PyngConvert(ngraph_cpp_less_op, element_result_type)
+        self.computation.ngraph_cpp_ops[op.tensor] = less_result_op
+
+    @visit.on_type(NotEqual)
+    def visit(self, op, input1, input2):
+        self.computation.set_op_rank(op)
+        ngraph_cpp_less_op = PyngNotEqual(
             self.computation.lookup_cpp_op(input1.tensor),
             self.computation.lookup_cpp_op(input2.tensor))
         # convert the element back from bool to float type
