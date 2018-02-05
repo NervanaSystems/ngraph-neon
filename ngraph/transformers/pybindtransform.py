@@ -31,14 +31,38 @@ class PybindComputation(Computation):
         super(PybindComputation, self).__init__(transformer, computation_op, **kwargs)
         self.transformer = transformer
         self.computation_op = computation_op
+        
+        # Interfacing with Ngraph Function
+        # input to Function
         self.parameter_list = []
-        self.result_primary_tensor_view_list = []
-        self.ngraph_op_result_list = []
-        self.return_result_list = dict()
+        self.variable_list = []
+        # result from Function
+        self.result_nodes_list = []
+        self.update_nodes_list = []
 
+        # Interfacing with Ngraph callframe
+        # input to callframe
+        self.param_primary_tensor_view_list = []
+        self.variable_primary_tensor_view_list = []
+        # output from callframe
+        self.result_primary_tensor_view_list = []
+        self.update_primary_tensor_view_list = []
+
+        # Interfacing with Neon Ops
+        self.neon_variable_list = []
+        self.neon_update_list = []
+        self.neon_return_list = []
+
+        # neon side numpy buffer management
+        self.neon_return_buffer = dict()
+        self.neon_variable_buffer = dict()
+        self.neon_update_buffer = dict()
+
+        # Neon -> Ngraph lookup
         self.ngraph_cpp_ops = dict()
         self.variables_cpp_op = dict()
-        self.variables = []
+
+        # Other variables and structures
         self.op_rank = dict()
         self.rank = 0
         self.scopevisited = set()
@@ -47,46 +71,67 @@ class PybindComputation(Computation):
         self.parcount = 0
 
         self.build_opgraph()
-        self.build_callframe(self.computation_op.returns, *self.computation_op.parameters)
+        self.build_function()
+        self.build_callframe()
 
     def __call__(self, *args, **kwargs):
         """
-        This builds a primary_tensor_view from the *args and
-        results to pass the ([parameter_list], [return_list])
-        to ngraph++ call_frame to compute the results.
+        Build primary_tensor_view for parameters ([parameter_list])
+        from *args for placeholder and input weight tensors.
+        Build primary_tensor_view for return values ([return_list])
+        from output computations and updated weights
+        Call call_frame with ([parameter_list], [return_list])
+        and copy back return values, updated weights.
 
         :param args:
         :param kwargs:
         :return: [list of computed results]
         """
-        param_primary_tensor_view_list = []
         args = self.unpack_args_or_feed_dict(args, kwargs)
-        self.get_ngraph_cpp_param_list(param_primary_tensor_view_list, *args)
+        # set tensor values for placeholders from args
+        # use c++ backend write method to pass the tensor values
+        for index, op in enumerate(self.computation_op.parameters):
+            element_size = self.get_element_size(op)
+            # TODO - need to define dtype of numpy array's for *params based on op.dtype
+            self.param_primary_tensor_view_list[index].write(util.numpy_to_c(
+                np.array(args[index], dtype=np.float32)), 0, int(element_size))
+        # set tensor values for weights from variable buffer
+        for index, op in enumerate(self.neon_variable_list):
+            element_size = self.get_element_size(op)
+            # TODO - need to define dtype of numpy array's for *params based on op.dtype
+            self.variable_primary_tensor_view_list[index].write(util.numpy_to_c(
+                self.neon_variable_buffer[op]), 0, int(element_size))
 
-        for index, result in enumerate(self.result_primary_tensor_view_list):
-            result_op = self.ngraph_op_result_list[index]
-            element_size = self.get_element_size(result_op)
-            shape = list(result_op.axes.lengths)
-            # TODO - need to define dtype of numpy array's for results based on result.dtype
-            result_arr = np.empty(shape, dtype=np.float32)
-            result.write(util.numpy_to_c(result_arr), 0, int(element_size))
-            self.return_result_list[result_op] = result_arr
-
-        self.cf.call(param_primary_tensor_view_list, self.result_primary_tensor_view_list)
+        self.cf.call(self.param_primary_tensor_view_list + self.variable_primary_tensor_view_list,
+                     self.result_primary_tensor_view_list + self.update_primary_tensor_view_list)
 
         # now read the values from the computed result
         for index, result in enumerate(self.result_primary_tensor_view_list):
-            result_op = self.ngraph_op_result_list[index]
+            result_op = self.neon_return_list[index]
             element_size = self.get_element_size(result_op)
-            result.read(util.numpy_to_c(self.return_result_list[result_op]), 0, int(element_size))
+            result.read(util.numpy_to_c(self.neon_return_buffer[result_op]),
+                        0,
+                        int(element_size))
+
+        # now read updated weights into weight variables from the computated result
+        for index, result in enumerate(self.update_primary_tensor_view_list):
+            result_op = self.neon_update_list[index]
+            element_size = self.get_element_size(result_op)
+            result.read(util.numpy_to_c(self.neon_update_buffer[result_op]),
+                        0,
+                        int(element_size))
+
+        # update weights
+        for node in self.neon_update_buffer:
+            np.copy(self.neon_variable_buffer[node], self.neon_update_buffer[node].all())
 
         # determine whether the value to be retruned is a list, dict or an op.
         if isinstance(self.computation_op.returns, Op):
-            return self.return_result_list[self.computation_op.returns]
+            return self.neon_return_buffer[self.computation_op.returns]
         elif isinstance(self.computation_op.returns, (collections.Sequence, OrderedSet)):
-            return tuple(self.return_result_list[op] for op in self.computation_op.returns)
+            return tuple(self.neon_return_buffer[op] for op in self.computation_op.returns)
         elif isinstance(self.computation_op.returns, collections.Set):
-            return self.return_result_list
+            return self.neon_return_buffer
         else:
             return None
 
@@ -97,29 +142,18 @@ class PybindComputation(Computation):
                     if self.scopemark[op] == self.variables_cpp_op[op.tensor][0]:
                         if self.op_rank[op] > self.op_rank[op.tensor]:
                             return self.variables_cpp_op[op.tensor][1]
-        """
-            if op.tensor in self.ngraph_cpp_ops:
-                return self.ngraph_cpp_ops[op.tensor]
-        else:
-            if op in self.ngraph_cpp_ops:
-                return self.ngraph_cpp_ops[op]
-        """
         if op.tensor in self.ngraph_cpp_ops:
             return self.ngraph_cpp_ops[op.tensor]
         return None
 
-    def register_cpp_op(self, op):
-        pass
-
-    def register_forward_variable(self, op):
-        pass
-
     def set_op_rank(self, op):
         self.op_rank[op] = self.rank
-        # print(op.name + " rank is " + str(self.rank))
         self.rank += 1
 
     def build_opgraph(self):
+        """
+        Build Ngraph opgraph from Neon's computation graph.
+        """
         computation = self.computation_op
         self.transformer.graph_passes = []
         self.transformer.graph_passes += [PybindWrapperGenerator(self.transformer, self)]
@@ -134,89 +168,91 @@ class PybindComputation(Computation):
             custom_pass(computation_op_list)
         self.transformer.run_registered_graph_passes(computation_op_list)
 
-    def build_callframe(self, results, *parameters):
+    def build_function(self):
         """
-        Passes result's primary_tensor_view to the ngraph++ Function to generate ngraph ++ op graph
-        allocates backend and initilizes ngraph++ call frame.
-
-        :param results:
-        :param parameters:
-        :return:
+        Build Ngraph Function from opgraph.
         """
         # define the result type
 
-        # TODO define element type based on result.dtype instead of defaulting to f32
-        self.result_element_type = Type.f32
-        result_nodes_list = []
-        result_node_to_shape = dict()
+        # TODO define element type based on dtype instead of defaulting to f32
+        self.element_type = Type.f32
 
-        if isinstance(results, Op):
-            results = [results]
+        if isinstance(self.computation_op.returns, Op):
+            self.neon_return_list.append(self.computation_op.returns)
+        else:
+            self.neon_return_list = self.computation_op.returns
 
-        for node in results:
+        for node in self.neon_return_list:
             if isinstance(node, SequentialOp):
                 node = node.ops[-1]
-            self.ngraph_op_result_list.append(node)
-            result_node_to_shape[node] = list(node.axes.lengths)
-            result_nodes_list.append(self.ngraph_cpp_ops[node])
+            self.result_nodes_list.append(self.ngraph_cpp_ops[node])
 
         # Add additional results (updated variable)
         for variable in self.variables_cpp_op:
-            node = self.variables_cpp_op[variable][2]
-            self.ngraph_op_result_list.append(node)
-            result_node_to_shape[node] = list(node.axes.lengths)
-            result_nodes_list.append(self.variables_cpp_op[variable][1])
+            self.neon_update_list.append(variable)
+            self.update_nodes_list.append(self.variables_cpp_op[variable][1])
 
         # use the ngraph_cpp_op dict to built the parameter list for c++ backend
-        for place_holders in parameters:
-            self.parameter_list.append(
-                self.ngraph_cpp_ops[place_holders.tensor])
+        for place_holders in self.computation_op.parameters:
+            self.parameter_list.append(self.ngraph_cpp_ops[place_holders.tensor])
 
         # Add additional parameters (variables)
-        for variable in self.variables:
-            self.parameter_list.append(
-                self.ngraph_cpp_ops[variable.tensor])
+        for variable in self.neon_variable_list:
+            self.variable_list.append(self.ngraph_cpp_ops[variable.tensor])
 
         # TODO - what's the role of the string argument? for now just passing 'test'
         self.function = Function(
-            result_nodes_list,
-            self.parameter_list,
+            self.result_nodes_list + self.update_nodes_list,
+            self.parameter_list + self.variable_list,
             'test')
 
+    def build_callframe(self):
+        """
+        Initialize Ngraph backend. Build and initialize Ngraph callframe from Function.
+        """
         self.manager = Manager.get(self.transformer.ngraph_backend)
         self.external = self.manager.compile(self.function)
         self.backend = self.manager.allocate_backend()
         self.cf = self.backend.make_call_frame(self.external)
+
         # create the primary_tensor_view for result's using the ngraph++ initilized backend
-        for node in results:
-            if isinstance(node, SequentialOp):
-                node = node.ops[-1]
+        for node in self.neon_return_list:
+            shape = list(node.axes.lengths)
             self.result_primary_tensor_view_list.append(
                 self.backend.make_primary_tensor_view(
-                    self.result_element_type, result_node_to_shape[node]))
+                    self.element_type, shape))
+            # Allocate return buffer
+            # TODO - need to define dtype of numpy array's for results based on result.dtype
+            result_arr = np.empty(shape, dtype=np.float32)
+            self.neon_return_buffer[node] = result_arr
 
-    def get_ngraph_cpp_param_list(self, param_primary_tensor_view_list, *args):
-        """
-        Builds a list of ngraph++ primary_tensor_view from ngraph *parameters list
-
-        :param args:
-        :return:
-        """
-        # get the primary tensor_view for all the *parameters passed from the user
-        for op in self.computation_op.parameters:
-            # TODO define element type based on op.dtype instead of deafulting to flaot32
-            param_element_type = Type.f32
-            param_primary_tensor_view_list.append(
+        # prepare tensor_views for placeholders
+        for node in self.computation_op.parameters:
+            self.param_primary_tensor_view_list.append(
                 self.backend.make_primary_tensor_view(
-                    param_element_type, list(
-                        op.axes.lengths)))
+                    self.element_type, list(node.axes.lengths)))
+        
+        # prepare tensor_views for input variables
+        for node in self.neon_variable_list:
+            shape = list(node.axes.lengths)
+            self.variable_primary_tensor_view_list.append(
+                self.backend.make_primary_tensor_view(
+                    self.element_type, shape))
+            # Allocate return buffer
+            # TODO - need to define dtype of numpy array's for variables based on dtype
+            if node.initial_value is None:
+                var_buffer = np.empty(shape, dtype=np.float32)
+            else:
+                var_buffer = node.initial_value
+            self.neon_variable_buffer[node] = var_buffer
 
-        # use c++ backend write method to pass the tensor values
-        for index, op in enumerate(self.computation_op.parameters):
-            element_size = self.get_element_size(op)
-            # TODO - need to define dtype of numpy array's for *params based on op.dtype
-            param_primary_tensor_view_list[index].write(util.numpy_to_c(
-                np.array(args[index], dtype=np.float32)), 0, int(element_size))
+        # prepare tensor_views for weights
+        for node in self.neon_update_list:
+            shape = list(node.axes.lengths)
+            self.update_primary_tensor_view_list.append(
+                self.backend.make_primary_tensor_view(
+                    self.element_type, list(node.axes.lengths)))
+            self.neon_update_buffer[node] = np.empty(shape, dtype=np.float32)
 
     def get_element_size(self, op):
         """

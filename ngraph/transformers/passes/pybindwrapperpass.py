@@ -255,7 +255,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                 op_element_type = Parameter(Type.f32, list(op.axes.lengths))
                 self.computation.ngraph_cpp_ops[op.tensor] = op_element_type
                 if not op.tensor.is_placeholder:
-                    self.computation.variables.append(op.tensor)
+                    self.computation.neon_variable_list.append(op.tensor)
 
     @visit.on_type(AssignableTensorOp)
     def visit(self, op):
