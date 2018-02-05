@@ -461,7 +461,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     def visit(self, op):
         self.computation.set_op_rank(op)
         # Legal child patterns
-        # 1. (AssignOp,)+, (~(AssignOp|SequentialOp|ParallelOp))
+        # 1. (AssignOp,)+, (~(SequentialOp|ParallelOp))
         # 2. ParallelOp, (~(AssignOp|SequentialOp|ParallelOp))
         # 3. SequentialOp, (~(AssignOp|SequentialOp|ParallelOp))
 
@@ -473,7 +473,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     def visit(self, op):
         self.computation.set_op_rank(op)
         # Legal child pattern
-        # (AssignOp,)+
+        # 1. (AssignOp,)+
+        # 2. (SequentialOp,)+ where SequentialOp = (AssignOp,)+
 
         # ParallelOp has no output node
 

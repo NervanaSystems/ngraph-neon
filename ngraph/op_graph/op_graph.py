@@ -929,15 +929,31 @@ class ControlBlockOp(Op):
 
 class ParallelOp(ControlBlockOp):
     """
-    Compute every Op in all in any order compatible with existing dependencies.
+    Compute every AssignOp in all in any order compatible with existing dependencies.
 
     Arguments:
-        all: Ops to be computed.
+        all: AssignOps to be computed.
         **kwargs: Args for related classes.
     """
 
     def __init__(self, all, **kwargs):
         super(ParallelOp, self).__init__(**kwargs)
+        # Legal child pattern
+        # 1. (AssignOp,)+
+        # 2. (SequentialOp,)+ where SequentialOp = (AssignOp,)+
+        if len(all) >= 2:
+            if isinstance(all[0], AssignOp):
+                for op in all:
+                    if not isinstance(op, AssignOp):
+                        raise RuntimeError("Illegal child formation")
+            elif isinstance(all[0], SequentialOp):
+                for op in all:
+                    if isinstance(op, SequentialOp):
+                        for child in op.ops:
+                            if not isinstance(child, AssignOp):
+                                raise RuntimeError("Illegal child formation")
+                    else:
+                        raise RuntimeError("Illegal child formation")
         for op in all:
             self.add_control_dep(op)
 
@@ -1512,6 +1528,27 @@ class SequentialOp(ValueOp):
         super(SequentialOp, self).__init__(**kwargs)
         self.value_tensor = None
         self._ops = None
+        # Legal child patterns
+        # 1. (AssignOp,)+, (~(SequentialOp|ParallelOp))
+        # 2. ParallelOp, (~(AssignOp|SequentialOp|ParallelOp))
+        # 3. SequentialOp, (~(AssignOp|SequentialOp|ParallelOp))
+        complex_op = "AssignOp, SequentialOp or ParallelOp"
+        num_children = len(ops)
+        if num_children < 2:
+            raise RuntimeError("SequentialOp need at least two children")
+        if isinstance(ops[0], AssignOp):
+            if isinstance(ops[-1], (ParallelOp, SequentialOp)):
+                raise RuntimeError("Illegal child formation")
+            for op in ops[:-1]:
+                if not isinstance(op, AssignOp):
+                    raise RuntimeError("Illegal child formation")
+        elif isinstance(ops[0], (ParallelOp, SequentialOp)):
+            if num_children > 2:
+                raise RuntimeError("Illegal child formation")
+            elif isinstance(ops[-1], (AssignOp, SequentialOp, ParallelOp)):
+                raise RuntimeError("Illegal child formation")
+        else:
+            raise RuntimeError("Illegal child formation")
         if ops is not None:
             self.ops = ops
 
