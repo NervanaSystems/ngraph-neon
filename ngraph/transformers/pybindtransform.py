@@ -55,7 +55,6 @@ class PybindComputation(Computation):
 
         # neon side numpy buffer management
         self.neon_return_buffer = dict()
-        self.neon_variable_buffer = dict()
         self.neon_update_buffer = dict()
 
         # Neon -> Ngraph lookup
@@ -100,7 +99,7 @@ class PybindComputation(Computation):
             tensor_size = self.get_tensor_size(op)
             # TODO - need to define dtype of numpy array's for *params based on op.dtype
             self.variable_primary_tensor_view_list[index].write(util.numpy_to_c(
-                self.neon_variable_buffer[op]), 0, tensor_size)
+                self.transformer.neon_variable_buffer[op]), 0, tensor_size)
 
         self.cf.call(self.param_primary_tensor_view_list + self.variable_primary_tensor_view_list,
                      self.result_primary_tensor_view_list + self.update_primary_tensor_view_list)
@@ -123,7 +122,7 @@ class PybindComputation(Computation):
 
         # update weights
         for node in self.neon_update_buffer:
-            np.copyto(self.neon_variable_buffer[node], self.neon_update_buffer[node])
+            np.copyto(self.transformer.neon_variable_buffer[node], self.neon_update_buffer[node])
 
         # determine whether the value to be retruned is a list, dict or an op.
         if isinstance(self.computation_op.returns, Op):
@@ -238,12 +237,13 @@ class PybindComputation(Computation):
             self.variable_primary_tensor_view_list.append(
                 self.backend.make_primary_tensor_view(
                     self.element_type, shape))
-            # Allocate return buffer
+            # Allocate variable buffer - shared by computations
             # TODO - need to define dtype of numpy array's for variables based on dtype
-            var_buffer = np.empty(shape, dtype=np.float32)
-            if node.initial_value is not None:
-                np.copyto(var_buffer, node.initial_value)
-            self.neon_variable_buffer[node] = var_buffer
+            if node not in self.transformer.neon_variable_buffer:
+                var_buffer = np.empty(shape, dtype=np.float32)
+                self.transformer.neon_variable_buffer[node] = var_buffer
+                if node.initial_value is not None:
+                    np.copyto(var_buffer, node.initial_value)
 
         # prepare tensor_views for weights
         for node in self.neon_update_list:
@@ -345,6 +345,7 @@ class PybindTransformer(FunctionTransformer):
             while creating the transformer_factory()")
         """
         super(PybindTransformer, self).__init__(**kwargs)
+        self.neon_variable_buffer = dict()
 
     def make_computation(self, computation):
         """
