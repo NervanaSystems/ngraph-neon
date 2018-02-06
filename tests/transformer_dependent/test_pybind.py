@@ -315,5 +315,5 @@ def test_unary_op():
             _log_ref = np.log(value1)
             _exp_ref = np.exp(value1)
 
-            np.testing.assert_equal(_log_val, _log_ref)
-            np.testing.assert_equal(_exp_val, _exp_ref)
+            assert np.allclose(_log_val, _log_ref, rtol=0, atol=2)
+            assert np.allclose(_exp_val, _exp_ref, rtol=0, atol=2)
