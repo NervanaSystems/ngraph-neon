@@ -259,7 +259,21 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(AssignableTensorOp)
     def visit(self, op):
-        raise RuntimeError("Should not visit AssignableTensorOp")
+        # Can be visited in the most trivial computation we only a variable is created
+        self.computation.set_op_rank(op)
+        if self.computation.lookup_cpp_op(op) is None:
+            if op.tensor.is_constant:
+                # FIXME: make tensors based on data type
+                constant_op = Constant(Type.f32,
+                                       list(op.axes.lengths),
+                                       list(self.flatten(op.tensor.const.tolist())))
+
+                self.computation.ngraph_cpp_ops[op.tensor] = constant_op
+            else:
+                op_element_type = Parameter(Type.f32, list(op.axes.lengths))
+                self.computation.ngraph_cpp_ops[op.tensor] = op_element_type
+                if not op.tensor.is_placeholder:
+                    self.computation.neon_variable_list.append(op.tensor)
 
     @visit.on_type(DotOp)
     def visit(self, op, input1, input2):
