@@ -140,7 +140,7 @@ class PybindComputation(Computation):
             if not op.tensor.is_constant:
                 if op.tensor in self.variables_cpp_op:
                     if self.scopemark[op] == self.variables_cpp_op[op.tensor][0]:
-                        if self.op_rank[op] > self.op_rank[op.tensor]:
+                        if self.op_rank[op] > self.op_rank[self.variables_cpp_op[op.tensor][2]]:
                             return self.variables_cpp_op[op.tensor][1]
         if op.tensor in self.ngraph_cpp_ops:
             return self.ngraph_cpp_ops[op.tensor]
