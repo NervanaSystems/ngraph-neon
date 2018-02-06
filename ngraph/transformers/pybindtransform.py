@@ -91,16 +91,16 @@ class PybindComputation(Computation):
         # set tensor values for placeholders from args
         # use c++ backend write method to pass the tensor values
         for index, op in enumerate(self.computation_op.parameters):
-            element_size = self.get_element_size(op)
+            tensor_size = self.get_tensor_size(op)
             # TODO - need to define dtype of numpy array's for *params based on op.dtype
             self.param_primary_tensor_view_list[index].write(util.numpy_to_c(
-                np.array(args[index], dtype=np.float32)), 0, int(element_size))
+                np.array(args[index], dtype=np.float32)), 0, tensor_size)
         # set tensor values for weights from variable buffer
         for index, op in enumerate(self.neon_variable_list):
-            element_size = self.get_element_size(op)
+            tensor_size = self.get_tensor_size(op)
             # TODO - need to define dtype of numpy array's for *params based on op.dtype
             self.variable_primary_tensor_view_list[index].write(util.numpy_to_c(
-                self.neon_variable_buffer[op]), 0, int(element_size))
+                self.neon_variable_buffer[op]), 0, tensor_size)
 
         self.cf.call(self.param_primary_tensor_view_list + self.variable_primary_tensor_view_list,
                      self.result_primary_tensor_view_list + self.update_primary_tensor_view_list)
@@ -108,18 +108,18 @@ class PybindComputation(Computation):
         # now read the values from the computed result
         for index, result in enumerate(self.result_primary_tensor_view_list):
             result_op = self.neon_return_list[index]
-            element_size = self.get_element_size(result_op)
+            tensor_size = self.get_tensor_size(result_op)
             result.read(util.numpy_to_c(self.neon_return_buffer[result_op]),
                         0,
-                        int(element_size))
+                        tensor_size)
 
         # now read updated weights into weight variables from the computated result
         for index, result in enumerate(self.update_primary_tensor_view_list):
             result_op = self.neon_update_list[index]
-            element_size = self.get_element_size(result_op)
+            tensor_size = self.get_tensor_size(result_op)
             result.read(util.numpy_to_c(self.neon_update_buffer[result_op]),
                         0,
-                        int(element_size))
+                        tensor_size)
 
         # update weights
         for node in self.neon_update_buffer:
@@ -253,16 +253,16 @@ class PybindComputation(Computation):
                     self.element_type, list(node.axes.lengths)))
             self.neon_update_buffer[node] = np.empty(shape, dtype=np.float32)
 
-    def get_element_size(self, op):
+    def get_tensor_size(self, op):
         """
-        computes the size of the op in bytes
+        computes the size of the tensor produced by op in bytes
 
         :param op:
         :return: int, op size in bytes
         """
         item_size = op.tensor.dtype.itemsize
-        element_size = (np.prod(op.axes.lengths)) * item_size
-        return element_size
+        tensor_size = int((np.prod(op.axes.lengths)) * item_size)
+        return tensor_size
 
 
 class FunctionTransformer(Transformer):
