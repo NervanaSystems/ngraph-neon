@@ -123,7 +123,7 @@ class PybindComputation(Computation):
 
         # update weights
         for node in self.neon_update_buffer:
-            np.copy(self.neon_variable_buffer[node], self.neon_update_buffer[node].all())
+            np.copyto(self.neon_variable_buffer[node], self.neon_update_buffer[node])
 
         # determine whether the value to be retruned is a list, dict or an op.
         if isinstance(self.computation_op.returns, Op):
@@ -240,10 +240,9 @@ class PybindComputation(Computation):
                     self.element_type, shape))
             # Allocate return buffer
             # TODO - need to define dtype of numpy array's for variables based on dtype
-            if node.initial_value is None:
-                var_buffer = np.empty(shape, dtype=np.float32)
-            else:
-                var_buffer = node.initial_value
+            var_buffer = np.empty(shape, dtype=np.float32)
+            if node.initial_value is not None:
+                np.copyto(var_buffer, node.initial_value)
             self.neon_variable_buffer[node] = var_buffer
 
         # prepare tensor_views for weights
