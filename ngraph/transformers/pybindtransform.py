@@ -275,58 +275,14 @@ class FunctionTransformer(Transformer):
             graph_pass.wrapped_do_pass(ops=ops, **kwargs)
         return ops
 
-    # TODO: update the following methods
-    def initialize_allocations(self):
-        """
-        Inititializes allocation caches.
-
-        """
-        self.op_tensors = dict()
-        self.op_tensor_views = dict()
-        self.device_buffers = OrderedSet()
-
     def host_to_device(self, computation, parameters, args):
-        """
-        Copy args to parameters in computation.
-
-        Args:
-            computation: The computation.
-            parameters: Parameters of the computation.
-            args: Values for the parameters.
-
-        """
-        for param, arg in zip(parameters, args):
-            self.get_op_tensor_view(param)[...] = arg
+        pass
 
     def device_to_host(self, computation, op, tensor=None):
-        """
-        Copy a computation result from the device back to the host.
-
-        Args:
-            computation: The computation.
-            op: The op associated with the value.
-            tensor: Optional tensor for returned value.
-
-        Returns:
-            The value of op.
-
-        """
-        if self.has_op_tensor(op):
-            return self.get_op_tensor_view(op).get(tensor)
+        pass
 
     def get_tensor_view_value(self, op, host_tensor=None):
-        """
-        Returns the contents of the tensor view for op.
-
-        Args:
-            op: The computation graph op.
-            host_tensor: Optional tensor to copy value into.
-
-        Returns:
-            A NumPy tensor with the elements associated with op.
-
-        """
-        return self.get_op_tensor_view(op).get(host_tensor)
+        pass
 
     @property
     def use_exop(self):
@@ -337,34 +293,8 @@ class FunctionTransformer(Transformer):
         """
         return False
 
-class PybindTransformer(FunctionTransformer):
-    """
-    Transformer for executing graphs to call the pybind wrapper of the ngraph c++.
-
-    """
-    """
-    transformer_name = "pybind_translator"
-    """
-
-    def __init__(self, **kwargs):
-        """
-        if "backend" in kwargs:
-            self.ngraph_backend = kwargs.pop("backend")
-        else:
-            raise AssertionError("No backend info found, please provide the backend info \
-            while creating the transformer_factory()")
-        """
-        super(PybindTransformer, self).__init__(**kwargs)
-
-    def make_computation(self, computation):
-        """
-        creates PybindComputation object
-
-        :param computation:
-        :return: instance of PybindComputation()
-        """
-        pybind_comp = PybindComputation(self, computation)
-        return pybind_comp
+    def initialize_allocations(self):
+        pass
 
     def initialize(self):
         pass
@@ -395,6 +325,36 @@ class PybindTransformer(FunctionTransformer):
 
     def state_initializations(self, states):
         pass
+
+
+class PybindTransformer(FunctionTransformer):
+    """
+    Transformer for executing graphs to call the pybind wrapper of the ngraph c++.
+
+    """
+    """
+    transformer_name = "pybind_translator"
+    """
+
+    def __init__(self, **kwargs):
+        """
+        if "backend" in kwargs:
+            self.ngraph_backend = kwargs.pop("backend")
+        else:
+            raise AssertionError("No backend info found, please provide the backend info \
+            while creating the transformer_factory()")
+        """
+        super(PybindTransformer, self).__init__(**kwargs)
+
+    def make_computation(self, computation):
+        """
+        creates PybindComputation object
+
+        :param computation:
+        :return: instance of PybindComputation()
+        """
+        pybind_comp = PybindComputation(self, computation)
+        return pybind_comp
 
 
 class PybindCPUTransformer(PybindTransformer):
