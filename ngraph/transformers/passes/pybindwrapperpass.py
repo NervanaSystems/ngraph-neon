@@ -260,7 +260,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     @visit.on_type(AssignableTensorOp)
     def visit(self, op):
         # Can be visited in the most trivial computation we only a variable is created
-        self.computation.set_op_rank(op)
+        # self.computation.set_op_rank(op)
         if self.computation.lookup_cpp_op(op) is None:
             if op.tensor.is_constant:
                 # FIXME: make tensors based on data type
@@ -496,7 +496,6 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     def visit(self, op, lhs, rhs):
         self.computation.set_op_rank(op)
         variable = lhs.tensor
-        self.computation.set_op_rank(variable)
         if variable not in self.computation.variables_cpp_op:
             self.computation.variables_cpp_op[variable] = \
                 (self.computation.scopemark[op], self.computation.ngraph_cpp_ops[rhs], rhs)
