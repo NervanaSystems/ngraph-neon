@@ -286,6 +286,12 @@ class GradientDescentMomentum(LearningRateOptimizer):
 
     def variable_update(self, variable, grad, scale_factor, weight_clip_value):
         updates = []
+        """
+        for op in ng.Op.ordered_ops([grad]):
+            op_var = ng.persistent_tensor(axes=op.tensor.axes,
+                                          initial_value=0.).named(variable.name + '_' + op.name)
+            updates.append(ng.assign(op_var, op))
+        """
         velocity = ng.persistent_tensor(axes=variable.axes,
                                         initial_value=0.).named(variable.name + '_vel')
         clip_grad = clip_gradient_value(grad, self.gradient_clip_value)
