@@ -1534,7 +1534,6 @@ class SequentialOp(ValueOp):
             # 1. (AssignOp,)+, (~(SequentialOp|ParallelOp))
             # 2. ParallelOp, (~(AssignOp|SequentialOp|ParallelOp))
             # 3. SequentialOp, (~(AssignOp|SequentialOp|ParallelOp))
-            complex_op = "AssignOp, SequentialOp or ParallelOp"
             num_children = len(ops)
             if num_children < 2:
                 raise RuntimeError("SequentialOp need at least two children")

@@ -31,7 +31,7 @@ class PybindComputation(Computation):
         super(PybindComputation, self).__init__(transformer, computation_op, **kwargs)
         self.transformer = transformer
         self.computation_op = computation_op
-        
+
         # Interfacing with Ngraph Function
         # input to Function
         self.parameter_list = []
@@ -157,7 +157,8 @@ class PybindComputation(Computation):
                     if self.scopemark[op] == self.variables_cpp_op[tensor_op][0]:
                         if self.op_rank[op] > self.op_rank[self.variables_cpp_op[tensor_op][1]]:
                             """
-                            print("Forwarding " + tensor_op.name + " to " + op.name + " forward value " + self.variables_cpp_op[tensor_op][1].name)
+                            print("Forwarding " + tensor_op.name + " to " + op.name +
+                                  " forward value " + self.variables_cpp_op[tensor_op][1].name)
                             """
                             return self.ngraph_cpp_ops[self.variables_cpp_op[tensor_op][1].tensor]
         else:
@@ -307,7 +308,7 @@ class PybindComputation(Computation):
             self.param_primary_tensor_view_list.append(
                 self.backend.make_primary_tensor_view(
                     self.element_type, shape))
-        
+
         # prepare tensor_views for input variables
         for node in self.neon_variable_list:
             shape = list(node.axes.lengths)
@@ -321,7 +322,7 @@ class PybindComputation(Computation):
             self.update_primary_tensor_view_list.append(
                 self.backend.make_primary_tensor_view(
                     self.element_type, shape))
- 
+
 
 class FunctionTransformer(Transformer):
     def __init__(self, **kwargs):

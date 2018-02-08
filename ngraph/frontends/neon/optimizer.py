@@ -460,7 +460,8 @@ class Adam(LearningRateOptimizer):
             ng.assign(m, m * self.beta_1 + (1 - self.beta_1) * grad),
             ng.assign(v, v * self.beta_2 + (1 - self.beta_2) * grad * grad),
             ng.assign(variable,
-                      clip_weight_value(variable - (scale_factor * self.ell * m) / (ng.sqrt(v) + self.epsilon), weight_clip_value))
+                      clip_weight_value(variable - (scale_factor * self.ell * m) /
+                                        (ng.sqrt(v) + self.epsilon), weight_clip_value))
         ])
         return updates
 
