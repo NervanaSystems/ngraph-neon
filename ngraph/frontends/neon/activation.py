@@ -42,7 +42,10 @@ class Rectlin(object):
         Returns:
             Tensor or optree: output activation
         """
-        return ng.maximum(x, 0) + self.slope * ng.minimum(0, x)
+        if self.slope == 0:
+            return ng.maximum(x, 0)
+        else:
+            return ng.maximum(x, 0) + self.slope * ng.minimum(0, x)
 
 
 class Rectlinclip(object):
@@ -66,8 +69,11 @@ class Rectlinclip(object):
         Returns:
             Tensor or optree: output activation
         """
-        return ng.minimum(ng.maximum(x, 0) + self.slope * ng.minimum(x, 0),
-                          self.cutoff)
+        if self.slope == 0:
+            return ng.minimum(ng.maximum(x, 0), self.cutoff)
+        else:
+            return ng.minimum(ng.maximum(x, 0) + self.slope * ng.minimum(x, 0),
+                              self.cutoff)
 
 
 class Identity(object):

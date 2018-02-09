@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright 2016 Nervana Systems Inc.
+# Copyright 2017 Nervana Systems Inc.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ----------------------------------------------------------------------------
+from __future__ import division
 from ngraph.transformers.passes.passes import PeepholeGraphPass
 from ngraph.util.generics import generic_method
 from ngraph.op_graph.op_graph import Op, Add, Multiply, BroadcastOp, TensorValueOp, \
     DotOp, LogOp, ExpOp, Sum, Greater, Maximum, ReductionOp, AssignableTensorOp, ReorderAxes, \
     OneHotOp, Divide, Subtract, NegativeOp, ReciprocalOp, TensorSizeOp, MapRolesOp, Minimum, \
-    Less, Max
+    Less, Max, NotEqual, SequentialOp, AssignOp, ParallelOp
 
 from pyngraph import Type
 from pyngraph.op import Parameter
@@ -27,6 +28,7 @@ from pyngraph.op import Maximum as PyngMaximum
 from pyngraph.op import Minimum as PyngMinimum
 from pyngraph.op import Greater as PyngGreater
 from pyngraph.op import Less as PyngLess
+from pyngraph.op import NotEqual as PyngNotEqual
 from pyngraph.op import Broadcast as PyngBroadcast
 from pyngraph.op import Dot as PyngDot
 from pyngraph.op import Log as PyngLog
@@ -39,6 +41,89 @@ from pyngraph.op import Reduce as PyngReduce
 from pyngraph import Function as Function
 
 
+class PybindScopePass:
+    """
+    Graph pass mark Variable version scope
+    Track AssignOp, SequentionOp and ParallelOp
+
+    Arguments
+        transformer (obj:`Transformer`): The associated transformer.
+    """
+
+    def __init__(self, computation, **kwargs):
+        self.computation = computation
+
+    # scope rules:
+    # - Do a pre-order traversal of op_graph
+    #     - Default scope is "root"
+    #     - Other scopes are formed by appending enclosing ParallelOp and SequentialOp
+    #       to default scope like a posix path
+    #     - Tag all ops with the enclosing scope name
+    def recordscope(self, results):
+
+        def extend_scope(scope, leaf):
+            return scope + '/' + leaf
+
+        def new_seq_scope(scope):
+            new_scope = extend_scope(scope, 'seq' + str(self.computation.seqcount))
+            self.computation.seqcount += 1
+            return new_scope
+
+        def new_par_scope(scope):
+            new_scope = extend_scope(scope, 'par' + str(self.computation.parcount))
+            self.computation.parcount += 1
+            return new_scope
+
+        def visit_pre_order(scope, op):
+            if isinstance(op, TensorValueOp):
+                if op not in self.computation.scopevisited:
+                    self.computation.scopevisited.add(op)
+                    self.computation.scopemark[op] = scope
+                    return
+                else:
+                    return
+            if isinstance(op, SequentialOp):
+                if op not in self.computation.scopevisited:
+                    childscope = new_seq_scope(scope)
+                    children = op.ops
+                    self.computation.scopevisited.add(op)
+                    self.computation.scopemark[op] = scope
+                    for child in children:
+                        visit_pre_order(childscope, child)
+                    return
+                else:
+                    return
+            elif isinstance(op, ParallelOp):
+                if op not in self.computation.scopevisited:
+                    childscope = new_par_scope(scope)
+                    children = op.control_deps
+                    self.computation.scopevisited.add(op)
+                    self.computation.scopemark[op] = scope
+                    for child in children:
+                        visit_pre_order(childscope, child)
+                    return
+                else:
+                    return
+
+            tensor_op = op.tensor
+            if tensor_op not in self.computation.scopevisited:
+                childscope = scope
+                children = tensor_op.args
+                self.computation.scopevisited.add(tensor_op)
+                self.computation.scopemark[tensor_op] = scope
+                for child in children:
+                    visit_pre_order(childscope, child)
+
+        for op in results:
+            visit_pre_order('root', op)
+
+        # for key, val in self.computation.scopemark.items():
+        #    print(key.name, val)
+
+    def __call__(self, results):
+        self.recordscope(results)
+
+
 class PybindWrapperGenerator(PeepholeGraphPass):
     """
     Graph pass to generate the PybindWrapper's by visiting all the Op's
@@ -48,9 +133,10 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         transformer (obj:`Transformer`): The associated transformer.
     """
 
-    def __init__(self, tranformer, **kwargs):
+    def __init__(self, transformer, computation, **kwargs):
         super(PybindWrapperGenerator, self).__init__(**kwargs)
-        self.transformer = tranformer
+        self.transformer = transformer
+        self.computation = computation
 
     def np_reduction_axis(self, op):
         """
@@ -110,43 +196,49 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @generic_method(dispatch_base_type=Op)
     def visit(self, op, *args):
-        pass
+        self.computation.set_op_rank(op)
+        raise RuntimeError("Unsupported op " + str(type(op)))
 
     @visit.on_type(Add)
     def visit(self, op, x, y):
-        ngraph_cpp_add_op = self.transformer.ngraph_cpp_op_prameter[x.tensor] \
-            + self.transformer.ngraph_cpp_op_prameter[y.tensor]
+        self.computation.set_op_rank(op)
+        ngraph_cpp_add_op = self.computation.lookup_cpp_op(x) \
+            + self.computation.lookup_cpp_op(y)
 
-        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_add_op
+        self.computation.register_cpp_op(op, ngraph_cpp_add_op)
 
     @visit.on_type(Divide)
     def visit(self, op, x, y):
-        ngraph_cpp_div_op = self.transformer.ngraph_cpp_op_prameter[x.tensor] \
-            / self.transformer.ngraph_cpp_op_prameter[y.tensor]
+        self.computation.set_op_rank(op)
+        ngraph_cpp_div_op = self.computation.lookup_cpp_op(x) \
+            / self.computation.lookup_cpp_op(y)
 
-        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_div_op
+        self.computation.register_cpp_op(op, ngraph_cpp_div_op)
 
     @visit.on_type(Multiply)
     def visit(self, op, x, y):
-        ngraph_cpp_mul_op = self.transformer.ngraph_cpp_op_prameter[x.tensor] \
-            * self.transformer.ngraph_cpp_op_prameter[y.tensor]
+        self.computation.set_op_rank(op)
+        ngraph_cpp_mul_op = self.computation.lookup_cpp_op(x) \
+            * self.computation.lookup_cpp_op(y)
 
-        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_mul_op
+        self.computation.register_cpp_op(op, ngraph_cpp_mul_op)
 
     @visit.on_type(Subtract)
     def visit(self, op, x, y):
-        ngraph_cpp_sub_op = self.transformer.ngraph_cpp_op_prameter[x.tensor] \
-            - self.transformer.ngraph_cpp_op_prameter[y.tensor]
+        self.computation.set_op_rank(op)
+        ngraph_cpp_sub_op = self.computation.lookup_cpp_op(x) \
+            - self.computation.lookup_cpp_op(y)
 
-        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_sub_op
+        self.computation.register_cpp_op(op, ngraph_cpp_sub_op)
 
     @visit.on_type(BroadcastOp)
     def visit(self, op, input):
+        self.computation.set_op_rank(op)
         axis_set = set()
         element_type = Type.f32
         # check if the op.args already have Paramterized view type.
-        if op.args[0].tensor in self.transformer.ngraph_cpp_op_prameter:
-            op_element_type = self.transformer.ngraph_cpp_op_prameter[op.args[0].tensor]
+        if self.computation.lookup_cpp_op(op.args[0]) is not None:
+            op_element_type = self.computation.lookup_cpp_op(op.args[0])
         else:
             op_element_type = Parameter(
                 element_type, list(op.args[0].axes.lengths))
@@ -158,8 +250,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             if axis not in broadcast_args_axes:
                 axis_set.add(pos)
 
-        self.transformer.ngraph_cpp_op_prameter[op.tensor] = \
-            PyngBroadcast(op_element_type, list(op.axes.lengths), axis_set)
+        self.computation.register_cpp_op(
+            op, PyngBroadcast(op_element_type, list(op.axes.lengths), axis_set))
 
     def flatten(self, container):
         if isinstance(container, (list, tuple)):
@@ -174,35 +266,41 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(TensorValueOp)
     def visit(self, op):
-
-        if op.tensor not in self.transformer.ngraph_cpp_op_prameter:
-            if op.tensor.is_constant:
+        self.computation.set_op_rank(op)
+        tensor = op.tensor
+        if self.computation.lookup_cpp_op(op) is None:
+            if tensor.is_constant:
                 # FIXME: make tensors based on data type
                 constant_op = Constant(Type.f32,
-                                       list(op.axes.lengths),
-                                       list(self.flatten(op.tensor.const.tolist())))
-
-                self.transformer.ngraph_cpp_op_prameter[op.tensor] = constant_op
+                                       list(tensor.axes.lengths),
+                                       list(self.flatten(tensor.const.tolist())))
+                self.computation.register_cpp_op(tensor, constant_op)
             else:
-                op_element_type = Parameter(Type.f32, list(op.axes.lengths))
-                self.transformer.ngraph_cpp_op_prameter[op.tensor] = op_element_type
+                op_element_type = Parameter(Type.f32, list(tensor.axes.lengths))
+                self.computation.register_cpp_op(tensor, op_element_type)
+                if not tensor.is_placeholder:
+                    self.computation.neon_variable_list.append(tensor)
 
     @visit.on_type(AssignableTensorOp)
     def visit(self, op):
-        if op.tensor not in self.transformer.ngraph_cpp_op_prameter:
-            if op.tensor.is_constant:
+        # Can be visited in the most trivial computation we only a variable is created
+        if self.computation.lookup_cpp_op(op) is None:
+            if op.is_constant:
                 # FIXME: make tensors based on data type
                 constant_op = Constant(Type.f32,
                                        list(op.axes.lengths),
-                                       list(self.flatten(op.tensor.const.tolist())))
+                                       list(self.flatten(op.const.tolist())))
 
-                self.transformer.ngraph_cpp_op_prameter[op.tensor] = constant_op
+                self.computation.register_cpp_op(op, constant_op)
             else:
                 op_element_type = Parameter(Type.f32, list(op.axes.lengths))
-                self.transformer.ngraph_cpp_op_prameter[op.tensor] = op_element_type
+                self.computation.register_cpp_op(op, op_element_type)
+                if not op.is_placeholder:
+                    self.computation.neon_variable_list.append(op)
 
     @visit.on_type(DotOp)
     def visit(self, op, input1, input2):
+        self.computation.set_op_rank(op)
         # determine the reduction_axes count
         reduction_axes_count, reduction_axes = self.get_reduction_axis(op)
 
@@ -215,8 +313,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             input1_axes_order = self.get_axes_order_from_axes_name(
                 input1.axes.names, input1_reshape_axes)
             input1_reorder_op = PyngReshape(
-                self.transformer.ngraph_cpp_op_prameter[
-                    input1.tensor],
+                self.computation.lookup_cpp_op(input1),
                 input1_axes_order,
                 self.get_shape_from_axes_order(
                     input1_axes_order,
@@ -224,8 +321,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             input2_axes_order = self.get_axes_order_from_axes_name(
                 input2.axes.names, input2_reshape_axes)
             input2_reorder_op = PyngReshape(
-                self.transformer.ngraph_cpp_op_prameter[
-                    input2.tensor],
+                self.computation.lookup_cpp_op(input2),
                 input2_axes_order,
                 self.get_shape_from_axes_order(
                     input2_axes_order,
@@ -234,46 +330,60 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                                         reduction_axes_count)
         else:
             ngraph_cpp_dot_op = PyngDot(
-                self.transformer.ngraph_cpp_op_prameter[
-                    input1.tensor], self.transformer.ngraph_cpp_op_prameter[
-                    input2.tensor], reduction_axes_count)
+                self.computation.lookup_cpp_op(input1),
+                self.computation.lookup_cpp_op(input2),
+                reduction_axes_count)
 
-        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_dot_op
+        self.computation.register_cpp_op(op, ngraph_cpp_dot_op)
 
     @visit.on_type(LogOp)
     def visit(self, op, input):
-        ngraph_cpp_log_op = PyngLog(self.transformer.ngraph_cpp_op_prameter[input.tensor])
-        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_log_op
+        self.computation.set_op_rank(op)
+        ngraph_cpp_log_op = PyngLog(self.computation.lookup_cpp_op(input))
+        self.computation.register_cpp_op(op, ngraph_cpp_log_op)
 
     @visit.on_type(ExpOp)
     def visit(self, op, input):
-        ngraph_cpp_exp_op = PyngExp(self.transformer.ngraph_cpp_op_prameter[input.tensor])
-        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_exp_op
+        self.computation.set_op_rank(op)
+        ngraph_cpp_exp_op = PyngExp(self.computation.lookup_cpp_op(input))
+        self.computation.register_cpp_op(op, ngraph_cpp_exp_op)
 
     @visit.on_type(Greater)
     def visit(self, op, input1, input2):
+        self.computation.set_op_rank(op)
         ngraph_cpp_greater_op = PyngGreater(
-            self.transformer.ngraph_cpp_op_prameter[
-                input1.tensor], self.transformer.ngraph_cpp_op_prameter[
-                input2.tensor])
+            self.computation.lookup_cpp_op(input1),
+            self.computation.lookup_cpp_op(input2))
         # convert the element back from bool to float type
         element_result_type = Type.f32
         greater_result_op = PyngConvert(ngraph_cpp_greater_op, element_result_type)
-        self.transformer.ngraph_cpp_op_prameter[op.tensor] = greater_result_op
+        self.computation.register_cpp_op(op, greater_result_op)
 
     @visit.on_type(Less)
     def visit(self, op, input1, input2):
+        self.computation.set_op_rank(op)
         ngraph_cpp_less_op = PyngLess(
-            self.transformer.ngraph_cpp_op_prameter[
-                input1.tensor], self.transformer.ngraph_cpp_op_prameter[
-                input2.tensor])
+            self.computation.lookup_cpp_op(input1),
+            self.computation.lookup_cpp_op(input2))
         # convert the element back from bool to float type
         element_result_type = Type.f32
         less_result_op = PyngConvert(ngraph_cpp_less_op, element_result_type)
-        self.transformer.ngraph_cpp_op_prameter[op.tensor] = less_result_op
+        self.computation.register_cpp_op(op, less_result_op)
+
+    @visit.on_type(NotEqual)
+    def visit(self, op, input1, input2):
+        self.computation.set_op_rank(op)
+        ngraph_cpp_less_op = PyngNotEqual(
+            self.computation.lookup_cpp_op(input1),
+            self.computation.lookup_cpp_op(input2))
+        # convert the element back from bool to float type
+        element_result_type = Type.f32
+        less_result_op = PyngConvert(ngraph_cpp_less_op, element_result_type)
+        self.computation.register_cpp_op(op, less_result_op)
 
     @visit.on_type(Sum)
     def visit(self, op, input):
+        self.computation.set_op_rank(op)
         if isinstance(self.np_reduction_axis(op), tuple):
             axis_set = self.np_reduction_axis(op)
         else:
@@ -281,28 +391,29 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             axis_set += (self.np_reduction_axis(op),)
 
         ngraph_cpp_sum_op = PyngSum(
-            self.transformer.ngraph_cpp_op_prameter[
-                input.tensor], set(axis_set))
-        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_sum_op
+            self.computation.lookup_cpp_op(input),
+            set(axis_set))
+        self.computation.register_cpp_op(op, ngraph_cpp_sum_op)
 
     @visit.on_type(Maximum)
     def visit(self, op, input1, input2):
+        self.computation.set_op_rank(op)
         ngraph_cpp_maximum_op = PyngMaximum(
-            self.transformer.ngraph_cpp_op_prameter[
-                input1.tensor], self.transformer.ngraph_cpp_op_prameter[
-                input2.tensor])
-        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_maximum_op
+            self.computation.lookup_cpp_op(input1),
+            self.computation.lookup_cpp_op(input2))
+        self.computation.register_cpp_op(op, ngraph_cpp_maximum_op)
 
     @visit.on_type(Minimum)
     def visit(self, op, input1, input2):
+        self.computation.set_op_rank(op)
         ngraph_cpp_minimum_op = PyngMinimum(
-            self.transformer.ngraph_cpp_op_prameter[
-                input1.tensor], self.transformer.ngraph_cpp_op_prameter[
-                input2.tensor])
-        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_minimum_op
+            self.computation.lookup_cpp_op(input1),
+            self.computation.lookup_cpp_op(input2))
+        self.computation.register_cpp_op(op, ngraph_cpp_minimum_op)
 
     @visit.on_type(ReorderAxes)
     def visit(self, op, input):
+        self.computation.set_op_rank(op)
         axis_order = []
         reorder_axes = list(op.axes.lengths)
         input_axes = list(op.args[0].axes.lengths)
@@ -311,50 +422,58 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         for pos, val in enumerate(input_axes):
             axis_order.append(reorder_axes.index(val))
         ngraph_cpp_reorder_op = PyngReshape(
-            self.transformer.ngraph_cpp_op_prameter[
-                op.args[0].tensor], axis_order, reorder_axes)
-        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_reorder_op
+            self.computation.lookup_cpp_op(op.args[0]),
+            axis_order,
+            reorder_axes)
+        self.computation.register_cpp_op(op, ngraph_cpp_reorder_op)
 
     @visit.on_type(OneHotOp)
     def visit(self, op, input):
+        self.computation.set_op_rank(op)
         onehot_shape = list(op.axes.lengths)
         one_hot_axis = (op.axes).index(op.axis)
         ngraph_cpp_onehot_op = PyngOneHot(
-            self.transformer.ngraph_cpp_op_prameter[
-                op.args[0].tensor], onehot_shape, one_hot_axis)
-        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_onehot_op
+            self.computation.lookup_cpp_op(op.args[0]),
+            onehot_shape,
+            one_hot_axis)
+        self.computation.register_cpp_op(op, ngraph_cpp_onehot_op)
 
     @visit.on_type(NegativeOp)
     def visit(self, op, input):
+        self.computation.set_op_rank(op)
         ngraph_cpp_neg_op = PyngNegative(
-            self.transformer.ngraph_cpp_op_prameter[input.tensor])
-        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_neg_op
+            self.computation.lookup_cpp_op(input))
+        self.computation.register_cpp_op(op, ngraph_cpp_neg_op)
 
     @visit.on_type(ReciprocalOp)
     def visit(self, op, input):
-        constant_op = Constant(Type.f32, [], [1])
+        self.computation.set_op_rank(op)
+        input_axes = list(input.axes.lengths)
+        constant_op = Constant(Type.f32, input_axes, [1])
         ngraph_cpp_reciprocal_op = constant_op \
-            / self.transformer.ngraph_cpp_op_prameter[input.tensor]
-        self.transformer.ngraph_cpp_op_prameter[op.tensor] = ngraph_cpp_reciprocal_op
+            / self.computation.lookup_cpp_op(input)
+        self.computation.register_cpp_op(op, ngraph_cpp_reciprocal_op)
 
     @visit.on_type(TensorSizeOp)
     def visit(self, op, input):
+        self.computation.set_op_rank(op)
         # TODO - is treating TensorSizeOp as constants, okay?
         # Construct constant list with number of elements = reduction axes size
         constant_tensor = [op.reduction_axes.size]
         constant_op = Constant(Type.f32,
                                [], constant_tensor)
-        self.transformer.ngraph_cpp_op_prameter[op.tensor] = constant_op
+        self.computation.register_cpp_op(op, constant_op)
 
     @visit.on_type(MapRolesOp)
     def visit(self, op, input):
+        self.computation.set_op_rank(op)
         # TODO - made it as workaround, need to check if this acceptable ?
-        self.transformer.ngraph_cpp_op_prameter[op.tensor] = \
-            self.transformer.ngraph_cpp_op_prameter[op.args[0].tensor]
+        self.computation.register_cpp_op(
+            op, self.computation.lookup_cpp_op(op.args[0]))
 
     @visit.on_type(Max)
     def visit(self, op, input):
-
+        self.computation.set_op_rank(op)
         # Define the reduction function handle
         element_type = Type.f32
         shape = []
@@ -369,8 +488,38 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         else:
             axis_set = tuple()
             axis_set += (self.np_reduction_axis(op),)
-        g_a = self.transformer.ngraph_cpp_op_prameter[input.tensor]
-        const_max_defult_value = [float('-inf')]
-        g_b = Constant(Type.f32, [], const_max_defult_value)
-        self.transformer.ngraph_cpp_op_prameter[op.tensor] = \
-            PyngReduce(g_a, g_b, fn, set(axis_set))
+        g_a = self.computation.lookup_cpp_op(input)
+        const_max_default_value = [float('-inf')]
+        g_b = Constant(Type.f32, [], const_max_default_value)
+        self.computation.register_cpp_op(op, PyngReduce(g_a, g_b, fn, set(axis_set)))
+
+    @visit.on_type(SequentialOp)
+    def visit(self, op):
+        self.computation.set_op_rank(op)
+        # Legal child patterns
+        # 1. (AssignOp,)+, (~(SequentialOp|ParallelOp))
+        # 2. ParallelOp, (~(AssignOp|SequentialOp|ParallelOp))
+        # 3. SequentialOp, (~(AssignOp|SequentialOp|ParallelOp))
+
+        # Output node is the last child op
+        self.computation.register_cpp_op(
+            op, self.computation.lookup_cpp_op(op.ops[-1]))
+
+    @visit.on_type(ParallelOp)
+    def visit(self, op):
+        self.computation.set_op_rank(op)
+        # Legal child pattern
+        # 1. (AssignOp,)+
+        # 2. (SequentialOp,)+ where SequentialOp = (AssignOp,)+
+
+        # ParallelOp has no output node
+
+    @visit.on_type(AssignOp)
+    def visit(self, op, lhs, rhs):
+        self.computation.set_op_rank(op)
+        variable = lhs.tensor
+        if variable not in self.computation.variables_cpp_op:
+            self.computation.variables_cpp_op[variable] = \
+                (self.computation.scopemark[op.tensor], rhs)
+        else:
+            raise RuntimeError("Variable updated more than once!")

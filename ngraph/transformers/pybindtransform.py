@@ -12,27 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ----------------------------------------------------------------------------
-import sys
 import collections
 import numpy as np
-import six
 from ngraph.transformers.base import Computation
-from ngraph.transformers.base import ComputationGraphTransformer
-from ngraph.op_graph.op_graph import Op, computation
+from ngraph.transformers.base import Transformer
+from ngraph.op_graph.op_graph import Op, AssignableTensorOp, TensorValueOp, SequentialOp
 from orderedset import OrderedSet
-# workaround to load the libngraph.so with RTLD_GLOBAL
-if six.PY3:
-    import os
-    flags = os.RTLD_NOW | os.RTLD_GLOBAL
-else:
-    import ctypes
-    flags = sys.getdlopenflags() | ctypes.RTLD_GLOBAL
-sys.setdlopenflags(flags)
 from ngraph.transformers.passes.pybindwrapperpass \
-    import PybindWrapperGenerator  # noqa: E402
-import pyngraph.util as util  # noqa: E402
-from pyngraph import Type, Function  # noqa: E402
-from pyngraph.runtime import Manager  # noqa: E402
+    import PybindWrapperGenerator, PybindScopePass
+import pyngraph.util as util
+from pyngraph import Type, Function
+from pyngraph.runtime import Manager
 
 
 class PybindComputation(Computation):
@@ -41,194 +31,329 @@ class PybindComputation(Computation):
         super(PybindComputation, self).__init__(transformer, computation_op, **kwargs)
         self.transformer = transformer
         self.computation_op = computation_op
-        self.parameter_list = []
-        # self.param_primary_tensor_view_list = []
-        self.result_primary_tensor_view_list = []
-        self.ngraph_op_result_list = []
-        self.return_result_list = dict()
 
-        self.initialize_cpp_backend(self.computation_op.returns, *self.computation_op.parameters)
+        # Interfacing with Ngraph Function
+        # input to Function
+        self.parameter_list = []
+        self.variable_list = []
+        # result from Function
+        self.result_nodes_list = []
+        self.update_nodes_list = []
+
+        # Interfacing with Ngraph callframe
+        # input to callframe
+        self.param_primary_tensor_view_list = []
+        self.variable_primary_tensor_view_list = []
+        # output from callframe
+        self.result_primary_tensor_view_list = []
+        self.update_primary_tensor_view_list = []
+
+        # Interfacing with Neon Ops
+        self.neon_variable_list = []
+        self.neon_update_list = []
+        self.neon_return_list = []
+
+        # neon side numpy buffer management
+        self.neon_return_buffer = dict()
+        self.neon_update_buffer = dict()
+
+        # Neon -> Ngraph lookup
+        self.ngraph_cpp_ops = dict()
+        self.variables_cpp_op = dict()
+
+        # Other variables and structures
+        self.op_rank = dict()
+        self.rank = 0
+        self.scopevisited = set()
+        self.scopemark = dict()
+        self.seqcount = 0
+        self.parcount = 0
+
+        self.build_opgraph()
+        self.build_function()
+        self.build_callframe()
 
     def __call__(self, *args, **kwargs):
         """
-        This builds a primary_tensor_view from the *args and
-        results to pass the ([parameter_list], [return_list])
-        to ngraph++ call_frame to compute the results.
+        Build primary_tensor_view for parameters ([parameter_list])
+        from *args for placeholder and input weight tensors.
+        Build primary_tensor_view for return values ([return_list])
+        from output computations and updated weights
+        Call call_frame with ([parameter_list], [return_list])
+        and copy back return values, updated weights.
 
         :param args:
         :param kwargs:
         :return: [list of computed results]
         """
-        param_primary_tensor_view_list = []
         args = self.unpack_args_or_feed_dict(args, kwargs)
-        self.get_ngraph_cpp_param_list(param_primary_tensor_view_list, *args)
-
-        for index, result in enumerate(self.result_primary_tensor_view_list):
-            result_op = self.ngraph_op_result_list[index]
-            element_size = self.get_element_size(result_op)
-            shape = list(result_op.axes.lengths)
-            # TODO - need to define dtype of numpy array's for results based on result.dtype
-            result_arr = np.empty(shape, dtype=np.float32)
-            result.write(util.numpy_to_c(result_arr), 0, int(element_size))
-            self.return_result_list[result_op] = result_arr
-
-        self.cf.call(param_primary_tensor_view_list, self.result_primary_tensor_view_list)
+        # set tensor values for placeholders from args
+        # use c++ backend write method to pass the tensor values
+        for index, op in enumerate(self.computation_op.parameters):
+            tensor_size = self.get_tensor_size(op)
+            # TODO - need to define dtype of numpy array's for *params based on op.dtype
+            self.param_primary_tensor_view_list[index].write(util.numpy_to_c(
+                np.array(args[index], dtype=np.float32)), 0, tensor_size)
+        # set tensor values for weights from variable buffer
+        for index, op in enumerate(self.neon_variable_list):
+            tensor_size = self.get_tensor_size(op)
+            # TODO - need to define dtype of numpy array's for *params based on op.dtype
+            self.variable_primary_tensor_view_list[index].write(util.numpy_to_c(
+                self.transformer.neon_variable_buffer[op]), 0, tensor_size)
+        """
+        print("Var In:")
+        for var in self.transformer.neon_variable_buffer:
+            if var.name.startswith('GradientDescentMomentum/Sequential/Affine/Linear/W'):
+                print("In: " + var.name)
+                print(self.transformer.neon_variable_buffer[var])
+        """
+        self.cf.call(self.param_primary_tensor_view_list + self.variable_primary_tensor_view_list,
+                     self.result_primary_tensor_view_list + self.update_primary_tensor_view_list)
 
         # now read the values from the computed result
         for index, result in enumerate(self.result_primary_tensor_view_list):
-            result_op = self.ngraph_op_result_list[index]
-            element_size = self.get_element_size(result_op)
-            result.read(util.numpy_to_c(self.return_result_list[result_op]), 0, int(element_size))
+            result_op = self.neon_return_list[index]
+            tensor_size = self.get_tensor_size(result_op)
+            result.read(util.numpy_to_c(self.neon_return_buffer[result_op]),
+                        0,
+                        tensor_size)
+
+        # now read updated weights into weight variables from the computated result
+        for index, result in enumerate(self.update_primary_tensor_view_list):
+            result_op = self.neon_update_list[index]
+            """
+            print('Read out ' + result_op.name)
+            """
+            tensor_size = self.get_tensor_size(result_op)
+            result.read(util.numpy_to_c(self.neon_update_buffer[result_op]),
+                        0,
+                        tensor_size)
+        """
+        print("Var Out:")
+        for var in self.neon_update_buffer:
+            if var.name.startswith('GradientDescentMomentum/Sequential/Affine/Linear/W'):
+                print("Out: " + var.name)
+                print(np.sum(self.neon_update_buffer[var]))
+        """
+        # update weights
+        for var in self.neon_update_buffer:
+            np.copyto(self.transformer.neon_variable_buffer[var], self.neon_update_buffer[var])
 
         # determine whether the value to be retruned is a list, dict or an op.
         if isinstance(self.computation_op.returns, Op):
-            return self.return_result_list[self.computation_op.returns]
+            return self.neon_return_buffer[self.computation_op.returns]
         elif isinstance(self.computation_op.returns, (collections.Sequence, OrderedSet)):
-            return tuple(self.return_result_list[op] for op in self.computation_op.returns)
+            return tuple(self.neon_return_buffer[op] for op in self.computation_op.returns)
         elif isinstance(self.computation_op.returns, collections.Set):
-            return self.return_result_list
+            return self.neon_return_buffer
         else:
             return None
 
-    def initialize_cpp_backend(self, results, *parameters):
-        """
-        Passes result's primary_tensor_view to the ngraph++ Function to generate ngraph ++ op graph
-        allocates backend and initilizes ngraph++ call frame.
-
-        :param results:
-        :param parameters:
-        :return:
-        """
-        # define the result type
-
-        # TODO define element type based on result.dtype instead of defaulting to f32
-        self.result_element_type = Type.f32
-        result_nodes_list = []
-        result_node_to_shape = dict()
-
-        if isinstance(self.computation_op.returns, Op):
-            self.ngraph_op_result_list.append(results)
-            result_node_to_shape[results] = list(results.axes.lengths)
-
-            result_nodes_list.append(self.transformer.ngraph_cpp_op_prameter[results])
+    def lookup_cpp_op(self, op):
+        if isinstance(op, TensorValueOp):
+            tensor_op = op.tensor
+            if not tensor_op.is_constant:
+                if tensor_op in self.variables_cpp_op:
+                    if self.scopemark[op] == self.variables_cpp_op[tensor_op][0]:
+                        if self.op_rank[op] > self.op_rank[self.variables_cpp_op[tensor_op][1]]:
+                            """
+                            print("Forwarding " + tensor_op.name + " to " + op.name +
+                                  " forward value " + self.variables_cpp_op[tensor_op][1].name)
+                            """
+                            return self.ngraph_cpp_ops[self.variables_cpp_op[tensor_op][1].tensor]
         else:
-            for node in results:
-                self.ngraph_op_result_list.append(node)
-                result_node_to_shape[node] = list(node.axes.lengths)
+            tensor_op = op.tensor
+        if tensor_op in self.ngraph_cpp_ops:
+            return self.ngraph_cpp_ops[tensor_op]
+        return None
 
-                result_nodes_list.append(self.transformer.ngraph_cpp_op_prameter[node])
+    def register_cpp_op(self, op, cpp_op):
+        if isinstance(op, SequentialOp):
+            self.ngraph_cpp_ops[op] = cpp_op
+            return
 
-        # use the ngraph_cpp_op dict to built the parameter list for c++ backend
-        for place_holders in parameters:
-            self.parameter_list.append(
-                self.transformer.ngraph_cpp_op_prameter[place_holders.tensor])
+        if isinstance(op, AssignableTensorOp):
+            """
+            print("register_cpp_op: " + op.name + \
+                  ", is_constant: " + str(op.is_constant) + \
+                  ", is_trainable: " + str(op.is_trainable) + \
+                  ", is_placeholder: " + str(op.is_placeholder))
+            """
+            tensor_op = op
+        else:
+            tensor_op = op.tensor
 
-        # TODO - what's the role of the string argument? for now just passing 'test'
-        self.function = Function(
-            result_nodes_list,
-            self.parameter_list,
-            'test')
+        if tensor_op in self.ngraph_cpp_ops:
+            raise RuntimeError("Cannot create register ngraph op twice: " + tensor_op.name)
+        self.ngraph_cpp_ops[tensor_op] = cpp_op
 
-        self.manager = Manager.get(self.transformer.ngraph_backend)
-        self.external = self.manager.compile(self.function)
-        self.backend = self.manager.allocate_backend()
-        self.cf = self.backend.make_call_frame(self.external)
-        # create the primary_tensor_view for result's using the ngraph++ initilized backend
-        if isinstance(self.computation_op.returns, Op):
-            self.result_primary_tensor_view_list.append(
-                self.backend.make_primary_tensor_view(
-                    self.result_element_type,
-                    result_node_to_shape[results]))
-        elif isinstance(self.computation_op.returns, (collections.Sequence, OrderedSet)):
-            for node in results:
-                self.result_primary_tensor_view_list.append(
-                    self.backend.make_primary_tensor_view(
-                        self.result_element_type, result_node_to_shape[node]))
+    def set_op_rank(self, op):
+        if isinstance(op, TensorValueOp):
+            self.op_rank[op] = self.rank
+        else:
+            self.op_rank[op.tensor] = self.rank
+        self.rank += 1
 
-    def get_ngraph_cpp_param_list(self, param_primary_tensor_view_list, *args):
+    def get_tensor_size(self, op):
         """
-        Builds a list of ngraph++ primary_tensor_view from ngraph *parameters list
-
-        :param args:
-        :return:
-        """
-        # get the primary tensor_view for all the *parameters passed from the user
-        for op in self.computation_op.parameters:
-            # TODO define element type based on op.dtype instead of deafulting to flaot32
-            param_element_type = Type.f32
-            param_primary_tensor_view_list.append(
-                self.backend.make_primary_tensor_view(
-                    param_element_type, list(
-                        op.axes.lengths)))
-
-        # use c++ backend write method to pass the tensor values
-        for index, op in enumerate(self.computation_op.parameters):
-            element_size = self.get_element_size(op)
-            # TODO - need to define dtype of numpy array's for *params based on op.dtype
-            param_primary_tensor_view_list[index].write(util.numpy_to_c(
-                np.array(args[index], dtype=np.float32)), 0, int(element_size))
-
-    def get_element_size(self, op):
-        """
-        computes the size of the op in bytes
+        computes the size of the tensor produced by op in bytes
 
         :param op:
         :return: int, op size in bytes
         """
         item_size = op.tensor.dtype.itemsize
-        element_size = (np.prod(op.axes.lengths)) * item_size
-        return element_size
+        tensor_size = int((np.prod(op.axes.lengths)) * item_size)
+        return tensor_size
 
-
-class PybindTransformer(ComputationGraphTransformer):
-    """
-    Transformer for executing graphs to call the pybind wrapper of the ngraph c++.
-
-    """
-    """
-    transformer_name = "pybind_translator"
-    """
-
-    def __init__(self, **kwargs):
+    def build_opgraph(self):
         """
-        if "backend" in kwargs:
-            self.ngraph_backend = kwargs.pop("backend")
-        else:
-            raise AssertionError("No backend info found, please provide the backend info \
-            while creating the transformer_factory()")
+        Build Ngraph opgraph from Neon's computation graph.
         """
-        super(PybindTransformer, self).__init__(**kwargs)
-        self.graph_passes = []
-        self.graph_passes += [PybindWrapperGenerator(self)]
-        self.computation_op_list = []
-        self.ngraph_cpp_op_prameter = dict()
-
-    def add_computation(self, computation):
-        """
-        Initilize ngraph++ backend and call's make_computation to generate PybindComputation Obj
-
-        :param computation:
-        :param results:
-        :param parameters:
-        :return: PybindComputation() object
-        """
-        self.computation_op_list = OrderedSet()
+        computation = self.computation_op
+        self.transformer.graph_passes = []
+        self.transformer.graph_passes += [PybindWrapperGenerator(self.transformer, self)]
+        self.custom_passes = []
+        self.custom_passes += [PybindScopePass(self)]
+        computation_op_list = OrderedSet()
         if isinstance(computation.returns, collections.Container):
-            self.computation_op_list.update(list(computation.returns))
+            computation_op_list.update(list(computation.returns))
         elif isinstance(computation.returns, Op):
-            self.computation_op_list.update(list([computation.returns]))
-        self.run_registered_graph_passes(self.computation_op_list)
-        return self.make_computation(computation)
+            computation_op_list.update(list([computation.returns]))
+        for custom_pass in self.custom_passes:
+            custom_pass(computation_op_list)
+        self.transformer.run_registered_graph_passes(computation_op_list)
 
-    def make_computation(self, computation):
+    def build_function(self):
         """
-        creates PybindComputation object
+        Build Ngraph Function from opgraph.
+        """
+        # define the result type
 
-        :param computation:
-        :return: instance of PybindComputation()
+        # TODO define element type based on dtype instead of defaulting to f32
+        self.element_type = Type.f32
+
+        if isinstance(self.computation_op.returns, Op):
+            self.neon_return_list.append(self.computation_op.returns)
+        else:
+            self.neon_return_list = self.computation_op.returns
+
+        for node in self.neon_return_list:
+            if isinstance(node, SequentialOp):
+                node = node.ops[-1]
+            self.result_nodes_list.append(self.ngraph_cpp_ops[node])
+
+        # Add additional results (updated variable)
+        for variable in self.variables_cpp_op:
+            """
+            print("Update " + variable.name + " " + self.variables_cpp_op[variable][1].name)
+            """
+            self.neon_update_list.append(variable)
+            ngraph_op = self.ngraph_cpp_ops[self.variables_cpp_op[variable][1].tensor]
+            """
+            rhs = self.variables_cpp_op[variable][1].tensor
+            for op in Op.ordered_ops([rhs]):
+                print("    " + op.name)
+                for arg in op.args:
+                    print("        " + arg.name)
+            """
+            self.update_nodes_list.append(ngraph_op)
+            shape = list(variable.axes.lengths)
+            self.neon_update_buffer[variable] = np.empty(shape, dtype=np.float32)
+
+        # use the ngraph_cpp_op dict to built the parameter list for c++ backend
+        for place_holders in self.computation_op.parameters:
+            self.parameter_list.append(self.ngraph_cpp_ops[place_holders.tensor])
+
+        # Add additional parameters (variables)
+        for variable in self.neon_variable_list:
+            self.variable_list.append(self.ngraph_cpp_ops[variable.tensor])
+            # Allocate variable buffer - shared by computations
+            # TODO - need to define dtype of numpy array's for variables based on dtype
+            if variable not in self.transformer.neon_variable_buffer:
+                shape = list(variable.axes.lengths)
+                var_buffer = np.empty(shape, dtype=np.float32)
+                self.transformer.neon_variable_buffer[variable] = var_buffer
+                if variable.initial_value is not None:
+                    np.copyto(var_buffer, variable.initial_value)
+
+        # TODO - what's the role of the string argument? for now just passing 'test'
+        self.function = Function(
+            self.result_nodes_list + self.update_nodes_list,
+            self.parameter_list + self.variable_list,
+            'test')
+
+    def build_callframe(self):
         """
-        pybind_comp = PybindComputation(self, computation)
-        return pybind_comp
+        Initialize Ngraph backend. Build and initialize Ngraph callframe from Function.
+        """
+        self.manager = Manager.get(self.transformer.ngraph_backend)
+        self.external = self.manager.compile(self.function)
+        self.backend = self.manager.allocate_backend()
+        self.cf = self.backend.make_call_frame(self.external)
+
+        # create the primary_tensor_view for result's using the ngraph++ initilized backend
+        for node in self.neon_return_list:
+            shape = list(node.axes.lengths)
+            self.result_primary_tensor_view_list.append(
+                self.backend.make_primary_tensor_view(
+                    self.element_type, shape))
+            # Allocate return buffer
+            # TODO - need to define dtype of numpy array's for results based on result.dtype
+            result_arr = np.empty(shape, dtype=np.float32)
+            self.neon_return_buffer[node] = result_arr
+
+        # prepare tensor_views for placeholders
+        for node in self.computation_op.parameters:
+            shape = list(node.axes.lengths)
+            self.param_primary_tensor_view_list.append(
+                self.backend.make_primary_tensor_view(
+                    self.element_type, shape))
+
+        # prepare tensor_views for input variables
+        for node in self.neon_variable_list:
+            shape = list(node.axes.lengths)
+            self.variable_primary_tensor_view_list.append(
+                self.backend.make_primary_tensor_view(
+                    self.element_type, shape))
+
+        # prepare tensor_views for weights
+        for node in self.neon_update_list:
+            shape = list(node.axes.lengths)
+            self.update_primary_tensor_view_list.append(
+                self.backend.make_primary_tensor_view(
+                    self.element_type, shape))
+
+
+class FunctionTransformer(Transformer):
+    def __init__(self, **kwargs):
+        super(FunctionTransformer, self).__init__(**kwargs)
+        self.computations = OrderedSet()
+
+    def run_registered_graph_passes(self, ops, **kwargs):
+        for graph_pass in self.graph_passes:
+            graph_pass.wrapped_do_pass(ops=ops, **kwargs)
+        return ops
+
+    def host_to_device(self, computation, parameters, args):
+        pass
+
+    def device_to_host(self, computation, op, tensor=None):
+        pass
+
+    def get_tensor_view_value(self, op, host_tensor=None):
+        pass
+
+    @property
+    def use_exop(self):
+        """
+
+        Returns: True if this transformer uses the execution graph.
+
+        """
+        return False
+
+    def initialize_allocations(self):
+        pass
 
     def initialize(self):
         pass
@@ -261,6 +386,37 @@ class PybindTransformer(ComputationGraphTransformer):
         pass
 
 
+class PybindTransformer(FunctionTransformer):
+    """
+    Transformer for executing graphs to call the pybind wrapper of the ngraph c++.
+
+    """
+    """
+    transformer_name = "pybind_translator"
+    """
+
+    def __init__(self, **kwargs):
+        """
+        if "backend" in kwargs:
+            self.ngraph_backend = kwargs.pop("backend")
+        else:
+            raise AssertionError("No backend info found, please provide the backend info \
+            while creating the transformer_factory()")
+        """
+        super(PybindTransformer, self).__init__(**kwargs)
+        self.neon_variable_buffer = dict()
+
+    def make_computation(self, computation):
+        """
+        creates PybindComputation object
+
+        :param computation:
+        :return: instance of PybindComputation()
+        """
+        pybind_comp = PybindComputation(self, computation)
+        return pybind_comp
+
+
 class PybindCPUTransformer(PybindTransformer):
     """
     Transformer for ngraph c++ with cpu backend.
@@ -283,3 +439,15 @@ class PybindINTERPRETERTransformer(PybindTransformer):
     def __init__(self, **kwargs):
         self.ngraph_backend = "INTERPRETER"
         super(PybindINTERPRETERTransformer, self).__init__(**kwargs)
+
+
+class PybindGPUTransformer(PybindTransformer):
+    """
+    Transformer for ngraph c++ with interpreter backend.
+
+    """
+    transformer_name = "nggpu"
+
+    def __init__(self, **kwargs):
+        self.ngraph_backend = "GPU"
+        super(PybindGPUTransformer, self).__init__(**kwargs)
