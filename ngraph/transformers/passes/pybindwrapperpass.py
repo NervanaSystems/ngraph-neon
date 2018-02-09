@@ -18,7 +18,7 @@ from ngraph.util.generics import generic_method
 from ngraph.op_graph.op_graph import Op, Add, Multiply, BroadcastOp, TensorValueOp, \
     DotOp, LogOp, ExpOp, Sum, Greater, Maximum, ReductionOp, AssignableTensorOp, ReorderAxes, \
     OneHotOp, Divide, Subtract, NegativeOp, ReciprocalOp, TensorSizeOp, MapRolesOp, Minimum, \
-    Less, Max, NotEqual, SequentialOp, AssignOp, ParallelOp
+    Less, Max, NotEqual, SequentialOp, AssignOp, ParallelOp, ExpandDims
 
 from pyngraph import Type
 from pyngraph.op import Parameter
@@ -416,11 +416,13 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         self.computation.set_op_rank(op)
         axis_order = []
         reorder_axes = list(op.axes.lengths)
-        input_axes = list(op.args[0].axes.lengths)
+        reorder_axes_names = op.axes.names
+        input_axes_names = op.args[0].axes.names
 
         # determine the axis order for the reshape
-        for pos, val in enumerate(input_axes):
-            axis_order.append(reorder_axes.index(val))
+        for input_axis_name in input_axes_names:
+            index = reorder_axes_names.index(input_axis_name)
+            axis_order.append(index)
         ngraph_cpp_reorder_op = PyngReshape(
             self.computation.lookup_cpp_op(op.args[0]),
             axis_order,
@@ -523,3 +525,12 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                 (self.computation.scopemark[op.tensor], rhs)
         else:
             raise RuntimeError("Variable updated more than once!")
+
+    @visit.on_type(ExpandDims)
+    def visit(self, op, x):
+        self.computation.set_op_rank(op)
+        op_element_type = self.computation.lookup_cpp_op(x)
+        axis_set = set()
+        axis_set.add(op.dim)
+        self.computation.register_cpp_op(op, PyngBroadcast(op_element_type,
+                                         list(op.axes.lengths), axis_set))
