@@ -18,7 +18,9 @@ from ngraph.util.generics import generic_method
 from ngraph.op_graph.op_graph import Op, Add, Multiply, BroadcastOp, TensorValueOp, \
     DotOp, LogOp, ExpOp, Sum, Greater, Maximum, ReductionOp, AssignableTensorOp, ReorderAxes, \
     OneHotOp, Divide, Subtract, NegativeOp, ReciprocalOp, TensorSizeOp, MapRolesOp, Minimum, \
-    Less, Max, NotEqual, SequentialOp, AssignOp, ParallelOp, ExpandDims
+    Less, Max, NotEqual, SequentialOp, AssignOp, ParallelOp, ExpandDims, TensorSliceOp
+from ngraph.op_graph.pooling import PoolingOp, BpropPoolOp
+from ngraph.op_graph.convolution import ConvolutionOp, bprop_conv, update_conv
 
 from pyngraph import Type
 from pyngraph.op import Parameter
@@ -237,7 +239,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         axis_set = set()
         element_type = Type.f32
         # check if the op.args already have Paramterized view type.
-        if self.computation.lookup_cpp_op(op.args[0]) is not None:
+        if self.computation.has_cpp_op(op.args[0]):
             op_element_type = self.computation.lookup_cpp_op(op.args[0])
         else:
             op_element_type = Parameter(
@@ -268,7 +270,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     def visit(self, op):
         self.computation.set_op_rank(op)
         tensor = op.tensor
-        if self.computation.lookup_cpp_op(op) is None:
+        if not self.computation.has_cpp_op(op):
             if tensor.is_constant:
                 # FIXME: make tensors based on data type
                 constant_op = Constant(Type.f32,
@@ -284,7 +286,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     @visit.on_type(AssignableTensorOp)
     def visit(self, op):
         # Can be visited in the most trivial computation we only a variable is created
-        if self.computation.lookup_cpp_op(op) is None:
+        if not self.computation.has_cpp_op(op):
             if op.is_constant:
                 # FIXME: make tensors based on data type
                 constant_op = Constant(Type.f32,
@@ -523,6 +525,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         if variable not in self.computation.variables_cpp_op:
             self.computation.variables_cpp_op[variable] = \
                 (self.computation.scopemark[op.tensor], rhs)
+            self.computation.register_cpp_op(
+                op, self.computation.lookup_cpp_op(rhs))
         else:
             raise RuntimeError("Variable updated more than once!")
 
@@ -534,3 +538,50 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         axis_set.add(op.dim)
         self.computation.register_cpp_op(op, PyngBroadcast(op_element_type,
                                          list(op.axes.lengths), axis_set))
+
+    @visit.on_type(ConvolutionOp)
+    def visit(self, op, *args):
+        # op.args[0] : inputs
+        # op.args[1] : filters
+        # op.args[2] (optional): bias
+        # op.conv_params
+        # op.channel_axes
+        # op.spatial_axes
+        pass
+
+    @visit.on_type(bprop_conv)
+    def visit(self, op, *args):
+        # op.args[0] : delta
+        # op.args[1] : filters
+        # op.fprop
+        pass
+
+    @visit.on_type(update_conv)
+    def visit(self, op, *args):
+        # op.args[0] : delta
+        # op.args[1] : inputs
+        # op.args[2] (optional) : dbias
+        # op.fprop
+        # op.dbias
+        pass
+
+    @visit.on_type(PoolingOp)
+    def visit(self, op, inputs):
+        # op.args[0] : inputs
+        # op.pool_params
+        # op.channel_axes
+        # op.spatial_axes
+        pass
+
+    @visit.on_type(BpropPoolOp)
+    def visit(self, op, delta):
+        # op.args[0] : delta
+        # op.fprop
+        # op.inputs
+        pass
+
+    @visit.on_type(TensorSliceOp)
+    def visit(self, op, x):
+        # op.args[0] : x
+        # op.slices
+        pass
