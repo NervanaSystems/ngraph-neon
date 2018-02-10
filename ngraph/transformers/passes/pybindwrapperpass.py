@@ -19,7 +19,7 @@ from ngraph.op_graph.op_graph import Op, Add, Multiply, BroadcastOp, TensorValue
     DotOp, LogOp, ExpOp, Sum, Greater, Maximum, ReductionOp, AssignableTensorOp, ReorderAxes, \
     OneHotOp, Divide, Subtract, NegativeOp, ReciprocalOp, TensorSizeOp, MapRolesOp, Minimum, \
     Less, Max, NotEqual, SequentialOp, AssignOp, ParallelOp, ExpandDims, TensorSliceOp, \
-    Equal
+    Equal, SqrtOp, SquareOp, Flatten, Unflatten, ContiguousOp
 from ngraph.op_graph.pooling import PoolingOp, BpropPoolOp
 from ngraph.op_graph.convolution import ConvolutionOp, bprop_conv, update_conv
 
@@ -48,6 +48,7 @@ from pyngraph.op import ConvolutionBackpropFilters as PyngConvolutionBackpropFil
 from pyngraph.op import MaxPool as PyngMaxPool
 from pyngraph.op import MaxPoolBackprop as PyngMaxPoolBackprop
 from pyngraph.op import Equal as PyngEqual
+from pyngraph.op import Sqrt as PyngSqrt
 from pyngraph import Function as Function
 
 
@@ -562,6 +563,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(ConvolutionOp)
     def visit(self, op, *args):
+        self.computation.set_op_rank(op)
         # op.args[0] : inputs
         # op.args[1] : filters
         # op.args[2] (optional): bias
@@ -644,6 +646,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     """
     @visit.on_type(bprop_conv)
     def visit(self, op, *args):
+        self.computation.set_op_rank(op)
         # op.args[0] : delta
         # op.args[1] : filters
         # op.fprop
@@ -658,6 +661,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(update_conv)
     def visit(self, op, *args):
+        self.computation.set_op_rank(op)
         # op.args[0] : delta
         # op.args[1] : inputs
         # op.args[2] (optional) : dbias
@@ -674,6 +678,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(PoolingOp)
     def visit(self, op, inputs):
+        self.computation.set_op_rank(op)
         # op.args[0] : inputs
         # op.pool_params
         # op.channel_axes
@@ -702,6 +707,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(BpropPoolOp)
     def visit(self, op, delta):
+        self.computation.set_op_rank(op)
         # op.args[0] : delta
         # op.fprop
         # op.inputs
@@ -755,6 +761,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(TensorSliceOp)
     def visit(self, op, x):
+        self.computation.set_op_rank(op)
         # op.args[0] : x
         # op.slices
         lowers = []
@@ -797,3 +804,30 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                                         list(op.axes.lengths))
 
         self.computation.register_cpp_op(op, ngraph_sliced)
+
+    @visit.on_type(SqrtOp)
+    def visit(self, op, x):
+        self.computation.set_op_rank(op)
+        ngraph_x = self.computation.lookup_cpp_op(x)
+        ngraph_sqrt = PyngSqrt(ngraph_x)
+        self.computation.register_cpp_op(op, ngraph_sqrt)
+
+    @visit.on_type(SquareOp)
+    def visit(self, op, x):
+        self.computation.set_op_rank(op)
+        ngraph_x = self.computation.lookup_cpp_op(x)
+        self.computation.register_cpp_op(op, ngraph_x * ngraph_x)
+
+    @visit.on_type(Flatten)
+    def visit(self, op, x):
+        self.computation.set_op_rank(op)
+
+    @visit.on_type(Unflatten)
+    def visit(self, op, x):
+        self.computation.set_op_rank(op)
+
+    @visit.on_type(ContiguousOp)
+    def visit(self, op, x):
+        self.computation.set_op_rank(op)
+        ngraph_x = self.computation.lookup_cpp_op(x)
+        self.computation.register_cpp_op(op, ngraph_x)
