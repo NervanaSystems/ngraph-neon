@@ -18,7 +18,8 @@ from ngraph.util.generics import generic_method
 from ngraph.op_graph.op_graph import Op, Add, Multiply, BroadcastOp, TensorValueOp, \
     DotOp, LogOp, ExpOp, Sum, Greater, Maximum, ReductionOp, AssignableTensorOp, ReorderAxes, \
     OneHotOp, Divide, Subtract, NegativeOp, ReciprocalOp, TensorSizeOp, MapRolesOp, Minimum, \
-    Less, Max, NotEqual, SequentialOp, AssignOp, ParallelOp, ExpandDims, TensorSliceOp
+    Less, Max, NotEqual, SequentialOp, AssignOp, ParallelOp, ExpandDims, TensorSliceOp, \
+    Equal
 from ngraph.op_graph.pooling import PoolingOp, BpropPoolOp
 from ngraph.op_graph.convolution import ConvolutionOp, bprop_conv, update_conv
 
@@ -40,6 +41,13 @@ from pyngraph.op import OneHot as PyngOneHot
 from pyngraph.op import Negative as PyngNegative
 from pyngraph.op import Convert as PyngConvert
 from pyngraph.op import Reduce as PyngReduce
+from pyngraph.op import Slice as PyngSlice
+from pyngraph.op import Convolution as PyngConvolution
+from pyngraph.op import ConvolutionBackpropData as PyngConvolutionBackpropData
+from pyngraph.op import ConvolutionBackpropFilters as PyngConvolutionBackpropFilters
+from pyngraph.op import MaxPool as PyngMaxPool
+from pyngraph.op import MaxPoolBackprop as PyngMaxPoolBackprop
+from pyngraph.op import Equal as PyngEqual
 from pyngraph import Function as Function
 
 
@@ -372,16 +380,27 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         less_result_op = PyngConvert(ngraph_cpp_less_op, element_result_type)
         self.computation.register_cpp_op(op, less_result_op)
 
-    @visit.on_type(NotEqual)
+    @visit.on_type(Equal)
     def visit(self, op, input1, input2):
         self.computation.set_op_rank(op)
-        ngraph_cpp_less_op = PyngNotEqual(
+        ngraph_cpp_equal_op = PyngEqual(
             self.computation.lookup_cpp_op(input1),
             self.computation.lookup_cpp_op(input2))
         # convert the element back from bool to float type
         element_result_type = Type.f32
-        less_result_op = PyngConvert(ngraph_cpp_less_op, element_result_type)
-        self.computation.register_cpp_op(op, less_result_op)
+        equal_result_op = PyngConvert(ngraph_cpp_equal_op, element_result_type)
+        self.computation.register_cpp_op(op, equal_result_op)
+
+    @visit.on_type(NotEqual)
+    def visit(self, op, input1, input2):
+        self.computation.set_op_rank(op)
+        ngraph_cpp_notequal_op = PyngNotEqual(
+            self.computation.lookup_cpp_op(input1),
+            self.computation.lookup_cpp_op(input2))
+        # convert the element back from bool to float type
+        element_result_type = Type.f32
+        notequal_result_op = PyngConvert(ngraph_cpp_notequal_op, element_result_type)
+        self.computation.register_cpp_op(op, notequal_result_op)
 
     @visit.on_type(Sum)
     def visit(self, op, input):
@@ -425,8 +444,10 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         for input_axis_name in input_axes_names:
             index = reorder_axes_names.index(input_axis_name)
             axis_order.append(index)
+        ngraph_input = self.computation.lookup_cpp_op(op.args[0])
+        # print(ngraph_input.get_output_shape(0))
         ngraph_cpp_reorder_op = PyngReshape(
-            self.computation.lookup_cpp_op(op.args[0]),
+            ngraph_input,
             axis_order,
             reorder_axes)
         self.computation.register_cpp_op(op, ngraph_cpp_reorder_op)
@@ -547,13 +568,92 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         # op.conv_params
         # op.channel_axes
         # op.spatial_axes
-        pass
+        if len(args) == 2:
+            inputs = args[0]
+            filters = args[1]
+        else:
+            inputs = args[0]
+            filters = args[1]
+            bias = args[2]
 
+        """
+        {'K': 16, 'T': 1, 'R': 5, 'S': 5, 'str_d': 1, 'pad_d': 0, 'dil_d': 1, 
+        'str_h': 1, 'pad_h': 0, 'dil_h': 1, 'str_w': 1, 'pad_w': 0, 'dil_w': 1}
+        """
+        """
+        print(inputs.axes)
+        print(op.axes)
+        print(filters.axes)
+        """
+        # print(op_element_type.get_output_shape(0))
+        reordered = PyngReshape(self.computation.lookup_cpp_op(inputs), [4, 0, 1, 2, 3],
+                                [inputs.axes[4].length, inputs.axes[0].length,
+                                inputs.axes[1].length, inputs.axes[2].length,
+                                inputs.axes[3].length])
+        filters_reordered = PyngReshape(self.computation.lookup_cpp_op(filters), [4, 0, 1, 2, 3],
+                                        [filters.axes[4].length, filters.axes[0].length,
+                                        filters.axes[1].length, filters.axes[2].length,
+                                        filters.axes[3].length])
+        ngraph_conv = PyngConvolution(
+            reordered,
+            filters_reordered,
+            [1, 1, 1])
+        ordered = PyngReshape(ngraph_conv, [4, 0, 1, 2, 3],
+                              list(op.axes.lengths))
+
+        self.computation.register_cpp_op(op, ordered)
+
+    """
+    /// \brief Constructs a batched-convolution data batch-backprop operation.
+    ///
+    /// \param data_batch_shape The shape of the data batch from forward-prop.
+    /// \param filters The node producing the filters from forward-prop.
+    /// \param output_delta The node producing output delta.
+    /// \param window_movement_strides_forward The window movement strides from forward-prop.
+    /// \param window_dilation_strides_forward The window dilation strides from forward-prop.
+    /// \param padding_below_forward The padding-below sizes from forward-prop.
+    /// \param padding_above_forward The padding-above sizes from forward-prop.
+    /// \param data_dilation_strides_forward The data dilation strides from forward-prop.
+    ConvolutionBackpropData(const Shape& data_batch_shape,
+                            const std::shared_ptr<Node>& filters,
+                            const std::shared_ptr<Node>& output_delta,
+                            const Strides& window_movement_strides_forward,
+                            const Strides& window_dilation_strides_forward,
+                            const CoordinateDiff& padding_below_forward,
+                            const CoordinateDiff& padding_above_forward,
+                            const Strides& data_dilation_strides_forward);
+
+    /// \brief Constructs a batched-convolution filter-backprop operation.
+    ///
+    /// \param data_batch The tensor producing the data batch from forward-prop.
+    /// \param filters_shape The shape of the filters from forward-prop.
+    /// \param output_delta The node producing output delta.
+    /// \param window_movement_strides_forward The window movement strides from forward-prop.
+    /// \param window_dilation_strides_forward The window dilation strides from forward-prop.
+    /// \param padding_below_forward The padding-below sizes from forward-prop.
+    /// \param padding_above_forward The padding-above sizes from forward-prop.
+    /// \param data_dilation_strides_forward The data dilation strides from forward-prop.
+    ConvolutionBackpropFilters(const std::shared_ptr<Node>& data_batch,
+                                const Shape& filters_shape,
+                                const std::shared_ptr<Node>& output_delta,
+                                const Strides& window_movement_strides_forward,
+                                const Strides& window_dilation_strides_forward,
+                                const CoordinateDiff& padding_below_forward,
+                                const CoordinateDiff& padding_above_forward,
+                                const Strides& data_dilation_strides_forward);
+    """
     @visit.on_type(bprop_conv)
     def visit(self, op, *args):
         # op.args[0] : delta
         # op.args[1] : filters
         # op.fprop
+        delta = args[0]
+        filters = args[1]
+        print(delta.axes)
+        print(filters.axes)
+        print(op.fprop.axes)
+        print(op.fprop.args[0].axes)
+        print(op.fprop.args[1].axes)
         pass
 
     @visit.on_type(update_conv)
@@ -563,6 +663,13 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         # op.args[2] (optional) : dbias
         # op.fprop
         # op.dbias
+        delta = args[0]
+        filters = args[1]
+        print(delta.axes)
+        print(filters.axes)
+        print(op.fprop.axes)
+        print(op.fprop.args[0].axes)
+        print(op.fprop.args[1].axes)
         pass
 
     @visit.on_type(PoolingOp)
@@ -571,17 +678,122 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         # op.pool_params
         # op.channel_axes
         # op.spatial_axes
-        pass
+        if 'max' == op.pool_params['op']:
+            """
+            print(op.pool_params)
+            print(inputs.axes)
+            print(op.axes)
+            """
+            reordered = PyngReshape(self.computation.lookup_cpp_op(inputs), [4, 0, 1, 2, 3],
+                                    [inputs.axes[4].length, inputs.axes[0].length,
+                                    inputs.axes[1].length, inputs.axes[2].length,
+                                    inputs.axes[3].length])
+            ngraph_pool = PyngMaxPool(reordered,
+                                      [op.pool_params['str_d'], op.pool_params['str_h'],
+                                          op.pool_params['str_w']],
+                                      [op.pool_params['str_d'], op.pool_params['str_h'],
+                                          op.pool_params['str_w']])    
+            ordered = PyngReshape(ngraph_pool, [4, 0, 1, 2, 3],
+                                  list(op.axes.lengths))
+
+            self.computation.register_cpp_op(op, ordered)
+        else:
+            raise RuntimeError("Only max pooling supported for now")
 
     @visit.on_type(BpropPoolOp)
     def visit(self, op, delta):
         # op.args[0] : delta
         # op.fprop
         # op.inputs
-        pass
+        if 'max' == op.fprop.pool_params['op']:
+            """
+            MaxPoolBackprop(const std::shared_ptr<Node>& arg_forward,
+                    const std::shared_ptr<Node>& delta,
+                    const Shape& window_shape,
+                    const Strides& window_movement_strides,
+                    const Shape& padding_below,
+                    const Shape& padding_above,
+                    const std::shared_ptr<op::MaxPool>& forward_op = nullptr);
+            """
+            """
+            print(delta.axes)
+            print(op.inputs.axes)
+            print(op.axes)
+            """
+            inputs = op.inputs
+            reordered = PyngReshape(self.computation.lookup_cpp_op(inputs), [4, 0, 1, 2, 3],
+                                    [inputs.axes[4].length, inputs.axes[0].length,
+                                    inputs.axes[1].length, inputs.axes[2].length,
+                                    inputs.axes[3].length])
+
+            red_delta = PyngReshape(self.computation.lookup_cpp_op(delta), [4, 0, 1, 2, 3],
+                                    [delta.axes[4].length, delta.axes[0].length,
+                                    delta.axes[1].length, delta.axes[2].length,
+                                    delta.axes[3].length])
+            ngraph_fprop = self.computation.lookup_cpp_op(op.fprop).get_input_op(0)
+            """
+            print(red_delta.get_output_shape(0))
+            print(ngraph_fprop.get_output_shape(0))
+            """
+            ngraph_pool = PyngMaxPoolBackprop(reordered,
+                                              red_delta,
+                                              [op.fprop.pool_params['str_d'],
+                                                  op.fprop.pool_params['str_h'],
+                                                  op.fprop.pool_params['str_w']],
+                                              [op.fprop.pool_params['str_d'],
+                                                  op.fprop.pool_params['str_h'],
+                                                  op.fprop.pool_params['str_w']],
+                                              [0, 0, 0],
+                                              [0, 0, 0],
+                                              ngraph_fprop)
+            ordered = PyngReshape(ngraph_pool, [4, 0, 1, 2, 3],
+                                  list(op.axes.lengths))
+
+            self.computation.register_cpp_op(op, ordered)
+        else:
+            raise RuntimeError("Only max pooling supported for now")
 
     @visit.on_type(TensorSliceOp)
     def visit(self, op, x):
         # op.args[0] : x
         # op.slices
-        pass
+        lowers = []
+        uppers = []
+        strides = []
+        axes_to_remove = []
+        for axis, s in zip(x.axes, op.slices):
+            if isinstance(s, int):
+                lowers.append(s)
+                uppers.append(s + 1)
+                strides.append(1)
+                axes_to_remove.append(axis)
+            else:
+                if s.start is None:
+                    lowers.append(0)
+                else:
+                    lowers.append(s.start)
+                if s.step is None:
+                    strides.append(1)
+                else:
+                    strides.append(s.step)
+                if s.stop is None:
+                    uppers.append(axis.length)
+                else:
+                    uppers.append(s.stop)
+        op_element_type = self.computation.lookup_cpp_op(x)
+        """
+        print("TensorSliceOp")
+        print(x.axes)
+        print(op.axes)
+        print(op_element_type.get_output_shape(0))
+        print(lowers)
+        print(uppers)
+        print(strides)
+        """
+        ngraph_sliced = PyngSlice(op_element_type, lowers, uppers, strides)
+        if axes_to_remove:
+            ngraph_sliced = PyngReshape(ngraph_sliced,
+                                        list(range(0, len(x.axes))),
+                                        list(op.axes.lengths))
+
+        self.computation.register_cpp_op(op, ngraph_sliced)
