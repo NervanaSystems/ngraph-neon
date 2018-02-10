@@ -777,8 +777,10 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                                           op.pool_params['str_w']],
                                       [op.pool_params['str_d'], op.pool_params['str_h'],
                                           op.pool_params['str_w']],
-                                      [0, 0, 0],
-                                      [0, 0, 0])
+                                      [op.pool_params['pad_d'], op.pool_params['pad_h'],
+                                          op.pool_params['pad_w']],
+                                      [op.pool_params['pad_d'], op.pool_params['pad_h'],
+                                          op.pool_params['pad_w']])
             ordered = PyngReshape(ngraph_pool, [4, 0, 1, 2, 3],
                                   list(op.axes.lengths))
 
@@ -792,7 +794,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         # op.args[0] : delta
         # op.fprop
         # op.inputs
-        if 'max' == op.fprop.pool_params['op']:
+        if 'max' == op.pool_params['op']:
             """
             MaxPoolBackprop(const std::shared_ptr<Node>& arg_forward,
                     const std::shared_ptr<Node>& delta,
@@ -830,8 +832,12 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                                               [op.fprop.pool_params['str_d'],
                                                   op.fprop.pool_params['str_h'],
                                                   op.fprop.pool_params['str_w']],
-                                              [0, 0, 0],
-                                              [0, 0, 0],
+                                              [op.fprop.pool_params['pad_d'],
+                                                  op.fprop.pool_params['pad_h'],
+                                                  op.fprop.pool_params['pad_w']],
+                                              [op.fprop.pool_params['pad_d'],
+                                                  op.fprop.pool_params['pad_h'],
+                                                  op.fprop.pool_params['pad_w']],
                                               ngraph_fprop)
             ordered = PyngReshape(ngraph_pool, [4, 0, 1, 2, 3],
                                   list(op.axes.lengths))
