@@ -561,6 +561,17 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         self.computation.register_cpp_op(op, PyngBroadcast(op_element_type,
                                          list(op.axes.lengths), axis_set))
 
+    """
+    /// brief Constructs a batched convolution operation.
+    ///
+    /// param data_batch The node producing the input data batch tensor.
+    /// param filters The node producing the filters tensor.
+    /// param window_movement_strides The window movement strides.
+    /// param window_dilation_strides The window dilation strides.
+    /// param padding_below The padding-below sizes.
+    /// param padding_above The padding-above sizes.
+    /// param data_dilation_strides The data dilation strides.
+    """
     @visit.on_type(ConvolutionOp)
     def visit(self, op, *args):
         self.computation.set_op_rank(op)
@@ -599,23 +610,28 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         ngraph_conv = PyngConvolution(
             reordered,
             filters_reordered,
-            [1, 1, 1])
+            [op.conv_params['str_d'], op.conv_params['str_h'], op.conv_params['str_w']],
+            [op.conv_params['str_d'], op.conv_params['str_h'], op.conv_params['str_w']],
+            [op.conv_params['pad_d'], op.conv_params['pad_h'], op.conv_params['pad_w']],
+            [op.conv_params['pad_d'], op.conv_params['pad_h'], op.conv_params['pad_w']],
+            [1, 1, 1]
+            )
         ordered = PyngReshape(ngraph_conv, [4, 0, 1, 2, 3],
                               list(op.axes.lengths))
 
         self.computation.register_cpp_op(op, ordered)
 
     """
-    /// \brief Constructs a batched-convolution data batch-backprop operation.
+    /// brief Constructs a batched-convolution data batch-backprop operation.
     ///
-    /// \param data_batch_shape The shape of the data batch from forward-prop.
-    /// \param filters The node producing the filters from forward-prop.
-    /// \param output_delta The node producing output delta.
-    /// \param window_movement_strides_forward The window movement strides from forward-prop.
-    /// \param window_dilation_strides_forward The window dilation strides from forward-prop.
-    /// \param padding_below_forward The padding-below sizes from forward-prop.
-    /// \param padding_above_forward The padding-above sizes from forward-prop.
-    /// \param data_dilation_strides_forward The data dilation strides from forward-prop.
+    /// param data_batch_shape The shape of the data batch from forward-prop.
+    /// param filters The node producing the filters from forward-prop.
+    /// param output_delta The node producing output delta.
+    /// param window_movement_strides_forward The window movement strides from forward-prop.
+    /// param window_dilation_strides_forward The window dilation strides from forward-prop.
+    /// param padding_below_forward The padding-below sizes from forward-prop.
+    /// param padding_above_forward The padding-above sizes from forward-prop.
+    /// param data_dilation_strides_forward The data dilation strides from forward-prop.
     ConvolutionBackpropData(const Shape& data_batch_shape,
                             const std::shared_ptr<Node>& filters,
                             const std::shared_ptr<Node>& output_delta,
@@ -624,17 +640,60 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                             const CoordinateDiff& padding_below_forward,
                             const CoordinateDiff& padding_above_forward,
                             const Strides& data_dilation_strides_forward);
+    """
+    @visit.on_type(bprop_conv)
+    def visit(self, op, *args):
+        self.computation.set_op_rank(op)
+        # op.args[0] : delta
+        # op.args[1] : filters
+        # op.fprop.args[0] : fprop data batch shape
+        # op.fprop.conv_params : forward params
+        delta = args[0]
+        filters = args[1]
+        data = op.fprop.args[0]
+        conv_params = op.fprop.conv_params
+        """
+        print(delta.axes)
+        print(filters.axes)
+        print(data.axes)
+        print(conv_params)
+        """
+        delta_reordered = PyngReshape(self.computation.lookup_cpp_op(delta), [4, 0, 1, 2, 3],
+                                      [delta.axes[4].length, delta.axes[0].length,
+                                      delta.axes[1].length, delta.axes[2].length,
+                                      delta.axes[3].length])
+        filters_reordered = PyngReshape(self.computation.lookup_cpp_op(filters), [4, 0, 1, 2, 3],
+                                        [filters.axes[4].length, filters.axes[0].length,
+                                        filters.axes[1].length, filters.axes[2].length,
+                                        filters.axes[3].length])
+        ngraph_bprop_conv = PyngConvolutionBackpropData(
+            [data.axes[4].length, data.axes[0].length, 
+                data.axes[1].length, data.axes[2].length,
+                data.axes[3].length],
+            filters_reordered,
+            delta_reordered,
+            [conv_params['str_d'], conv_params['str_h'], conv_params['str_w']],
+            [conv_params['str_d'], conv_params['str_h'], conv_params['str_w']],
+            [conv_params['pad_d'], conv_params['pad_h'], conv_params['pad_w']],
+            [conv_params['pad_d'], conv_params['pad_h'], conv_params['pad_w']],
+            [1, 1, 1]
+            )
+        ordered = PyngReshape(ngraph_bprop_conv, [4, 0, 1, 2, 3],
+                              list(op.axes.lengths))
 
-    /// \brief Constructs a batched-convolution filter-backprop operation.
+        self.computation.register_cpp_op(op, ordered)
+
+    """
+    /// brief Constructs a batched-convolution filter-backprop operation.
     ///
-    /// \param data_batch The tensor producing the data batch from forward-prop.
-    /// \param filters_shape The shape of the filters from forward-prop.
-    /// \param output_delta The node producing output delta.
-    /// \param window_movement_strides_forward The window movement strides from forward-prop.
-    /// \param window_dilation_strides_forward The window dilation strides from forward-prop.
-    /// \param padding_below_forward The padding-below sizes from forward-prop.
-    /// \param padding_above_forward The padding-above sizes from forward-prop.
-    /// \param data_dilation_strides_forward The data dilation strides from forward-prop.
+    /// param data_batch The tensor producing the data batch from forward-prop.
+    /// param filters_shape The shape of the filters from forward-prop.
+    /// param output_delta The node producing output delta.
+    /// param window_movement_strides_forward The window movement strides from forward-prop.
+    /// param window_dilation_strides_forward The window dilation strides from forward-prop.
+    /// param padding_below_forward The padding-below sizes from forward-prop.
+    /// param padding_above_forward The padding-above sizes from forward-prop.
+    /// param data_dilation_strides_forward The data dilation strides from forward-prop.
     ConvolutionBackpropFilters(const std::shared_ptr<Node>& data_batch,
                                 const Shape& filters_shape,
                                 const std::shared_ptr<Node>& output_delta,
@@ -644,37 +703,50 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                                 const CoordinateDiff& padding_above_forward,
                                 const Strides& data_dilation_strides_forward);
     """
-    @visit.on_type(bprop_conv)
-    def visit(self, op, *args):
-        self.computation.set_op_rank(op)
-        # op.args[0] : delta
-        # op.args[1] : filters
-        # op.fprop
-        delta = args[0]
-        filters = args[1]
-        print(delta.axes)
-        print(filters.axes)
-        print(op.fprop.axes)
-        print(op.fprop.args[0].axes)
-        print(op.fprop.args[1].axes)
-        pass
-
     @visit.on_type(update_conv)
     def visit(self, op, *args):
         self.computation.set_op_rank(op)
         # op.args[0] : delta
-        # op.args[1] : inputs
+        # op.args[1] : data batch
         # op.args[2] (optional) : dbias
-        # op.fprop
-        # op.dbias
+        # op.fprop.args[0] : data batch
+        # op.fprop.args[1] : filters
+        # op.fprop.conv_params : forward params
         delta = args[0]
-        filters = args[1]
+        data = args[1]
+        filters = op.fprop.args[1]
+        conv_params = op.fprop.conv_params
+        """
         print(delta.axes)
         print(filters.axes)
-        print(op.fprop.axes)
-        print(op.fprop.args[0].axes)
-        print(op.fprop.args[1].axes)
-        pass
+        print(data.axes)
+        print(conv_params)
+        """
+        data_reordered = PyngReshape(self.computation.lookup_cpp_op(data), [4, 0, 1, 2, 3],
+                                     [data.axes[4].length, data.axes[0].length,
+                                     data.axes[1].length, data.axes[2].length,
+                                     data.axes[3].length])
+        delta_reordered = PyngReshape(self.computation.lookup_cpp_op(delta), [4, 0, 1, 2, 3],
+                                      [delta.axes[4].length, delta.axes[0].length,
+                                      delta.axes[1].length, delta.axes[2].length,
+                                      delta.axes[3].length])
+
+        ngraph_update_conv = PyngConvolutionBackpropFilters(
+            data_reordered,
+            [filters.axes[4].length, filters.axes[0].length, 
+                filters.axes[1].length, filters.axes[2].length,
+                filters.axes[3].length],
+            delta_reordered,
+            [conv_params['str_d'], conv_params['str_h'], conv_params['str_w']],
+            [conv_params['str_d'], conv_params['str_h'], conv_params['str_w']],
+            [conv_params['pad_d'], conv_params['pad_h'], conv_params['pad_w']],
+            [conv_params['pad_d'], conv_params['pad_h'], conv_params['pad_w']],
+            [1, 1, 1]
+            )
+        ordered = PyngReshape(ngraph_update_conv, [4, 0, 1, 2, 3],
+                              list(op.axes.lengths))
+
+        self.computation.register_cpp_op(op, ordered)
 
     @visit.on_type(PoolingOp)
     def visit(self, op, inputs):
@@ -821,10 +893,19 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     @visit.on_type(Flatten)
     def visit(self, op, x):
         self.computation.set_op_rank(op)
+        ngraph_flatten = PyngReshape(self.computation.lookup_cpp_op(x),
+                                     list(range(0, len(x.axes))),
+                                     list(op.axes.lengths))
+        self.computation.register_cpp_op(op, ngraph_flatten)
 
     @visit.on_type(Unflatten)
     def visit(self, op, x):
         self.computation.set_op_rank(op)
+        self.computation.set_op_rank(op)
+        ngraph_unflatten = PyngReshape(self.computation.lookup_cpp_op(x),
+                                       list(range(0, len(x.axes))),
+                                       list(op.axes.lengths))
+        self.computation.register_cpp_op(op, ngraph_unflatten)
 
     @visit.on_type(ContiguousOp)
     def visit(self, op, x):
