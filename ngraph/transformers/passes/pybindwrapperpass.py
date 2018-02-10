@@ -585,12 +585,10 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             inputs = args[0]
             filters = args[1]
         else:
-            inputs = args[0]
-            filters = args[1]
-            bias = args[2]
+            raise RuntimeError("Not Implemented: Convolution with bias")
 
         """
-        {'K': 16, 'T': 1, 'R': 5, 'S': 5, 'str_d': 1, 'pad_d': 0, 'dil_d': 1, 
+        {'K': 16, 'T': 1, 'R': 5, 'S': 5, 'str_d': 1, 'pad_d': 0, 'dil_d': 1,
         'str_h': 1, 'pad_h': 0, 'dil_h': 1, 'str_w': 1, 'pad_w': 0, 'dil_w': 1}
         """
         """
@@ -614,8 +612,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             [op.conv_params['str_d'], op.conv_params['str_h'], op.conv_params['str_w']],
             [op.conv_params['pad_d'], op.conv_params['pad_h'], op.conv_params['pad_w']],
             [op.conv_params['pad_d'], op.conv_params['pad_h'], op.conv_params['pad_w']],
-            [1, 1, 1]
-            )
+            [1, 1, 1])
+
         ordered = PyngReshape(ngraph_conv, [4, 0, 1, 2, 3],
                               list(op.axes.lengths))
 
@@ -667,7 +665,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                                         filters.axes[1].length, filters.axes[2].length,
                                         filters.axes[3].length])
         ngraph_bprop_conv = PyngConvolutionBackpropData(
-            [data.axes[4].length, data.axes[0].length, 
+            [data.axes[4].length, data.axes[0].length,
                 data.axes[1].length, data.axes[2].length,
                 data.axes[3].length],
             filters_reordered,
@@ -676,8 +674,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             [conv_params['str_d'], conv_params['str_h'], conv_params['str_w']],
             [conv_params['pad_d'], conv_params['pad_h'], conv_params['pad_w']],
             [conv_params['pad_d'], conv_params['pad_h'], conv_params['pad_w']],
-            [1, 1, 1]
-            )
+            [1, 1, 1])
+
         ordered = PyngReshape(ngraph_bprop_conv, [4, 0, 1, 2, 3],
                               list(op.axes.lengths))
 
@@ -733,7 +731,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
         ngraph_update_conv = PyngConvolutionBackpropFilters(
             data_reordered,
-            [filters.axes[4].length, filters.axes[0].length, 
+            [filters.axes[4].length, filters.axes[0].length,
                 filters.axes[1].length, filters.axes[2].length,
                 filters.axes[3].length],
             delta_reordered,
@@ -741,13 +739,22 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             [conv_params['str_d'], conv_params['str_h'], conv_params['str_w']],
             [conv_params['pad_d'], conv_params['pad_h'], conv_params['pad_w']],
             [conv_params['pad_d'], conv_params['pad_h'], conv_params['pad_w']],
-            [1, 1, 1]
-            )
+            [1, 1, 1])
+
         ordered = PyngReshape(ngraph_update_conv, [4, 0, 1, 2, 3],
                               list(op.axes.lengths))
 
         self.computation.register_cpp_op(op, ordered)
 
+    """
+    /// brief Constructs a batched max pooling operation.
+    ///
+    /// param arg The node producing the input data batch tensor.
+    /// param window_shape The window shape.
+    /// param window_movement_strides The window movement strides.
+    /// param padding_below The below-padding shape.
+    /// param padding_above The above-padding shape.
+    """
     @visit.on_type(PoolingOp)
     def visit(self, op, inputs):
         self.computation.set_op_rank(op)
@@ -769,7 +776,9 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                                       [op.pool_params['str_d'], op.pool_params['str_h'],
                                           op.pool_params['str_w']],
                                       [op.pool_params['str_d'], op.pool_params['str_h'],
-                                          op.pool_params['str_w']])    
+                                          op.pool_params['str_w']],
+                                      [0, 0, 0],
+                                      [0, 0, 0])
             ordered = PyngReshape(ngraph_pool, [4, 0, 1, 2, 3],
                                   list(op.axes.lengths))
 
