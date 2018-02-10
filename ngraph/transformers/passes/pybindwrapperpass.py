@@ -609,7 +609,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             reordered,
             filters_reordered,
             [op.conv_params['str_d'], op.conv_params['str_h'], op.conv_params['str_w']],
-            [op.conv_params['str_d'], op.conv_params['str_h'], op.conv_params['str_w']],
+            [op.conv_params['dil_d'], op.conv_params['dil_h'], op.conv_params['dil_w']],
             [op.conv_params['pad_d'], op.conv_params['pad_h'], op.conv_params['pad_w']],
             [op.conv_params['pad_d'], op.conv_params['pad_h'], op.conv_params['pad_w']],
             [1, 1, 1])
@@ -671,7 +671,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             filters_reordered,
             delta_reordered,
             [conv_params['str_d'], conv_params['str_h'], conv_params['str_w']],
-            [conv_params['str_d'], conv_params['str_h'], conv_params['str_w']],
+            [conv_params['dil_d'], conv_params['dil_h'], conv_params['dil_w']],
             [conv_params['pad_d'], conv_params['pad_h'], conv_params['pad_w']],
             [conv_params['pad_d'], conv_params['pad_h'], conv_params['pad_w']],
             [1, 1, 1])
@@ -736,7 +736,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                 filters.axes[3].length],
             delta_reordered,
             [conv_params['str_d'], conv_params['str_h'], conv_params['str_w']],
-            [conv_params['str_d'], conv_params['str_h'], conv_params['str_w']],
+            [conv_params['dil_d'], conv_params['dil_h'], conv_params['dil_w']],
             [conv_params['pad_d'], conv_params['pad_h'], conv_params['pad_w']],
             [conv_params['pad_d'], conv_params['pad_h'], conv_params['pad_w']],
             [1, 1, 1])
