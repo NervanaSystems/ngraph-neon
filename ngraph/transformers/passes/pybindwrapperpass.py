@@ -773,8 +773,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                                     inputs.axes[1].length, inputs.axes[2].length,
                                     inputs.axes[3].length])
             ngraph_pool = PyngMaxPool(reordered,
-                                      [op.pool_params['str_d'], op.pool_params['str_h'],
-                                          op.pool_params['str_w']],
+                                      [op.pool_params['T'], op.pool_params['R'],
+                                          op.pool_params['S']],
                                       [op.pool_params['str_d'], op.pool_params['str_h'],
                                           op.pool_params['str_w']],
                                       [op.pool_params['pad_d'], op.pool_params['pad_h'],
@@ -826,9 +826,9 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             """
             ngraph_pool = PyngMaxPoolBackprop(reordered,
                                               red_delta,
-                                              [op.fprop.pool_params['str_d'],
-                                                  op.fprop.pool_params['str_h'],
-                                                  op.fprop.pool_params['str_w']],
+                                              [op.fprop.pool_params['T'],
+                                                  op.fprop.pool_params['R'],
+                                                  op.fprop.pool_params['S']],
                                               [op.fprop.pool_params['str_d'],
                                                   op.fprop.pool_params['str_h'],
                                                   op.fprop.pool_params['str_w']],
