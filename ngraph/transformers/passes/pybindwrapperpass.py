@@ -47,6 +47,8 @@ from pyngraph.op import ConvolutionBackpropData as PyngConvolutionBackpropData
 from pyngraph.op import ConvolutionBackpropFilters as PyngConvolutionBackpropFilters
 from pyngraph.op import MaxPool as PyngMaxPool
 from pyngraph.op import MaxPoolBackprop as PyngMaxPoolBackprop
+from pyngraph.op import AvgPool as PyngAvgPool
+from pyngraph.op import AvgPoolBackprop as PyngAvgPoolBackprop
 from pyngraph.op import Equal as PyngEqual
 from pyngraph.op import Sqrt as PyngSqrt
 from pyngraph import Function as Function
@@ -754,6 +756,14 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     /// param window_movement_strides The window movement strides.
     /// param padding_below The below-padding shape.
     /// param padding_above The above-padding shape.
+
+    /// brief Constructs a batched average pooling operation.
+    ///
+    /// param arg The node producing the input data batch tensor.
+    /// param window_shape The window shape.
+    /// param window_movement_strides The window movement strides.
+    /// param padding_below The below-padding shape.
+    /// param padding_above The above-padding shape.
     """
     @visit.on_type(PoolingOp)
     def visit(self, op, inputs):
@@ -785,8 +795,28 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                                   list(op.axes.lengths))
 
             self.computation.register_cpp_op(op, ordered)
+        elif 'avg' == op.pool_params['op']:
+            reordered = PyngReshape(self.computation.lookup_cpp_op(inputs), [4, 0, 1, 2, 3],
+                                    [inputs.axes[4].length, inputs.axes[0].length,
+                                    inputs.axes[1].length, inputs.axes[2].length,
+                                    inputs.axes[3].length])
+            ngraph_pool = PyngAvgPool(reordered,
+                                      [op.pool_params['T'], op.pool_params['R'],
+                                          op.pool_params['S']],
+                                      [op.pool_params['str_d'], op.pool_params['str_h'],
+                                          op.pool_params['str_w']],
+                                      [op.pool_params['pad_d'], op.pool_params['pad_h'],
+                                          op.pool_params['pad_w']],
+                                      [op.pool_params['pad_d'], op.pool_params['pad_h'],
+                                          op.pool_params['pad_w']])
+            print(list(op.axes.lengths))
+            print(ngraph_pool.get_output_shape(0))
+            ordered = PyngReshape(ngraph_pool, [4, 0, 1, 2, 3],
+                                  list(op.axes.lengths))
+
+            self.computation.register_cpp_op(op, ordered)
         else:
-            raise RuntimeError("Only max pooling supported for now")
+            raise RuntimeError("Unsupported pooling type: " + op.pool_params['op'])
 
     @visit.on_type(BpropPoolOp)
     def visit(self, op, delta):
@@ -843,8 +873,51 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                                   list(op.axes.lengths))
 
             self.computation.register_cpp_op(op, ordered)
+        elif 'avg' == op.pool_params['op']:
+            """
+            AvgPoolBackprop(const Shape& forward_arg_shape,
+                const std::shared_ptr<Node>& delta,
+                const Shape& window_shape,
+                const Strides& window_movement_strides,
+                const Shape& padding_below,
+                const Shape& padding_above);
+            """
+            """
+            print(delta.axes)
+            print(op.inputs.axes)
+            print(op.axes)
+            """
+            red_delta = PyngReshape(self.computation.lookup_cpp_op(delta), [4, 0, 1, 2, 3],
+                                    [delta.axes[4].length, delta.axes[0].length,
+                                    delta.axes[1].length, delta.axes[2].length,
+                                    delta.axes[3].length])
+            """
+            print(red_delta.get_output_shape(0))
+            print(ngraph_fprop.get_output_shape(0))
+            """
+            inputs = op.inputs
+            ngraph_pool = PyngAvgPoolBackprop([inputs.axes[4].length, inputs.axes[0].length,
+                                              inputs.axes[1].length, inputs.axes[2].length,
+                                              inputs.axes[3].length],
+                                              red_delta,
+                                              [op.fprop.pool_params['T'],
+                                                  op.fprop.pool_params['R'],
+                                                  op.fprop.pool_params['S']],
+                                              [op.fprop.pool_params['str_d'],
+                                                  op.fprop.pool_params['str_h'],
+                                                  op.fprop.pool_params['str_w']],
+                                              [op.fprop.pool_params['pad_d'],
+                                                  op.fprop.pool_params['pad_h'],
+                                                  op.fprop.pool_params['pad_w']],
+                                              [op.fprop.pool_params['pad_d'],
+                                                  op.fprop.pool_params['pad_h'],
+                                                  op.fprop.pool_params['pad_w']])
+            ordered = PyngReshape(ngraph_pool, [4, 0, 1, 2, 3],
+                                  list(op.axes.lengths))
+
+            self.computation.register_cpp_op(op, ordered)
         else:
-            raise RuntimeError("Only max pooling supported for now")
+            raise RuntimeError("Unsupported pooling type: " + op.pool_params['op'])
 
     @visit.on_type(TensorSliceOp)
     def visit(self, op, x):
