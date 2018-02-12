@@ -149,7 +149,7 @@ class PybindComputation(Computation):
         else:
             return None
 
-    def lookup_cpp_op(self, op):
+    def search_cpp_op(self, op):
         if isinstance(op, TensorValueOp):
             tensor_op = op.tensor
             if not tensor_op.is_constant:
@@ -166,6 +166,20 @@ class PybindComputation(Computation):
         if tensor_op in self.ngraph_cpp_ops:
             return self.ngraph_cpp_ops[tensor_op]
         return None
+
+    def lookup_cpp_op(self, op):
+        ngraph_op = self.search_cpp_op(op)
+        if ngraph_op is None:
+            raise RuntimeError("Ngraph Op missing for Neon Op " + op.name)
+        else:
+            return ngraph_op
+
+    def has_cpp_op(self, op):
+        ngraph_op = self.search_cpp_op(op)
+        if ngraph_op is None:
+            return False
+        else:
+            return True
 
     def register_cpp_op(self, op, cpp_op):
         if isinstance(op, SequentialOp):

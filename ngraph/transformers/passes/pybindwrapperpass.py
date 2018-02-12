@@ -18,7 +18,10 @@ from ngraph.util.generics import generic_method
 from ngraph.op_graph.op_graph import Op, Add, Multiply, BroadcastOp, TensorValueOp, \
     DotOp, LogOp, ExpOp, Sum, Greater, Maximum, ReductionOp, AssignableTensorOp, ReorderAxes, \
     OneHotOp, Divide, Subtract, NegativeOp, ReciprocalOp, TensorSizeOp, MapRolesOp, Minimum, \
-    Less, Max, NotEqual, SequentialOp, AssignOp, ParallelOp
+    Less, Max, NotEqual, SequentialOp, AssignOp, ParallelOp, ExpandDims, TensorSliceOp, \
+    Equal, SqrtOp, SquareOp, Flatten, Unflatten, ContiguousOp
+from ngraph.op_graph.pooling import PoolingOp, BpropPoolOp
+from ngraph.op_graph.convolution import ConvolutionOp, bprop_conv, update_conv
 
 from pyngraph import Type
 from pyngraph.op import Parameter
@@ -38,6 +41,14 @@ from pyngraph.op import OneHot as PyngOneHot
 from pyngraph.op import Negative as PyngNegative
 from pyngraph.op import Convert as PyngConvert
 from pyngraph.op import Reduce as PyngReduce
+from pyngraph.op import Slice as PyngSlice
+from pyngraph.op import Convolution as PyngConvolution
+from pyngraph.op import ConvolutionBackpropData as PyngConvolutionBackpropData
+from pyngraph.op import ConvolutionBackpropFilters as PyngConvolutionBackpropFilters
+from pyngraph.op import MaxPool as PyngMaxPool
+from pyngraph.op import MaxPoolBackprop as PyngMaxPoolBackprop
+from pyngraph.op import Equal as PyngEqual
+from pyngraph.op import Sqrt as PyngSqrt
 from pyngraph import Function as Function
 
 
@@ -237,7 +248,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         axis_set = set()
         element_type = Type.f32
         # check if the op.args already have Paramterized view type.
-        if self.computation.lookup_cpp_op(op.args[0]) is not None:
+        if self.computation.has_cpp_op(op.args[0]):
             op_element_type = self.computation.lookup_cpp_op(op.args[0])
         else:
             op_element_type = Parameter(
@@ -268,7 +279,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     def visit(self, op):
         self.computation.set_op_rank(op)
         tensor = op.tensor
-        if self.computation.lookup_cpp_op(op) is None:
+        if not self.computation.has_cpp_op(op):
             if tensor.is_constant:
                 # FIXME: make tensors based on data type
                 constant_op = Constant(Type.f32,
@@ -284,7 +295,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     @visit.on_type(AssignableTensorOp)
     def visit(self, op):
         # Can be visited in the most trivial computation we only a variable is created
-        if self.computation.lookup_cpp_op(op) is None:
+        if not self.computation.has_cpp_op(op):
             if op.is_constant:
                 # FIXME: make tensors based on data type
                 constant_op = Constant(Type.f32,
@@ -370,16 +381,27 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         less_result_op = PyngConvert(ngraph_cpp_less_op, element_result_type)
         self.computation.register_cpp_op(op, less_result_op)
 
-    @visit.on_type(NotEqual)
+    @visit.on_type(Equal)
     def visit(self, op, input1, input2):
         self.computation.set_op_rank(op)
-        ngraph_cpp_less_op = PyngNotEqual(
+        ngraph_cpp_equal_op = PyngEqual(
             self.computation.lookup_cpp_op(input1),
             self.computation.lookup_cpp_op(input2))
         # convert the element back from bool to float type
         element_result_type = Type.f32
-        less_result_op = PyngConvert(ngraph_cpp_less_op, element_result_type)
-        self.computation.register_cpp_op(op, less_result_op)
+        equal_result_op = PyngConvert(ngraph_cpp_equal_op, element_result_type)
+        self.computation.register_cpp_op(op, equal_result_op)
+
+    @visit.on_type(NotEqual)
+    def visit(self, op, input1, input2):
+        self.computation.set_op_rank(op)
+        ngraph_cpp_notequal_op = PyngNotEqual(
+            self.computation.lookup_cpp_op(input1),
+            self.computation.lookup_cpp_op(input2))
+        # convert the element back from bool to float type
+        element_result_type = Type.f32
+        notequal_result_op = PyngConvert(ngraph_cpp_notequal_op, element_result_type)
+        self.computation.register_cpp_op(op, notequal_result_op)
 
     @visit.on_type(Sum)
     def visit(self, op, input):
@@ -416,13 +438,17 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         self.computation.set_op_rank(op)
         axis_order = []
         reorder_axes = list(op.axes.lengths)
-        input_axes = list(op.args[0].axes.lengths)
+        reorder_axes_names = op.axes.names
+        input_axes_names = op.args[0].axes.names
 
         # determine the axis order for the reshape
-        for pos, val in enumerate(input_axes):
-            axis_order.append(reorder_axes.index(val))
+        for input_axis_name in input_axes_names:
+            index = reorder_axes_names.index(input_axis_name)
+            axis_order.append(index)
+        ngraph_input = self.computation.lookup_cpp_op(op.args[0])
+        # print(ngraph_input.get_output_shape(0))
         ngraph_cpp_reorder_op = PyngReshape(
-            self.computation.lookup_cpp_op(op.args[0]),
+            ngraph_input,
             axis_order,
             reorder_axes)
         self.computation.register_cpp_op(op, ngraph_cpp_reorder_op)
@@ -521,5 +547,383 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         if variable not in self.computation.variables_cpp_op:
             self.computation.variables_cpp_op[variable] = \
                 (self.computation.scopemark[op.tensor], rhs)
+            self.computation.register_cpp_op(
+                op, self.computation.lookup_cpp_op(rhs))
         else:
             raise RuntimeError("Variable updated more than once!")
+
+    @visit.on_type(ExpandDims)
+    def visit(self, op, x):
+        self.computation.set_op_rank(op)
+        op_element_type = self.computation.lookup_cpp_op(x)
+        axis_set = set()
+        axis_set.add(op.dim)
+        self.computation.register_cpp_op(op, PyngBroadcast(op_element_type,
+                                         list(op.axes.lengths), axis_set))
+
+    """
+    /// brief Constructs a batched convolution operation.
+    ///
+    /// param data_batch The node producing the input data batch tensor.
+    /// param filters The node producing the filters tensor.
+    /// param window_movement_strides The window movement strides.
+    /// param window_dilation_strides The window dilation strides.
+    /// param padding_below The padding-below sizes.
+    /// param padding_above The padding-above sizes.
+    /// param data_dilation_strides The data dilation strides.
+    """
+    @visit.on_type(ConvolutionOp)
+    def visit(self, op, *args):
+        self.computation.set_op_rank(op)
+        # op.args[0] : inputs
+        # op.args[1] : filters
+        # op.args[2] (optional): bias
+        # op.conv_params
+        # op.channel_axes
+        # op.spatial_axes
+        if len(args) == 2:
+            inputs = args[0]
+            filters = args[1]
+        else:
+            raise RuntimeError("Not Implemented: Convolution with bias")
+
+        """
+        {'K': 16, 'T': 1, 'R': 5, 'S': 5, 'str_d': 1, 'pad_d': 0, 'dil_d': 1,
+        'str_h': 1, 'pad_h': 0, 'dil_h': 1, 'str_w': 1, 'pad_w': 0, 'dil_w': 1}
+        """
+        """
+        print(inputs.axes)
+        print(op.axes)
+        print(filters.axes)
+        """
+        # print(op_element_type.get_output_shape(0))
+        reordered = PyngReshape(self.computation.lookup_cpp_op(inputs), [4, 0, 1, 2, 3],
+                                [inputs.axes[4].length, inputs.axes[0].length,
+                                inputs.axes[1].length, inputs.axes[2].length,
+                                inputs.axes[3].length])
+        filters_reordered = PyngReshape(self.computation.lookup_cpp_op(filters), [4, 0, 1, 2, 3],
+                                        [filters.axes[4].length, filters.axes[0].length,
+                                        filters.axes[1].length, filters.axes[2].length,
+                                        filters.axes[3].length])
+        ngraph_conv = PyngConvolution(
+            reordered,
+            filters_reordered,
+            [op.conv_params['str_d'], op.conv_params['str_h'], op.conv_params['str_w']],
+            [op.conv_params['dil_d'], op.conv_params['dil_h'], op.conv_params['dil_w']],
+            [op.conv_params['pad_d'], op.conv_params['pad_h'], op.conv_params['pad_w']],
+            [op.conv_params['pad_d'], op.conv_params['pad_h'], op.conv_params['pad_w']],
+            [1, 1, 1])
+
+        ordered = PyngReshape(ngraph_conv, [4, 0, 1, 2, 3],
+                              list(op.axes.lengths))
+
+        self.computation.register_cpp_op(op, ordered)
+
+    """
+    /// brief Constructs a batched-convolution data batch-backprop operation.
+    ///
+    /// param data_batch_shape The shape of the data batch from forward-prop.
+    /// param filters The node producing the filters from forward-prop.
+    /// param output_delta The node producing output delta.
+    /// param window_movement_strides_forward The window movement strides from forward-prop.
+    /// param window_dilation_strides_forward The window dilation strides from forward-prop.
+    /// param padding_below_forward The padding-below sizes from forward-prop.
+    /// param padding_above_forward The padding-above sizes from forward-prop.
+    /// param data_dilation_strides_forward The data dilation strides from forward-prop.
+    ConvolutionBackpropData(const Shape& data_batch_shape,
+                            const std::shared_ptr<Node>& filters,
+                            const std::shared_ptr<Node>& output_delta,
+                            const Strides& window_movement_strides_forward,
+                            const Strides& window_dilation_strides_forward,
+                            const CoordinateDiff& padding_below_forward,
+                            const CoordinateDiff& padding_above_forward,
+                            const Strides& data_dilation_strides_forward);
+    """
+    @visit.on_type(bprop_conv)
+    def visit(self, op, *args):
+        self.computation.set_op_rank(op)
+        # op.args[0] : delta
+        # op.args[1] : filters
+        # op.fprop.args[0] : fprop data batch shape
+        # op.fprop.conv_params : forward params
+        delta = args[0]
+        filters = args[1]
+        data = op.fprop.args[0]
+        conv_params = op.fprop.conv_params
+        """
+        print(delta.axes)
+        print(filters.axes)
+        print(data.axes)
+        print(conv_params)
+        """
+        delta_reordered = PyngReshape(self.computation.lookup_cpp_op(delta), [4, 0, 1, 2, 3],
+                                      [delta.axes[4].length, delta.axes[0].length,
+                                      delta.axes[1].length, delta.axes[2].length,
+                                      delta.axes[3].length])
+        filters_reordered = PyngReshape(self.computation.lookup_cpp_op(filters), [4, 0, 1, 2, 3],
+                                        [filters.axes[4].length, filters.axes[0].length,
+                                        filters.axes[1].length, filters.axes[2].length,
+                                        filters.axes[3].length])
+        ngraph_bprop_conv = PyngConvolutionBackpropData(
+            [data.axes[4].length, data.axes[0].length,
+                data.axes[1].length, data.axes[2].length,
+                data.axes[3].length],
+            filters_reordered,
+            delta_reordered,
+            [conv_params['str_d'], conv_params['str_h'], conv_params['str_w']],
+            [conv_params['dil_d'], conv_params['dil_h'], conv_params['dil_w']],
+            [conv_params['pad_d'], conv_params['pad_h'], conv_params['pad_w']],
+            [conv_params['pad_d'], conv_params['pad_h'], conv_params['pad_w']],
+            [1, 1, 1])
+
+        ordered = PyngReshape(ngraph_bprop_conv, [4, 0, 1, 2, 3],
+                              list(op.axes.lengths))
+
+        self.computation.register_cpp_op(op, ordered)
+
+    """
+    /// brief Constructs a batched-convolution filter-backprop operation.
+    ///
+    /// param data_batch The tensor producing the data batch from forward-prop.
+    /// param filters_shape The shape of the filters from forward-prop.
+    /// param output_delta The node producing output delta.
+    /// param window_movement_strides_forward The window movement strides from forward-prop.
+    /// param window_dilation_strides_forward The window dilation strides from forward-prop.
+    /// param padding_below_forward The padding-below sizes from forward-prop.
+    /// param padding_above_forward The padding-above sizes from forward-prop.
+    /// param data_dilation_strides_forward The data dilation strides from forward-prop.
+    ConvolutionBackpropFilters(const std::shared_ptr<Node>& data_batch,
+                                const Shape& filters_shape,
+                                const std::shared_ptr<Node>& output_delta,
+                                const Strides& window_movement_strides_forward,
+                                const Strides& window_dilation_strides_forward,
+                                const CoordinateDiff& padding_below_forward,
+                                const CoordinateDiff& padding_above_forward,
+                                const Strides& data_dilation_strides_forward);
+    """
+    @visit.on_type(update_conv)
+    def visit(self, op, *args):
+        self.computation.set_op_rank(op)
+        # op.args[0] : delta
+        # op.args[1] : data batch
+        # op.args[2] (optional) : dbias
+        # op.fprop.args[0] : data batch
+        # op.fprop.args[1] : filters
+        # op.fprop.conv_params : forward params
+        delta = args[0]
+        data = args[1]
+        filters = op.fprop.args[1]
+        conv_params = op.fprop.conv_params
+        """
+        print(delta.axes)
+        print(filters.axes)
+        print(data.axes)
+        print(conv_params)
+        """
+        data_reordered = PyngReshape(self.computation.lookup_cpp_op(data), [4, 0, 1, 2, 3],
+                                     [data.axes[4].length, data.axes[0].length,
+                                     data.axes[1].length, data.axes[2].length,
+                                     data.axes[3].length])
+        delta_reordered = PyngReshape(self.computation.lookup_cpp_op(delta), [4, 0, 1, 2, 3],
+                                      [delta.axes[4].length, delta.axes[0].length,
+                                      delta.axes[1].length, delta.axes[2].length,
+                                      delta.axes[3].length])
+
+        ngraph_update_conv = PyngConvolutionBackpropFilters(
+            data_reordered,
+            [filters.axes[4].length, filters.axes[0].length,
+                filters.axes[1].length, filters.axes[2].length,
+                filters.axes[3].length],
+            delta_reordered,
+            [conv_params['str_d'], conv_params['str_h'], conv_params['str_w']],
+            [conv_params['dil_d'], conv_params['dil_h'], conv_params['dil_w']],
+            [conv_params['pad_d'], conv_params['pad_h'], conv_params['pad_w']],
+            [conv_params['pad_d'], conv_params['pad_h'], conv_params['pad_w']],
+            [1, 1, 1])
+
+        ordered = PyngReshape(ngraph_update_conv, [4, 0, 1, 2, 3],
+                              list(op.axes.lengths))
+
+        self.computation.register_cpp_op(op, ordered)
+
+    """
+    /// brief Constructs a batched max pooling operation.
+    ///
+    /// param arg The node producing the input data batch tensor.
+    /// param window_shape The window shape.
+    /// param window_movement_strides The window movement strides.
+    /// param padding_below The below-padding shape.
+    /// param padding_above The above-padding shape.
+    """
+    @visit.on_type(PoolingOp)
+    def visit(self, op, inputs):
+        self.computation.set_op_rank(op)
+        # op.args[0] : inputs
+        # op.pool_params
+        # op.channel_axes
+        # op.spatial_axes
+        if 'max' == op.pool_params['op']:
+            """
+            print(op.pool_params)
+            print(inputs.axes)
+            print(op.axes)
+            """
+            reordered = PyngReshape(self.computation.lookup_cpp_op(inputs), [4, 0, 1, 2, 3],
+                                    [inputs.axes[4].length, inputs.axes[0].length,
+                                    inputs.axes[1].length, inputs.axes[2].length,
+                                    inputs.axes[3].length])
+            ngraph_pool = PyngMaxPool(reordered,
+                                      [op.pool_params['T'], op.pool_params['R'],
+                                          op.pool_params['S']],
+                                      [op.pool_params['str_d'], op.pool_params['str_h'],
+                                          op.pool_params['str_w']],
+                                      [op.pool_params['pad_d'], op.pool_params['pad_h'],
+                                          op.pool_params['pad_w']],
+                                      [op.pool_params['pad_d'], op.pool_params['pad_h'],
+                                          op.pool_params['pad_w']])
+            ordered = PyngReshape(ngraph_pool, [4, 0, 1, 2, 3],
+                                  list(op.axes.lengths))
+
+            self.computation.register_cpp_op(op, ordered)
+        else:
+            raise RuntimeError("Only max pooling supported for now")
+
+    @visit.on_type(BpropPoolOp)
+    def visit(self, op, delta):
+        self.computation.set_op_rank(op)
+        # op.args[0] : delta
+        # op.fprop
+        # op.inputs
+        if 'max' == op.pool_params['op']:
+            """
+            MaxPoolBackprop(const std::shared_ptr<Node>& arg_forward,
+                    const std::shared_ptr<Node>& delta,
+                    const Shape& window_shape,
+                    const Strides& window_movement_strides,
+                    const Shape& padding_below,
+                    const Shape& padding_above,
+                    const std::shared_ptr<op::MaxPool>& forward_op = nullptr);
+            """
+            """
+            print(delta.axes)
+            print(op.inputs.axes)
+            print(op.axes)
+            """
+            inputs = op.inputs
+            reordered = PyngReshape(self.computation.lookup_cpp_op(inputs), [4, 0, 1, 2, 3],
+                                    [inputs.axes[4].length, inputs.axes[0].length,
+                                    inputs.axes[1].length, inputs.axes[2].length,
+                                    inputs.axes[3].length])
+
+            red_delta = PyngReshape(self.computation.lookup_cpp_op(delta), [4, 0, 1, 2, 3],
+                                    [delta.axes[4].length, delta.axes[0].length,
+                                    delta.axes[1].length, delta.axes[2].length,
+                                    delta.axes[3].length])
+            ngraph_fprop = self.computation.lookup_cpp_op(op.fprop).get_input_op(0)
+            """
+            print(red_delta.get_output_shape(0))
+            print(ngraph_fprop.get_output_shape(0))
+            """
+            ngraph_pool = PyngMaxPoolBackprop(reordered,
+                                              red_delta,
+                                              [op.fprop.pool_params['T'],
+                                                  op.fprop.pool_params['R'],
+                                                  op.fprop.pool_params['S']],
+                                              [op.fprop.pool_params['str_d'],
+                                                  op.fprop.pool_params['str_h'],
+                                                  op.fprop.pool_params['str_w']],
+                                              [op.fprop.pool_params['pad_d'],
+                                                  op.fprop.pool_params['pad_h'],
+                                                  op.fprop.pool_params['pad_w']],
+                                              [op.fprop.pool_params['pad_d'],
+                                                  op.fprop.pool_params['pad_h'],
+                                                  op.fprop.pool_params['pad_w']],
+                                              ngraph_fprop)
+            ordered = PyngReshape(ngraph_pool, [4, 0, 1, 2, 3],
+                                  list(op.axes.lengths))
+
+            self.computation.register_cpp_op(op, ordered)
+        else:
+            raise RuntimeError("Only max pooling supported for now")
+
+    @visit.on_type(TensorSliceOp)
+    def visit(self, op, x):
+        self.computation.set_op_rank(op)
+        # op.args[0] : x
+        # op.slices
+        lowers = []
+        uppers = []
+        strides = []
+        axes_to_remove = []
+        for axis, s in zip(x.axes, op.slices):
+            if isinstance(s, int):
+                lowers.append(s)
+                uppers.append(s + 1)
+                strides.append(1)
+                axes_to_remove.append(axis)
+            else:
+                if s.start is None:
+                    lowers.append(0)
+                else:
+                    lowers.append(s.start)
+                if s.step is None:
+                    strides.append(1)
+                else:
+                    strides.append(s.step)
+                if s.stop is None:
+                    uppers.append(axis.length)
+                else:
+                    uppers.append(s.stop)
+        op_element_type = self.computation.lookup_cpp_op(x)
+        """
+        print("TensorSliceOp")
+        print(x.axes)
+        print(op.axes)
+        print(op_element_type.get_output_shape(0))
+        print(lowers)
+        print(uppers)
+        print(strides)
+        """
+        ngraph_sliced = PyngSlice(op_element_type, lowers, uppers, strides)
+        if axes_to_remove:
+            ngraph_sliced = PyngReshape(ngraph_sliced,
+                                        list(range(0, len(x.axes))),
+                                        list(op.axes.lengths))
+
+        self.computation.register_cpp_op(op, ngraph_sliced)
+
+    @visit.on_type(SqrtOp)
+    def visit(self, op, x):
+        self.computation.set_op_rank(op)
+        ngraph_x = self.computation.lookup_cpp_op(x)
+        ngraph_sqrt = PyngSqrt(ngraph_x)
+        self.computation.register_cpp_op(op, ngraph_sqrt)
+
+    @visit.on_type(SquareOp)
+    def visit(self, op, x):
+        self.computation.set_op_rank(op)
+        ngraph_x = self.computation.lookup_cpp_op(x)
+        self.computation.register_cpp_op(op, ngraph_x * ngraph_x)
+
+    @visit.on_type(Flatten)
+    def visit(self, op, x):
+        self.computation.set_op_rank(op)
+        ngraph_flatten = PyngReshape(self.computation.lookup_cpp_op(x),
+                                     list(range(0, len(x.axes))),
+                                     list(op.axes.lengths))
+        self.computation.register_cpp_op(op, ngraph_flatten)
+
+    @visit.on_type(Unflatten)
+    def visit(self, op, x):
+        self.computation.set_op_rank(op)
+        self.computation.set_op_rank(op)
+        ngraph_unflatten = PyngReshape(self.computation.lookup_cpp_op(x),
+                                       list(range(0, len(x.axes))),
+                                       list(op.axes.lengths))
+        self.computation.register_cpp_op(op, ngraph_unflatten)
+
+    @visit.on_type(ContiguousOp)
+    def visit(self, op, x):
+        self.computation.set_op_rank(op)
+        ngraph_x = self.computation.lookup_cpp_op(x)
+        self.computation.register_cpp_op(op, ngraph_x)
