@@ -16,7 +16,7 @@ from __future__ import division
 from ngraph.transformers.passes.passes import PeepholeGraphPass
 from ngraph.util.generics import generic_method
 from ngraph.op_graph.op_graph import Op, Add, Multiply, BroadcastOp, TensorValueOp, \
-    DotOp, LogOp, ExpOp, Sum, Greater, Maximum, ReductionOp, AssignableTensorOp, ReorderAxes, \
+    DotOp, LogOp, ExpOp, Sum, Greater, GreaterEqual, Maximum, ReductionOp, AssignableTensorOp, ReorderAxes, \
     OneHotOp, Divide, Subtract, NegativeOp, ReciprocalOp, TensorSizeOp, MapRolesOp, Minimum, \
     Less, Max, NotEqual, SequentialOp, AssignOp, ParallelOp, ExpandDims, TensorSliceOp, \
     Equal, SqrtOp, SquareOp, Flatten, Unflatten, ContiguousOp
@@ -24,34 +24,35 @@ from ngraph.op_graph.pooling import PoolingOp, BpropPoolOp
 from ngraph.op_graph.convolution import ConvolutionOp, bprop_conv, update_conv
 
 from pyngraph import Type
+from pyngraph import Function as Function
 from pyngraph.op import Parameter
-from pyngraph.op import Constant
-from pyngraph.op import Sum as PyngSum
-from pyngraph.op import Maximum as PyngMaximum
-from pyngraph.op import Minimum as PyngMinimum
-from pyngraph.op import Greater as PyngGreater
-from pyngraph.op import Less as PyngLess
-from pyngraph.op import NotEqual as PyngNotEqual
+from pyngraph.op import AvgPool as PyngAvgPool
+from pyngraph.op import AvgPoolBackprop as PyngAvgPoolBackprop
 from pyngraph.op import Broadcast as PyngBroadcast
-from pyngraph.op import Dot as PyngDot
-from pyngraph.op import Log as PyngLog
-from pyngraph.op import Exp as PyngExp
-from pyngraph.op import Reshape as PyngReshape
-from pyngraph.op import OneHot as PyngOneHot
-from pyngraph.op import Negative as PyngNegative
+from pyngraph.op import Constant
 from pyngraph.op import Convert as PyngConvert
-from pyngraph.op import Reduce as PyngReduce
-from pyngraph.op import Slice as PyngSlice
 from pyngraph.op import Convolution as PyngConvolution
 from pyngraph.op import ConvolutionBackpropData as PyngConvolutionBackpropData
 from pyngraph.op import ConvolutionBackpropFilters as PyngConvolutionBackpropFilters
+from pyngraph.op import Dot as PyngDot
+from pyngraph.op import Equal as PyngEqual
+from pyngraph.op import Exp as PyngExp
+from pyngraph.op import Greater as PyngGreater
+from pyngraph.op import GreaterEq as PyngGreaterEq
+from pyngraph.op import Less as PyngLess
+from pyngraph.op import Log as PyngLog
+from pyngraph.op import Maximum as PyngMaximum
 from pyngraph.op import MaxPool as PyngMaxPool
 from pyngraph.op import MaxPoolBackprop as PyngMaxPoolBackprop
-from pyngraph.op import AvgPool as PyngAvgPool
-from pyngraph.op import AvgPoolBackprop as PyngAvgPoolBackprop
-from pyngraph.op import Equal as PyngEqual
+from pyngraph.op import Minimum as PyngMinimum
+from pyngraph.op import Negative as PyngNegative
+from pyngraph.op import NotEqual as PyngNotEqual
+from pyngraph.op import OneHot as PyngOneHot
+from pyngraph.op import Reshape as PyngReshape
+from pyngraph.op import Reduce as PyngReduce
+from pyngraph.op import Slice as PyngSlice
 from pyngraph.op import Sqrt as PyngSqrt
-from pyngraph import Function as Function
+from pyngraph.op import Sum as PyngSum
 
 
 class PybindScopePass:
@@ -365,6 +366,17 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     def visit(self, op, input1, input2):
         self.computation.set_op_rank(op)
         ngraph_cpp_greater_op = PyngGreater(
+            self.computation.lookup_cpp_op(input1),
+            self.computation.lookup_cpp_op(input2))
+        # convert the element back from bool to float type
+        element_result_type = Type.f32
+        greater_result_op = PyngConvert(ngraph_cpp_greater_op, element_result_type)
+        self.computation.register_cpp_op(op, greater_result_op)
+
+    @visit.on_type(GreaterEqual)
+    def visit(self, op, input1, input2):
+        self.computation.set_op_rank(op)
+        ngraph_cpp_greater_op = PyngGreaterEq(
             self.computation.lookup_cpp_op(input1),
             self.computation.lookup_cpp_op(input2))
         # convert the element back from bool to float type
