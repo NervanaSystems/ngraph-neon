@@ -16,10 +16,10 @@ from __future__ import division
 from ngraph.transformers.passes.passes import PeepholeGraphPass
 from ngraph.util.generics import generic_method
 from ngraph.op_graph.op_graph import Op, Add, Multiply, BroadcastOp, TensorValueOp, \
-    DotOp, LogOp, ExpOp, Sum, Greater, GreaterEqual, Maximum, ReductionOp, AssignableTensorOp, ReorderAxes, \
+    DotOp, LogOp, ExpOp, Sum, Greater, GreaterEqual, Maximum, ReductionOp, AssignableTensorOp, \
     OneHotOp, Divide, Subtract, NegativeOp, ReciprocalOp, TensorSizeOp, MapRolesOp, Minimum, \
     Less, Max, NotEqual, SequentialOp, AssignOp, ParallelOp, ExpandDims, TensorSliceOp, \
-    Equal, SqrtOp, SquareOp, Flatten, Unflatten, ContiguousOp
+    Equal, SqrtOp, SquareOp, Flatten, Unflatten, ContiguousOp, Prod, ReorderAxes
 from ngraph.op_graph.pooling import PoolingOp, BpropPoolOp
 from ngraph.op_graph.convolution import ConvolutionOp, bprop_conv, update_conv
 
@@ -45,6 +45,7 @@ from pyngraph.op import Maximum as PyngMaximum
 from pyngraph.op import MaxPool as PyngMaxPool
 from pyngraph.op import MaxPoolBackprop as PyngMaxPoolBackprop
 from pyngraph.op import Minimum as PyngMinimum
+from pyngraph.op import Multiply as PyngMultiply
 from pyngraph.op import Negative as PyngNegative
 from pyngraph.op import NotEqual as PyngNotEqual
 from pyngraph.op import OneHot as PyngOneHot
@@ -485,6 +486,29 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             self.computation.lookup_cpp_op(input))
         self.computation.register_cpp_op(op, ngraph_cpp_neg_op)
 
+    @visit.on_type(Prod)
+    def visit(self, op, input):
+        self.computation.set_op_rank(op)
+        # Define the reduction function handle
+        element_type = Type.f32
+        shape = []
+        f_a = Parameter(element_type, shape)
+        f_b = Parameter(element_type, shape)
+        ngraph_cpp_mul_op = PyngMultiply(f_a, f_b)
+        fn = Function([ngraph_cpp_mul_op], [f_a, f_b], "ReductionOp")
+
+        # define the reduction op with the above defined Function handle
+        if isinstance(self.np_reduction_axis(op), tuple):
+            axis_set = self.np_reduction_axis(op)
+        else:
+            axis_set = tuple()
+            axis_set += (self.np_reduction_axis(op),)
+        g_a = self.computation.lookup_cpp_op(input)
+        const_prod_default_value = [1.]
+        g_b = Constant(Type.f32, [], const_prod_default_value)
+
+        self.computation.register_cpp_op(op, PyngReduce(g_a, g_b, fn, set(axis_set)))
+
     @visit.on_type(ReciprocalOp)
     def visit(self, op, input):
         self.computation.set_op_rank(op)
@@ -748,7 +772,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             [1, 1])
 
         ordered = PyngReshape(ngraph_update_conv, [1, 2, 3, 0],
-                              list(op.axes.lengths)) 
+                              list(op.axes.lengths))
 
         self.computation.register_cpp_op(op, ordered)
 
@@ -867,7 +891,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                                                   op.fprop.pool_params['pad_w']],
                                               ngraph_fprop)
             ordered = PyngReshape(ngraph_pool, [1, 2, 3, 0],
-                                  list(op.axes.lengths)) 
+                                  list(op.axes.lengths))
 
             self.computation.register_cpp_op(op, ordered)
         elif 'avg' == op.pool_params['op']:
