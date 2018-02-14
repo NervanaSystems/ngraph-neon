@@ -862,8 +862,10 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                                           op.pool_params['pad_w']],
                                       [op.pool_params['pad_h'],
                                           op.pool_params['pad_w']])
+            """
             print(list(op.axes.lengths))
             print(ngraph_pool.get_output_shape(0))
+            """
             ordered = PyngReshape(ngraph_pool, [1, 2, 3, 0],
                                   list(op.axes.lengths))
 
