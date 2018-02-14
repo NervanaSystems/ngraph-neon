@@ -69,6 +69,7 @@ class PybindComputation(Computation):
         self.seqcount = 0
         self.parcount = 0
 
+        self.function_count = 0
         self.build_opgraph()
         self.build_function()
         self.build_callframe()
@@ -294,7 +295,7 @@ class PybindComputation(Computation):
         self.function = Function(
             self.result_nodes_list + self.update_nodes_list,
             self.parameter_list + self.variable_list,
-            'test')
+            self.transformer.get_function_name())
 
     def build_callframe(self):
         """
@@ -419,6 +420,7 @@ class PybindTransformer(FunctionTransformer):
         """
         super(PybindTransformer, self).__init__(**kwargs)
         self.neon_variable_buffer = dict()
+        self.function_count = 0
 
     def make_computation(self, computation):
         """
@@ -429,6 +431,11 @@ class PybindTransformer(FunctionTransformer):
         """
         pybind_comp = PybindComputation(self, computation)
         return pybind_comp
+
+    def get_function_name(self):
+        name = 'function' + str(self.function_count)
+        self.function_count += 1
+        return name
 
 
 class PybindCPUTransformer(PybindTransformer):
