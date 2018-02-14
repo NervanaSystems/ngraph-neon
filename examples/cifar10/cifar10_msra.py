@@ -172,10 +172,11 @@ if __name__ == "__main__":
 
     with Layer.inference_mode_on():
         inference_prob = resnet(inputs['image'])
-        errors = ng.not_equal(ng.argmax(inference_prob, out_axes=[ax.N]), label_indices)
+        #errors = ng.not_equal(ng.argmax(inference_prob, out_axes=[ax.N]), label_indices)
         eval_loss = ng.cross_entropy_multi(inference_prob, ng.one_hot(label_indices, axis=ax.Y))
         eval_loss_names = ['cross_ent_loss', 'misclass']
-        eval_computation = ng.computation([eval_loss, errors], "all")
+        #eval_computation = ng.computation([eval_loss, errors], "all")
+        eval_computation = ng.computation([eval_loss], "all")
 
     # Now bind the computations we are interested in
     transformer = ngt.make_transformer()
