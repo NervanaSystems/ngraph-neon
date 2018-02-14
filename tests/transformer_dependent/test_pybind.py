@@ -136,6 +136,32 @@ def test_dot():
         assert np.allclose(_dot_val, _dot_val_ref)
 
 
+def test_prod():
+
+    H = ng.make_axis(length=2)
+    W = ng.make_axis(length=2)
+    H1 = ng.make_axis(length=1)
+    W1 = ng.make_axis(length=4)
+
+    input1 = ng.placeholder(axes=[H, W])
+    input2 = ng.placeholder(axes=[H1, W1])
+
+    # does reduction sum operation along axis[0]:H
+    prod_op_1 = ng.prod(input1, reduction_axes=H)
+
+    # sum elements across all the axis
+    prod_op_2 = ng.prod(input2)
+
+    with ExecutorFactory() as ex:
+        _prod = ex.executor(prod_op_1, input1)
+        _prod_val = _prod([[1, 2], [3, 4]])
+        assert np.array_equal(_prod_val, [3, 8])
+
+        _prod = ex.executor(prod_op_2, input2)
+        _prod_val = _prod([1, 2, 3, 4])
+        assert np.array_equal(_prod_val, 24)
+
+
 def test_sum():
 
     H = ng.make_axis(length=2)
@@ -266,19 +292,24 @@ def test_binary_op():
 
         _maximum = ng.Maximum(tensor1, tensor2)
         _greater = ng.Greater(tensor1, tensor2)
+        _greater_equal = ng.GreaterEqual(tensor1, tensor2)
         with ExecutorFactory() as ex:
 
             _max_computation = ex.executor(_maximum, tensor1, tensor2)
             _max_val = _max_computation(value1, value2)
             _greater_computation = ex.executor(_greater, tensor1, tensor2)
             _greater_val = _greater_computation(value1, value2)
+            _greater_equal_computation = ex.executor(_greater_equal, tensor1, tensor2)
+            _greater_equal_val = _greater_equal_computation(value1, value2)
 
             # compute ref output
             _max_ref = np.maximum(value1, value2)
             _greater_ref = np.greater(value1, value2)
+            _greater_equal_ref = np.greater_equal(value1, value2)
 
             np.testing.assert_equal(_max_val, _max_ref)
             np.testing.assert_equal(_greater_val, _greater_ref)
+            np.testing.assert_equal(_greater_equal_val, _greater_equal_ref)
 
 
 def test_unary_op():

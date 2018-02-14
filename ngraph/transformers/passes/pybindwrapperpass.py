@@ -16,43 +16,45 @@ from __future__ import division
 from ngraph.transformers.passes.passes import PeepholeGraphPass
 from ngraph.util.generics import generic_method
 from ngraph.op_graph.op_graph import Op, Add, Multiply, BroadcastOp, TensorValueOp, \
-    DotOp, LogOp, ExpOp, Sum, Greater, Maximum, ReductionOp, AssignableTensorOp, ReorderAxes, \
+    DotOp, LogOp, ExpOp, Sum, Greater, GreaterEqual, Maximum, ReductionOp, AssignableTensorOp, \
     OneHotOp, Divide, Subtract, NegativeOp, ReciprocalOp, TensorSizeOp, MapRolesOp, Minimum, \
     Less, Max, NotEqual, SequentialOp, AssignOp, ParallelOp, ExpandDims, TensorSliceOp, \
-    Equal, SqrtOp, SquareOp, Flatten, Unflatten, ContiguousOp
+    Equal, SqrtOp, SquareOp, Flatten, Unflatten, ContiguousOp, Prod, ReorderAxes
 from ngraph.op_graph.pooling import PoolingOp, BpropPoolOp
 from ngraph.op_graph.convolution import ConvolutionOp, bprop_conv, update_conv
 import numpy as np
 
 from pyngraph import Type
+from pyngraph import Function as Function
 from pyngraph.op import Parameter
-from pyngraph.op import Constant
-from pyngraph.op import Sum as PyngSum
-from pyngraph.op import Maximum as PyngMaximum
-from pyngraph.op import Minimum as PyngMinimum
-from pyngraph.op import Greater as PyngGreater
-from pyngraph.op import Less as PyngLess
-from pyngraph.op import NotEqual as PyngNotEqual
+from pyngraph.op import AvgPool as PyngAvgPool
+from pyngraph.op import AvgPoolBackprop as PyngAvgPoolBackprop
 from pyngraph.op import Broadcast as PyngBroadcast
-from pyngraph.op import Dot as PyngDot
-from pyngraph.op import Log as PyngLog
-from pyngraph.op import Exp as PyngExp
-from pyngraph.op import Reshape as PyngReshape
-from pyngraph.op import OneHot as PyngOneHot
-from pyngraph.op import Negative as PyngNegative
+from pyngraph.op import Constant
 from pyngraph.op import Convert as PyngConvert
-from pyngraph.op import Reduce as PyngReduce
-from pyngraph.op import Slice as PyngSlice
 from pyngraph.op import Convolution as PyngConvolution
 from pyngraph.op import ConvolutionBackpropData as PyngConvolutionBackpropData
 from pyngraph.op import ConvolutionBackpropFilters as PyngConvolutionBackpropFilters
+from pyngraph.op import Dot as PyngDot
+from pyngraph.op import Equal as PyngEqual
+from pyngraph.op import Exp as PyngExp
+from pyngraph.op import Greater as PyngGreater
+from pyngraph.op import GreaterEq as PyngGreaterEq
+from pyngraph.op import Less as PyngLess
+from pyngraph.op import Log as PyngLog
+from pyngraph.op import Maximum as PyngMaximum
 from pyngraph.op import MaxPool as PyngMaxPool
 from pyngraph.op import MaxPoolBackprop as PyngMaxPoolBackprop
-from pyngraph.op import AvgPool as PyngAvgPool
-from pyngraph.op import AvgPoolBackprop as PyngAvgPoolBackprop
-from pyngraph.op import Equal as PyngEqual
+from pyngraph.op import Minimum as PyngMinimum
+from pyngraph.op import Multiply as PyngMultiply
+from pyngraph.op import Negative as PyngNegative
+from pyngraph.op import NotEqual as PyngNotEqual
+from pyngraph.op import OneHot as PyngOneHot
+from pyngraph.op import Reshape as PyngReshape
+from pyngraph.op import Reduce as PyngReduce
+from pyngraph.op import Slice as PyngSlice
 from pyngraph.op import Sqrt as PyngSqrt
-from pyngraph import Function as Function
+from pyngraph.op import Sum as PyngSum
 
 
 class PybindScopePass:
@@ -399,6 +401,17 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         greater_result_op = PyngConvert(ngraph_cpp_greater_op, element_result_type)
         self.computation.register_cpp_op(op, greater_result_op)
 
+    @visit.on_type(GreaterEqual)
+    def visit(self, op, input1, input2):
+        self.computation.set_op_rank(op)
+        ngraph_cpp_greater_op = PyngGreaterEq(
+            self.computation.lookup_cpp_op(input1),
+            self.computation.lookup_cpp_op(input2))
+        # convert the element back from bool to float type
+        element_result_type = Type.f32
+        greater_result_op = PyngConvert(ngraph_cpp_greater_op, element_result_type)
+        self.computation.register_cpp_op(op, greater_result_op)
+
     @visit.on_type(Less)
     def visit(self, op, input1, input2):
         self.computation.set_op_rank(op)
@@ -500,6 +513,29 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             self.computation.lookup_cpp_op(input))
         self.computation.register_cpp_op(op, ngraph_cpp_neg_op)
 
+    @visit.on_type(Prod)
+    def visit(self, op, input):
+        self.computation.set_op_rank(op)
+        # Define the reduction function handle
+        element_type = Type.f32
+        shape = []
+        f_a = Parameter(element_type, shape)
+        f_b = Parameter(element_type, shape)
+        ngraph_cpp_mul_op = PyngMultiply(f_a, f_b)
+        fn = Function([ngraph_cpp_mul_op], [f_a, f_b], "ProdReductionOp")
+
+        # define the reduction op with the above defined Function handle
+        if isinstance(self.np_reduction_axis(op), tuple):
+            axis_set = self.np_reduction_axis(op)
+        else:
+            axis_set = tuple()
+            axis_set += (self.np_reduction_axis(op),)
+        g_a = self.computation.lookup_cpp_op(input)
+        const_prod_default_value = [1.]
+        g_b = Constant(Type.f32, [], const_prod_default_value)
+
+        self.computation.register_cpp_op(op, PyngReduce(g_a, g_b, fn, set(axis_set)))
+
     @visit.on_type(ReciprocalOp)
     def visit(self, op, input):
         self.computation.set_op_rank(op)
@@ -535,7 +571,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         f_a = Parameter(element_type, shape)
         f_b = Parameter(element_type, shape)
         ngraph_cpp_min_op = PyngMaximum(f_a, f_b)
-        fn = Function([ngraph_cpp_min_op], [f_a, f_b], "ReductionOp")
+        fn = Function([ngraph_cpp_min_op], [f_a, f_b], "MaxReductionOp")
 
         # define the reduction op with the above defined Function handle
         if isinstance(self.np_reduction_axis(op), tuple):
@@ -763,7 +799,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             [1, 1])
 
         ordered = PyngReshape(ngraph_update_conv, [1, 2, 3, 0],
-                              list(op.axes.lengths)) 
+                              list(op.axes.lengths))
 
         self.computation.register_cpp_op(op, ordered)
 
@@ -882,7 +918,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                                                   op.fprop.pool_params['pad_w']],
                                               ngraph_fprop)
             ordered = PyngReshape(ngraph_pool, [1, 2, 3, 0],
-                                  list(op.axes.lengths)) 
+                                  list(op.axes.lengths))
 
             self.computation.register_cpp_op(op, ordered)
         elif 'avg' == op.pool_params['op']:
