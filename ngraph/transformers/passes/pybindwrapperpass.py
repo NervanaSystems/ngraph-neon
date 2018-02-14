@@ -495,7 +495,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         f_a = Parameter(element_type, shape)
         f_b = Parameter(element_type, shape)
         ngraph_cpp_mul_op = PyngMultiply(f_a, f_b)
-        fn = Function([ngraph_cpp_mul_op], [f_a, f_b], "ReductionOp")
+        fn = Function([ngraph_cpp_mul_op], [f_a, f_b], "ProdReductionOp")
 
         # define the reduction op with the above defined Function handle
         if isinstance(self.np_reduction_axis(op), tuple):
@@ -544,7 +544,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         f_a = Parameter(element_type, shape)
         f_b = Parameter(element_type, shape)
         ngraph_cpp_min_op = PyngMaximum(f_a, f_b)
-        fn = Function([ngraph_cpp_min_op], [f_a, f_b], "ReductionOp")
+        fn = Function([ngraph_cpp_min_op], [f_a, f_b], "MaxReductionOp")
 
         # define the reduction op with the above defined Function handle
         if isinstance(self.np_reduction_axis(op), tuple):
