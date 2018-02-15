@@ -320,63 +320,75 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         # determine the reduction_axes count
         reduction_axes_count, reduction_axes = self.get_reduction_axis(op)
 
+        reshape_input_needed = False
+        reshape_output_needed = False
+
         # check if the input1/input2 needs to be Transposed and if yes, Transpose
         if (len(input1.axes.names) != 0 and len(input2.axes.names) != 0) \
                 and (input1.axes.names[-1] != input2.axes.names[0]):
-
-            input1_reshape_axes = list((op.x_out_axes + op.reduction_axes).names)
-            input2_reshape_axes = list((op.reduction_axes + op.y_out_axes).names)
+            reshape_input_needed = True
+            input1_axes = list((op.x_out_axes + op.reduction_axes).names)
+            input2_axes = list((op.reduction_axes + op.y_out_axes).names)
             input1_axes_order = self.get_axes_order_from_axes_name(
-                input1.axes.names, input1_reshape_axes)
+                input1.axes.names, input1_axes)
             input1_axes_shape = self.get_shape_from_axes_order(
                                     input1_axes_order,
                                     input1.axes.lengths)
-            if reduction_axes_count > 0:
-                input1_axes_shape = input1_axes_shape[:-reduction_axes_count] + \
-                    [np.prod(input1_axes_shape[-reduction_axes_count:])]
-            input1_reorder_op = PyngReshape(
-                self.computation.lookup_cpp_op(input1),
-                input1_axes_order,
-                input1_axes_shape)
             input2_axes_order = self.get_axes_order_from_axes_name(
-                input2.axes.names, input2_reshape_axes)
+                input2.axes.names, input2_axes)
             input2_axes_shape = self.get_shape_from_axes_order(
                                     input2_axes_order,
                                     input2.axes.lengths)
-            if reduction_axes_count > 0:
-                input2_axes_shape = [np.prod(input2_axes_shape[:reduction_axes_count])] + \
-                    input2_axes_shape[reduction_axes_count:]
-            input2_reorder_op = PyngReshape(
+        else:
+            input1_axes_shape = list(input1.axes.lengths)
+            input1_axes_order = list(range(0, len(input1.axes)))
+            input2_axes_shape = list(input2.axes.lengths)
+            input2_axes_order = list(range(0, len(input2.axes)))
+
+        # flatten reduction_axes
+        if reduction_axes_count > 1:
+            reshape_input_needed = True
+            input1_axes_shape = input1_axes_shape[:-reduction_axes_count] + \
+                [np.prod(input1_axes_shape[-reduction_axes_count:])]
+            input2_axes_shape = [np.prod(input2_axes_shape[:reduction_axes_count])] + \
+                input2_axes_shape[reduction_axes_count:]
+            reduction_axes_count = 1
+
+        # check if other axes need to be flatten to force 2D dot
+        if reduction_axes_count == 1:
+            if len(op.x_out_axes) > 1:
+                reshape_input_needed = True
+                reshape_output_needed = True
+                input1_axes_shape = [np.prod(input1_axes_shape[:-1])] + input1_axes_shape[-1:]
+            if len(op.y_out_axes) > 1:
+                reshape_input_needed = True
+                reshape_output_needed = True
+                input2_axes_shape = input2_axes_shape[:1] + [np.prod(input2_axes_shape[1:])]
+
+        # reshape input
+        if reshape_input_needed:
+            input1_op = PyngReshape(
+                self.computation.lookup_cpp_op(input1),
+                input1_axes_order,
+                input1_axes_shape)
+            input2_op = PyngReshape(
                 self.computation.lookup_cpp_op(input2),
                 input2_axes_order,
                 input2_axes_shape)
-            ngraph_cpp_dot_op = PyngDot(input1_reorder_op, input2_reorder_op,
-                                        1 if reduction_axes_count > 0 else 0)
         else:
-            if reduction_axes_count > 0:
-                input1_axes_shape = list(input1.axes.lengths)
-                input2_axes_shape = list(input2.axes.lengths)
-                input1_axes_shape = input1_axes_shape[:-reduction_axes_count] + \
-                    [np.prod(input1_axes_shape[-reduction_axes_count:])]
-                input2_axes_shape = [np.prod(input2_axes_shape[:reduction_axes_count])] + \
-                    input2_axes_shape[reduction_axes_count:]
-                input1_reorder_op = PyngReshape(
-                    self.computation.lookup_cpp_op(input1),
-                    list(range(0, len(input1.axes))),
-                    input1_axes_shape)
-                input2_reorder_op = PyngReshape(
-                    self.computation.lookup_cpp_op(input2),
-                    list(range(0, len(input2.axes))),
-                    input2_axes_shape)
-                ngraph_cpp_dot_op = PyngDot(input1_reorder_op, input2_reorder_op,
-                                            1)
-            else:
-                ngraph_cpp_dot_op = PyngDot(
-                    self.computation.lookup_cpp_op(input1),
-                    self.computation.lookup_cpp_op(input2),
-                    reduction_axes_count)
+            input1_op = self.computation.lookup_cpp_op(input1)
+            input2_op = self.computation.lookup_cpp_op(input2)
 
-        self.computation.register_cpp_op(op, ngraph_cpp_dot_op)
+        ngraph_op = PyngDot(input1_op, input2_op,
+                            reduction_axes_count)
+        # reshape output
+        if reshape_output_needed:
+            ngraph_op = PyngReshape(
+                ngraph_op,
+                list(range(0, 4 - 2*reduction_axes_count)),
+                list(op.x_out_axes.lengths) + list(op.y_out_axes.lengths))
+        # reshape output
+        self.computation.register_cpp_op(op, ngraph_op)
 
     @visit.on_type(LogOp)
     def visit(self, op, input):
@@ -522,7 +534,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         f_a = Parameter(element_type, shape)
         f_b = Parameter(element_type, shape)
         ngraph_cpp_mul_op = PyngMultiply(f_a, f_b)
-        fn = Function([ngraph_cpp_mul_op], [f_a, f_b], "ProdReductionOp")
+        fn = Function([ngraph_cpp_mul_op], [f_a, f_b], self.transformer.get_function_name())
 
         # define the reduction op with the above defined Function handle
         if isinstance(self.np_reduction_axis(op), tuple):
@@ -571,7 +583,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         f_a = Parameter(element_type, shape)
         f_b = Parameter(element_type, shape)
         ngraph_cpp_min_op = PyngMaximum(f_a, f_b)
-        fn = Function([ngraph_cpp_min_op], [f_a, f_b], "MaxReductionOp")
+        fn = Function([ngraph_cpp_min_op], [f_a, f_b], self.transformer.get_function_name())
 
         # define the reduction op with the above defined Function handle
         if isinstance(self.np_reduction_axis(op), tuple):
