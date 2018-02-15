@@ -383,7 +383,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                             reduction_axes_count)
         # reshape output
         if reshape_output_needed:
-            input1_op = PyngReshape(
+            ngraph_op = PyngReshape(
                 ngraph_op,
                 list(range(0, 4 - 2*reduction_axes_count)),
                 list(op.x_out_axes.lengths) + list(op.y_out_axes.lengths))
