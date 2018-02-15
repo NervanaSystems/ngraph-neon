@@ -360,7 +360,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                 reshape_input_needed = True
                 reshape_output_needed = True
                 input1_axes_shape = [np.prod(input1_axes_shape[:-1])] + input1_axes_shape[-1:]
-            if len(op.y_out_axes) > 2:
+            if len(op.y_out_axes) > 1:
                 reshape_input_needed = True
                 reshape_output_needed = True
                 input2_axes_shape = input2_axes_shape[:1] + [np.prod(input2_axes_shape[1:])]
