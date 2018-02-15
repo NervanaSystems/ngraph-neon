@@ -864,22 +864,21 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         elif 'avg' == op.pool_params['op']:
             reordered = PyngReshape(self.computation.lookup_cpp_op(inputs), [4, 0, 1, 2, 3],
                                     [inputs.axes[4].length, inputs.axes[0].length,
-                                    inputs.axes[1].length, inputs.axes[2].length,
-                                    inputs.axes[3].length])
+                                    inputs.axes[2].length, inputs.axes[3].length])
             ngraph_pool = PyngAvgPool(reordered,
-                                      [op.pool_params['T'], op.pool_params['R'],
+                                      [op.pool_params['R'],
                                           op.pool_params['S']],
-                                      [op.pool_params['str_d'], op.pool_params['str_h'],
+                                      [op.pool_params['str_h'],
                                           op.pool_params['str_w']],
-                                      [op.pool_params['pad_d'], op.pool_params['pad_h'],
+                                      [op.pool_params['pad_h'],
                                           op.pool_params['pad_w']],
-                                      [op.pool_params['pad_d'], op.pool_params['pad_h'],
+                                      [op.pool_params['pad_h'],
                                           op.pool_params['pad_w']])
             """
             print(list(op.axes.lengths))
             print(ngraph_pool.get_output_shape(0))
             """
-            ordered = PyngReshape(ngraph_pool, [4, 0, 1, 2, 3],
+            ordered = PyngReshape(ngraph_pool, [1, 2, 3, 0],
                                   list(op.axes.lengths))
 
             self.computation.register_cpp_op(op, ordered)
@@ -951,30 +950,24 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             """
             red_delta = PyngReshape(self.computation.lookup_cpp_op(delta), [4, 0, 1, 2, 3],
                                     [delta.axes[4].length, delta.axes[0].length,
-                                    delta.axes[1].length, delta.axes[2].length,
-                                    delta.axes[3].length])
+                                    delta.axes[2].length, delta.axes[3].length])
             """
             print(red_delta.get_output_shape(0))
             print(ngraph_fprop.get_output_shape(0))
             """
             inputs = op.inputs
             ngraph_pool = PyngAvgPoolBackprop([inputs.axes[4].length, inputs.axes[0].length,
-                                              inputs.axes[1].length, inputs.axes[2].length,
-                                              inputs.axes[3].length],
+                                              inputs.axes[2].length, inputs.axes[3].length],
                                               red_delta,
-                                              [op.fprop.pool_params['T'],
-                                                  op.fprop.pool_params['R'],
+                                              [op.fprop.pool_params['R'],
                                                   op.fprop.pool_params['S']],
-                                              [op.fprop.pool_params['str_d'],
-                                                  op.fprop.pool_params['str_h'],
+                                              [op.fprop.pool_params['str_h'],
                                                   op.fprop.pool_params['str_w']],
-                                              [op.fprop.pool_params['pad_d'],
-                                                  op.fprop.pool_params['pad_h'],
+                                              [op.fprop.pool_params['pad_h'],
                                                   op.fprop.pool_params['pad_w']],
-                                              [op.fprop.pool_params['pad_d'],
-                                                  op.fprop.pool_params['pad_h'],
+                                              [op.fprop.pool_params['pad_h'],
                                                   op.fprop.pool_params['pad_w']])
-            ordered = PyngReshape(ngraph_pool, [4, 0, 1, 2, 3],
+            ordered = PyngReshape(ngraph_pool, [1, 2, 3, 0],
                                   list(op.axes.lengths))
 
             self.computation.register_cpp_op(op, ordered)
