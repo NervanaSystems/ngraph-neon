@@ -386,7 +386,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             input1_op = PyngReshape(
                 ngraph_op,
                 list(range(0, 4 - 2*reduction_axes_count)),
-                list(op.x_out.lengths) + list(op.y_out.lengths))
+                list(op.x_out_axes.lengths) + list(op.y_out_axes.lengths))
         # reshape output
         self.computation.register_cpp_op(op, ngraph_op)
 
@@ -875,8 +875,10 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                                           op.pool_params['pad_w']],
                                       [op.pool_params['pad_d'], op.pool_params['pad_h'],
                                           op.pool_params['pad_w']])
+            """
             print(list(op.axes.lengths))
             print(ngraph_pool.get_output_shape(0))
+            """
             ordered = PyngReshape(ngraph_pool, [4, 0, 1, 2, 3],
                                   list(op.axes.lengths))
 
