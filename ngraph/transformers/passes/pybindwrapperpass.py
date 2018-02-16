@@ -252,7 +252,12 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                 return PyngLog(x)
             elif isinstance(op, ExpOp):
                 return PyngExp(x)
-
+            elif isinstance(op, SquareOp):
+                return x * x
+            elif isinstance(op, SqrtOp):
+                return PyngSqrt(x)
+            elif isinstance(op, NegativeOp):
+                return PyngNegative(x)
 
         self.computation.set_op_rank(op)
         ngraph_cpp_op = pyng_unary_op(op, self.computation.lookup_cpp_op(x))
@@ -504,11 +509,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         self.computation.register_cpp_op(op, ngraph_cpp_onehot_op)
 
     @visit.on_type(NegativeOp)
-    def visit(self, op, input):
-        self.computation.set_op_rank(op)
-        ngraph_cpp_neg_op = PyngNegative(
-            self.computation.lookup_cpp_op(input))
-        self.computation.register_cpp_op(op, ngraph_cpp_neg_op)
+    def visit(self, op, x):
+        self.unary_op(op, x)
 
     @visit.on_type(Prod)
     def visit(self, op, input):

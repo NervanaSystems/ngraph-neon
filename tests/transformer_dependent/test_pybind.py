@@ -264,7 +264,16 @@ def test_tensor_dot_tensor():
             np.testing.assert_equal(evaluated, expected_output)
 
 
-def test_binary_op():
+@pytest.mark.parametrize('ng_func, np_func', [
+    (ng.Maximum, np.maximum),
+    (ng.Minimum, np.minimum),
+    (ng.Greater, np.greater),
+    (ng.GreaterEqual, np.greater_equal),
+    (ng.Equal, np.equal),
+    (ng.NotEqual, np.not_equal),
+    (ng.Less, np.less),
+    ])
+def test_binary_op(ng_func, np_func):
     H = ng.make_axis().named('H')
     W = ng.make_axis().named('W')
 
@@ -290,51 +299,24 @@ def test_binary_op():
             test['tensor2'], dtype=np.float32
         )
 
-        _maximum = ng.Maximum(tensor1, tensor2)
-        _minimum = ng.Minimum(tensor1, tensor2)
-        _greater = ng.Greater(tensor1, tensor2)
-        _greater_equal = ng.GreaterEqual(tensor1, tensor2)
-        _equal = ng.Equal(tensor1, tensor2)
-        _not_equal = ng.NotEqual(tensor1, tensor2)
-        _less = ng.Less(tensor1, tensor2)
+        _ng_func = ng_func(tensor1, tensor2)
+
         with ExecutorFactory() as ex:
 
-            _maximum_computation = ex.executor(_maximum, tensor1, tensor2)
-            _maximum_val = _maximum_computation(value1, value2)
-            _minimum_computation = ex.executor(_minimum, tensor1, tensor2)
-            _minimum_val = _minimum_computation(value1, value2)
-            _greater_computation = ex.executor(_greater, tensor1, tensor2)
-            _greater_val = _greater_computation(value1, value2)
-            _greater_equal_computation = ex.executor(_greater_equal, tensor1, tensor2)
-            _greater_equal_val = _greater_equal_computation(value1, value2)
-            _equal_computation = ex.executor(_equal, tensor1, tensor2)
-            _equal_val = _equal_computation(value1, value2)
-            _not_equal_computation = ex.executor(_not_equal, tensor1, tensor2)
-            _not_equal_val = _not_equal_computation(value1, value2)
-            _less_computation = ex.executor(_less, tensor1, tensor2)
-            _less_val = _less_computation(value1, value2)
+            _ng_computation = ex.executor(_ng_func, tensor1, tensor2)
+            _ng_val = _ng_computation(value1, value2)
+            _ng_ref = np_func(value1, value2)
+            np.testing.assert_equal(_ng_val, _ng_ref)
 
 
-
-            # compute ref output
-            _maximum_ref = np.maximum(value1, value2)
-            _minimum_ref = np.minimum(value1, value2)
-            _greater_ref = np.greater(value1, value2)
-            _greater_equal_ref = np.greater_equal(value1, value2)
-            _equal_ref = np.equal(value1, value2)
-            _not_equal_ref = np.not_equal(value1, value2)
-            _less_ref = np.less(value1, value2)
-
-            np.testing.assert_equal(_maximum_val, _maximum_ref)
-            np.testing.assert_equal(_minimum_val, _minimum_ref)
-            np.testing.assert_equal(_greater_val, _greater_ref)
-            np.testing.assert_equal(_greater_equal_val, _greater_equal_ref)
-            np.testing.assert_equal(_equal_val, _equal_ref)
-            np.testing.assert_equal(_not_equal_val, _not_equal_ref)
-            np.testing.assert_equal(_less_val, _less_ref)
-
-
-def test_unary_op():
+@pytest.mark.parametrize('ng_func, np_func', [
+    (ng.exp, np.exp),
+    (ng.NegativeOp, np.negative),
+    (ng.log, np.log),
+    (ng.square, np.square),
+    (ng.sqrt, np.sqrt)
+    ])
+def test_unary_op_(ng_func, np_func):
     H = ng.make_axis().named('H')
     W = ng.make_axis().named('W')
 
@@ -353,20 +335,10 @@ def test_unary_op():
         tensor1 = ng.placeholder(test['tensor1_axes'])
         value1 = np.array(test['tensor1'], dtype=np.float32)
 
-        _exp = ng.exp(tensor1)
-
-        _log = ng.log(tensor1)
+        _ng_func = ng_func(tensor1)
 
         with ExecutorFactory() as ex:
-            _exp_computation = ex.executor(_exp, tensor1)
-            _exp_val = _exp_computation(value1)
-
-            _log_computation = ex.executor(_log, tensor1)
-            _log_val = _log_computation(value1)
-
-            # compute ref values
-            _log_ref = np.log(value1)
-            _exp_ref = np.exp(value1)
-
-            assert np.allclose(_log_val, _log_ref, rtol=0, atol=2)
-            assert np.allclose(_exp_val, _exp_ref, rtol=0, atol=2)
+            _ng_computation = ex.executor(_ng_func, tensor1)
+            _ng_val = _ng_computation(value1)
+            _ng_ref = np_func(value1)
+            assert np.allclose(_ng_val, _ng_ref, rtol=0, atol=2)
