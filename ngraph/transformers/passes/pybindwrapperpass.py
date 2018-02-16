@@ -437,23 +437,23 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(Greater)
     def visit(self, op, x, y):
-        self.binary_op(op, x, y, True)
+        self.binary_op(op, x, y, is_logical=True)
 
     @visit.on_type(GreaterEqual)
     def visit(self, op, x, y):
-        self.binary_op(op, x, y, True)
+        self.binary_op(op, x, y, is_logical=True)
 
     @visit.on_type(Less)
     def visit(self, op, x, y):
-        self.binary_op(op, x, y, True)
+        self.binary_op(op, x, y, is_logical=True)
 
     @visit.on_type(Equal)
     def visit(self, op, x, y):
-        self.binary_op(op, x, y, True)
+        self.binary_op(op, x, y, is_logical=True)
 
     @visit.on_type(NotEqual)
     def visit(self, op, x, y):
-        self.binary_op(op, x, y, True)
+        self.binary_op(op, x, y, is_logical=True)
 
     @visit.on_type(Sum)
     def visit(self, op, input):
