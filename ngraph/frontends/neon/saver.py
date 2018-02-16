@@ -138,7 +138,10 @@ class Saver(object):
         # Traverse computation graph and extract persistent tensors and unique op instance name
         save_variables = find_ops(get_root_ops(computation))
         self.getter_op_names, ops = zip(*save_variables.items())
-        self.getter = transformer.computation(ops)
+        if transformer.name not in ("ngcpu", "nginterp", "nggpu"):
+            self.getter = transformer.computation(ops)
+        else:
+            self.getter = transformer.neon_variable_buffer
 
     def save(self, filename, compress=False, transformer=None, computation=None):
         """
@@ -156,8 +159,12 @@ class Saver(object):
             self.setup_save(transformer=transformer,
                             computation=computation)
         tensors = dict()
-        tensors = {name: tensor.copy() for name, tensor in zip(self.getter_op_names,
-                                                               self.getter())}
+        if transformer.name not in ("ngcpu", "nginterp", "nggpu"):
+            tensors = {name: tensor.copy() for name, tensor in zip(self.getter_op_names,
+                                                                   self.getter())}
+        else:
+            for op, tensor in self.getter.items():
+                tensors[op.name] = tensor
         # write dictionary to file
         savefile = SaverFile(filename)
         savefile.write_values(tensors, compress)
@@ -212,10 +219,13 @@ class Saver(object):
         savefile = SaverFile(filename)
         tensors = savefile.read_values()
         nodes = match_ops(tensors, get_root_ops(computation))
-        restore_ops = []
-        for op_to_save, op_value in nodes.items():
-            restore_ops.append(ng.AssignOp(op_to_save, op_value))
-        self.setter = transformer.computation(restore_ops)
+        if transformer.name not in ("ngcpu", "nginterp", "nggpu"):
+            restore_ops = []
+            for op_to_save, op_value in nodes.items():
+                restore_ops.append(ng.AssignOp(op_to_save, op_value))
+            self.setter = transformer.computation(restore_ops)
+        else:
+            self.setter = (nodes, transformer.neon_variable_buffer)
 
     def restore(self, transformer=None, computation=None, filename=None):
         """
@@ -232,4 +242,8 @@ class Saver(object):
             self.setup_restore(transformer=transformer,
                                computation=computation,
                                filename=filename)
-        self.setter()
+        if transformer.name not in ("ngcpu", "nginterp", "nggpu"):
+            self.setter()
+        else:
+            for op, tensor in self.setter[0]:
+                self.setter[1][op] = tensor
