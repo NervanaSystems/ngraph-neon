@@ -291,25 +291,47 @@ def test_binary_op():
         )
 
         _maximum = ng.Maximum(tensor1, tensor2)
+        _minimum = ng.Minimum(tensor1, tensor2)
         _greater = ng.Greater(tensor1, tensor2)
         _greater_equal = ng.GreaterEqual(tensor1, tensor2)
+        _equal = ng.Equal(tensor1, tensor2)
+        _not_equal = ng.NotEqual(tensor1, tensor2)
+        _less = ng.Less(tensor1, tensor2)
         with ExecutorFactory() as ex:
 
-            _max_computation = ex.executor(_maximum, tensor1, tensor2)
-            _max_val = _max_computation(value1, value2)
+            _maximum_computation = ex.executor(_maximum, tensor1, tensor2)
+            _maximum_val = _maximum_computation(value1, value2)
+            _minimum_computation = ex.executor(_minimum, tensor1, tensor2)
+            _minimum_val = _minimum_computation(value1, value2)
             _greater_computation = ex.executor(_greater, tensor1, tensor2)
             _greater_val = _greater_computation(value1, value2)
             _greater_equal_computation = ex.executor(_greater_equal, tensor1, tensor2)
             _greater_equal_val = _greater_equal_computation(value1, value2)
+            _equal_computation = ex.executor(_equal, tensor1, tensor2)
+            _equal_val = _equal_computation(value1, value2)
+            _not_equal_computation = ex.executor(_not_equal, tensor1, tensor2)
+            _not_equal_val = _not_equal_computation(value1, value2)
+            _less_computation = ex.executor(_less, tensor1, tensor2)
+            _less_val = _less_computation(value1, value2)
+
+
 
             # compute ref output
-            _max_ref = np.maximum(value1, value2)
+            _maximum_ref = np.maximum(value1, value2)
+            _minimum_ref = np.minimum(value1, value2)
             _greater_ref = np.greater(value1, value2)
             _greater_equal_ref = np.greater_equal(value1, value2)
+            _equal_ref = np.equal(value1, value2)
+            _not_equal_ref = np.not_equal(value1, value2)
+            _less_ref = np.less(value1, value2)
 
-            np.testing.assert_equal(_max_val, _max_ref)
+            np.testing.assert_equal(_maximum_val, _maximum_ref)
+            np.testing.assert_equal(_minimum_val, _minimum_ref)
             np.testing.assert_equal(_greater_val, _greater_ref)
             np.testing.assert_equal(_greater_equal_val, _greater_equal_ref)
+            np.testing.assert_equal(_equal_val, _equal_ref)
+            np.testing.assert_equal(_not_equal_val, _not_equal_ref)
+            np.testing.assert_equal(_less_val, _less_ref)
 
 
 def test_unary_op():

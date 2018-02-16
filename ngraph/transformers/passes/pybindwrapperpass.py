@@ -231,6 +231,11 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                 return PyngEqual(x, y)
             elif isinstance(op, NotEqual):
                 return PyngNotEqual(x, y)
+            elif isinstance(op, Maximum):
+                return PyngMaximum(x, y)
+            elif isinstance(op, Minimum):
+                return PyngMinimum(x, y)
+
 
         self.computation.set_op_rank(op)
         ngraph_cpp_op = pyng_binary_op(op, self.computation.lookup_cpp_op(x),
@@ -460,21 +465,13 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         self.computation.register_cpp_op(op, ngraph_cpp_sum_op)
 
     @visit.on_type(Maximum)
-    def visit(self, op, input1, input2):
-        self.computation.set_op_rank(op)
-        ngraph_cpp_maximum_op = PyngMaximum(
-            self.computation.lookup_cpp_op(input1),
-            self.computation.lookup_cpp_op(input2))
-        self.computation.register_cpp_op(op, ngraph_cpp_maximum_op)
-
+    def visit(self, op, x, y):
+        self.binary_op(op, x, y)
+   
     @visit.on_type(Minimum)
-    def visit(self, op, input1, input2):
-        self.computation.set_op_rank(op)
-        ngraph_cpp_minimum_op = PyngMinimum(
-            self.computation.lookup_cpp_op(input1),
-            self.computation.lookup_cpp_op(input2))
-        self.computation.register_cpp_op(op, ngraph_cpp_minimum_op)
-
+    def visit(self, op, x, y):
+        self.binary_op(op, x, y)
+        
     @visit.on_type(ReorderAxes)
     def visit(self, op, input):
         self.computation.set_op_rank(op)
@@ -991,15 +988,6 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                 else:
                     uppers.append(s.stop)
         op_element_type = self.computation.lookup_cpp_op(x)
-        """
-        print("TensorSliceOp")
-        print(x.axes)
-        print(op.axes)
-        print(op_element_type.get_output_shape(0))
-        print(lowers)
-        print(uppers)
-        print(strides)
-        """
         ngraph_sliced = PyngSlice(op_element_type, lowers, uppers, strides)
         if axes_to_remove:
             ngraph_sliced = PyngReshape(ngraph_sliced,
