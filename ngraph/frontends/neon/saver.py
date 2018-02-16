@@ -94,8 +94,7 @@ class Saver(object):
 
         Arguments:
             transformer : transformer where the weights are stored
-            computation (ComputationOp or dict of Ops):
-                          A ComputationOp or dictionary of output Ops of interest.
+            computation : All outputs of computation (An Op, list of Ops or dictionary of Ops)
         """
         # collect and return a set of all AssignableTensorOp's
         def find_ops(values):
@@ -150,8 +149,7 @@ class Saver(object):
             compress: specify whether to compress the weights
             transformer : transformer where the weights are stored
                           required only if setup_save is not called
-            computation (ComputationOp or dict of Ops):
-                          A ComputationOp or dictionary of output Ops of interest.
+            computation : All outputs of computation (An Op, list of Ops or dictionary of Ops)
                           required only if setup_save is not called
         """
         if self.getter is None:
@@ -171,8 +169,7 @@ class Saver(object):
 
         Arguments:
             transformer : transformer where the weights will be restored
-            computation (ComputationOp or dict of Ops):
-                          A ComputationOp or dictionary of output Ops of interest.
+            computation : All outputs of computation (An Op, list of Ops or dictionary of Ops)
             filename: name of file with saved weights
         """
         def match_ops(tensors, values):
@@ -226,8 +223,7 @@ class Saver(object):
         Arguments:
             transformer : transformer where the weights will be restored
                           required only if setup_restore is not called
-            computation (ComputationOp or dict of Ops):
-                          A ComputationOp or dictionary of output Ops of interest.
+            computation : All outputs of computation (An Op, list of Ops or dictionary of Ops)
                           required only if setup_restore is not called
             filename: name of file with saved weights
                       required only if setup_restore is not called
