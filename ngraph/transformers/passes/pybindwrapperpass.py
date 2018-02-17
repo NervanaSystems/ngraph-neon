@@ -210,6 +210,59 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
         return reshape_axis_order
 
+    def binary_op(self, op, x, y, is_logical=False):
+
+        def pyng_binary_op(op, x, y):
+            if isinstance(op, Add):
+                return x + y
+            elif isinstance(op, Divide):
+                return x / y
+            elif isinstance(op, Multiply):
+                return x * y
+            elif isinstance(op, Subtract):
+                return x - y
+            elif isinstance(op, Greater):
+                return PyngGreater(x, y)
+            elif isinstance(op, GreaterEqual):
+                return PyngGreaterEq(x, y)
+            elif isinstance(op, Less):
+                return PyngLess(x, y)
+            elif isinstance(op, Equal):
+                return PyngEqual(x, y)
+            elif isinstance(op, NotEqual):
+                return PyngNotEqual(x, y)
+            elif isinstance(op, Maximum):
+                return PyngMaximum(x, y)
+            elif isinstance(op, Minimum):
+                return PyngMinimum(x, y)
+
+
+        self.computation.set_op_rank(op)
+        ngraph_cpp_op = pyng_binary_op(op, self.computation.lookup_cpp_op(x),
+                                       self.computation.lookup_cpp_op(y))
+        if is_logical:
+            element_result_type = Type.f32
+            ngraph_cpp_op = PyngConvert(ngraph_cpp_op, element_result_type)
+        self.computation.register_cpp_op(op, ngraph_cpp_op)
+
+    def unary_op(self, op, x):
+
+        def pyng_unary_op(op, x):
+            if isinstance(op, LogOp):
+                return PyngLog(x)
+            elif isinstance(op, ExpOp):
+                return PyngExp(x)
+            elif isinstance(op, SquareOp):
+                return x * x
+            elif isinstance(op, SqrtOp):
+                return PyngSqrt(x)
+            elif isinstance(op, NegativeOp):
+                return PyngNegative(x)
+
+        self.computation.set_op_rank(op)
+        ngraph_cpp_op = pyng_unary_op(op, self.computation.lookup_cpp_op(x))
+        self.computation.register_cpp_op(op, ngraph_cpp_op)
+
     @generic_method(dispatch_base_type=Op)
     def visit(self, op, *args):
         self.computation.set_op_rank(op)
@@ -217,35 +270,19 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(Add)
     def visit(self, op, x, y):
-        self.computation.set_op_rank(op)
-        ngraph_cpp_add_op = self.computation.lookup_cpp_op(x) \
-            + self.computation.lookup_cpp_op(y)
-
-        self.computation.register_cpp_op(op, ngraph_cpp_add_op)
+        self.binary_op(op, x, y)
 
     @visit.on_type(Divide)
     def visit(self, op, x, y):
-        self.computation.set_op_rank(op)
-        ngraph_cpp_div_op = self.computation.lookup_cpp_op(x) \
-            / self.computation.lookup_cpp_op(y)
-
-        self.computation.register_cpp_op(op, ngraph_cpp_div_op)
+        self.binary_op(op, x, y)
 
     @visit.on_type(Multiply)
     def visit(self, op, x, y):
-        self.computation.set_op_rank(op)
-        ngraph_cpp_mul_op = self.computation.lookup_cpp_op(x) \
-            * self.computation.lookup_cpp_op(y)
-
-        self.computation.register_cpp_op(op, ngraph_cpp_mul_op)
+        self.binary_op(op, x, y)
 
     @visit.on_type(Subtract)
     def visit(self, op, x, y):
-        self.computation.set_op_rank(op)
-        ngraph_cpp_sub_op = self.computation.lookup_cpp_op(x) \
-            - self.computation.lookup_cpp_op(y)
-
-        self.computation.register_cpp_op(op, ngraph_cpp_sub_op)
+        self.binary_op(op, x, y)
 
     @visit.on_type(BroadcastOp)
     def visit(self, op, input):
@@ -392,70 +429,31 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(LogOp)
     def visit(self, op, input):
-        self.computation.set_op_rank(op)
-        ngraph_cpp_log_op = PyngLog(self.computation.lookup_cpp_op(input))
-        self.computation.register_cpp_op(op, ngraph_cpp_log_op)
+        self.unary_op(op, input)
 
     @visit.on_type(ExpOp)
     def visit(self, op, input):
-        self.computation.set_op_rank(op)
-        ngraph_cpp_exp_op = PyngExp(self.computation.lookup_cpp_op(input))
-        self.computation.register_cpp_op(op, ngraph_cpp_exp_op)
+        self.unary_op(op, input)
 
     @visit.on_type(Greater)
-    def visit(self, op, input1, input2):
-        self.computation.set_op_rank(op)
-        ngraph_cpp_greater_op = PyngGreater(
-            self.computation.lookup_cpp_op(input1),
-            self.computation.lookup_cpp_op(input2))
-        # convert the element back from bool to float type
-        element_result_type = Type.f32
-        greater_result_op = PyngConvert(ngraph_cpp_greater_op, element_result_type)
-        self.computation.register_cpp_op(op, greater_result_op)
+    def visit(self, op, x, y):
+        self.binary_op(op, x, y, is_logical=True)
 
     @visit.on_type(GreaterEqual)
-    def visit(self, op, input1, input2):
-        self.computation.set_op_rank(op)
-        ngraph_cpp_greater_op = PyngGreaterEq(
-            self.computation.lookup_cpp_op(input1),
-            self.computation.lookup_cpp_op(input2))
-        # convert the element back from bool to float type
-        element_result_type = Type.f32
-        greater_result_op = PyngConvert(ngraph_cpp_greater_op, element_result_type)
-        self.computation.register_cpp_op(op, greater_result_op)
+    def visit(self, op, x, y):
+        self.binary_op(op, x, y, is_logical=True)
 
     @visit.on_type(Less)
-    def visit(self, op, input1, input2):
-        self.computation.set_op_rank(op)
-        ngraph_cpp_less_op = PyngLess(
-            self.computation.lookup_cpp_op(input1),
-            self.computation.lookup_cpp_op(input2))
-        # convert the element back from bool to float type
-        element_result_type = Type.f32
-        less_result_op = PyngConvert(ngraph_cpp_less_op, element_result_type)
-        self.computation.register_cpp_op(op, less_result_op)
+    def visit(self, op, x, y):
+        self.binary_op(op, x, y, is_logical=True)
 
     @visit.on_type(Equal)
-    def visit(self, op, input1, input2):
-        self.computation.set_op_rank(op)
-        ngraph_cpp_equal_op = PyngEqual(
-            self.computation.lookup_cpp_op(input1),
-            self.computation.lookup_cpp_op(input2))
-        # convert the element back from bool to float type
-        element_result_type = Type.f32
-        equal_result_op = PyngConvert(ngraph_cpp_equal_op, element_result_type)
-        self.computation.register_cpp_op(op, equal_result_op)
+    def visit(self, op, x, y):
+        self.binary_op(op, x, y, is_logical=True)
 
     @visit.on_type(NotEqual)
-    def visit(self, op, input1, input2):
-        self.computation.set_op_rank(op)
-        ngraph_cpp_notequal_op = PyngNotEqual(
-            self.computation.lookup_cpp_op(input1),
-            self.computation.lookup_cpp_op(input2))
-        # convert the element back from bool to float type
-        element_result_type = Type.f32
-        notequal_result_op = PyngConvert(ngraph_cpp_notequal_op, element_result_type)
-        self.computation.register_cpp_op(op, notequal_result_op)
+    def visit(self, op, x, y):
+        self.binary_op(op, x, y, is_logical=True)
 
     @visit.on_type(Sum)
     def visit(self, op, input):
@@ -472,21 +470,13 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         self.computation.register_cpp_op(op, ngraph_cpp_sum_op)
 
     @visit.on_type(Maximum)
-    def visit(self, op, input1, input2):
-        self.computation.set_op_rank(op)
-        ngraph_cpp_maximum_op = PyngMaximum(
-            self.computation.lookup_cpp_op(input1),
-            self.computation.lookup_cpp_op(input2))
-        self.computation.register_cpp_op(op, ngraph_cpp_maximum_op)
-
+    def visit(self, op, x, y):
+        self.binary_op(op, x, y)
+   
     @visit.on_type(Minimum)
-    def visit(self, op, input1, input2):
-        self.computation.set_op_rank(op)
-        ngraph_cpp_minimum_op = PyngMinimum(
-            self.computation.lookup_cpp_op(input1),
-            self.computation.lookup_cpp_op(input2))
-        self.computation.register_cpp_op(op, ngraph_cpp_minimum_op)
-
+    def visit(self, op, x, y):
+        self.binary_op(op, x, y)
+        
     @visit.on_type(ReorderAxes)
     def visit(self, op, input):
         self.computation.set_op_rank(op)
@@ -519,11 +509,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         self.computation.register_cpp_op(op, ngraph_cpp_onehot_op)
 
     @visit.on_type(NegativeOp)
-    def visit(self, op, input):
-        self.computation.set_op_rank(op)
-        ngraph_cpp_neg_op = PyngNegative(
-            self.computation.lookup_cpp_op(input))
-        self.computation.register_cpp_op(op, ngraph_cpp_neg_op)
+    def visit(self, op, x):
+        self.unary_op(op, x)
 
     @visit.on_type(Prod)
     def visit(self, op, input):
@@ -1003,15 +990,6 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                 else:
                     uppers.append(s.stop)
         op_element_type = self.computation.lookup_cpp_op(x)
-        """
-        print("TensorSliceOp")
-        print(x.axes)
-        print(op.axes)
-        print(op_element_type.get_output_shape(0))
-        print(lowers)
-        print(uppers)
-        print(strides)
-        """
         ngraph_sliced = PyngSlice(op_element_type, lowers, uppers, strides)
         if axes_to_remove:
             ngraph_sliced = PyngReshape(ngraph_sliced,
