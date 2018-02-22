@@ -3311,7 +3311,7 @@ class Divide(BinaryElementWiseOp):
         super(Divide, self).__init__(x, y, **kwargs)
 
     def generate_adjoints(self, adjoints, delta, x, y):
-        x.generate_add_delta(adjoints, delta * self / x)
+        x.generate_add_delta(adjoints, delta / y)
         y.generate_add_delta(adjoints, -delta * self / y)
 
 
