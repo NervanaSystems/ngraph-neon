@@ -16,6 +16,7 @@
 # ******************************************************************************
 
 from __future__ import division, print_function
+import sys
 import numpy as np
 import ngraph as ng
 import ngraph.transformers as ngt
@@ -29,6 +30,13 @@ from contextlib import closing
 from ngraph.frontends.neon import Saver
 from utils import get_network_params, set_lr
 
+
+def open_csv(file_name, mode):
+    """
+    Open CSV file with right mode based on the py version
+    """
+    return(open(file_name, mode=mode + 'b') if sys.version_info[0] < 3 else
+           open(file_name, mode=mode, newline=''))
 
 # Calculate metrics over given dataset
 def loop_eval(dataset, input_ph, metric_name, computation, en_top5=False):
@@ -245,7 +253,7 @@ with closing(ngt.make_transformer_factory(args.backend, **t_args)()) as transfor
     if(args.logfile is not None):
         print("\nSaving results to csv file")
         import csv
-        with open(args.logfile + ".csv", 'wb') as train_test_file:
+        with open_csv(args.logfile + ".csv", 'w') as train_test_file:
             wr = csv.writer(train_test_file, quoting=csv.QUOTE_ALL)
             wr.writerow(train_result)
             wr.writerow(test_result)
