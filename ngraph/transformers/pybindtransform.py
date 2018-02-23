@@ -464,11 +464,23 @@ class PybindINTERPRETERTransformer(PybindTransformer):
 
 class PybindGPUTransformer(PybindTransformer):
     """
-    Transformer for ngraph c++ with interpreter backend.
+    Transformer for ngraph c++ with gpu backend.
 
     """
     transformer_name = "nggpu"
 
     def __init__(self, **kwargs):
         self.ngraph_backend = "GPU"
+        super(PybindGPUTransformer, self).__init__(**kwargs)
+
+
+class PybindARGONTransformer(PybindTransformer):
+    """
+    Transformer for ngraph c++ with argon backend.
+
+    """
+    transformer_name = "ngargon"
+
+    def __init__(self, **kwargs):
+        self.ngraph_backend = "ARGON"
         super(PybindGPUTransformer, self).__init__(**kwargs)
