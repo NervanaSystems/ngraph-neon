@@ -483,4 +483,4 @@ class PybindARGONTransformer(PybindTransformer):
 
     def __init__(self, **kwargs):
         self.ngraph_backend = "ARGON"
-        super(PybindGPUTransformer, self).__init__(**kwargs)
+        super(PybindARGONTransformer, self).__init__(**kwargs)
