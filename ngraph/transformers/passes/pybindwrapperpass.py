@@ -472,11 +472,11 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     @visit.on_type(Maximum)
     def visit(self, op, x, y):
         self.binary_op(op, x, y)
-   
+
     @visit.on_type(Minimum)
     def visit(self, op, x, y):
         self.binary_op(op, x, y)
-        
+
     @visit.on_type(ReorderAxes)
     def visit(self, op, input):
         self.computation.set_op_rank(op)
@@ -1000,16 +1000,11 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(SqrtOp)
     def visit(self, op, x):
-        self.computation.set_op_rank(op)
-        ngraph_x = self.computation.lookup_cpp_op(x)
-        ngraph_sqrt = PyngSqrt(ngraph_x)
-        self.computation.register_cpp_op(op, ngraph_sqrt)
+        self.unary_op(op, x)
 
     @visit.on_type(SquareOp)
     def visit(self, op, x):
-        self.computation.set_op_rank(op)
-        ngraph_x = self.computation.lookup_cpp_op(x)
-        self.computation.register_cpp_op(op, ngraph_x * ngraph_x)
+        self.unary_op(op, x)
 
     @visit.on_type(Flatten)
     def visit(self, op, x):
