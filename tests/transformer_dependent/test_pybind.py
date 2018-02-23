@@ -188,7 +188,6 @@ def test_sum():
         assert np.array_equal(_sum_val, 10)
 
 
-@pytest.config.ngcpu_skip(reason="Higher rank reshape is not supported yet.")
 def test_tensor_dot_tensor():
     """TODO."""
     C = ng.make_axis().named('C')
