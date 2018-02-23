@@ -860,7 +860,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                                       [op.pool_params['pad_h'],
                                           op.pool_params['pad_w']],
                                       [op.pool_params['pad_h'],
-                                          op.pool_params['pad_w']])
+                                          op.pool_params['pad_w']],
+                                      True)
             """
             print(list(op.axes.lengths))
             print(ngraph_pool.get_output_shape(0))
