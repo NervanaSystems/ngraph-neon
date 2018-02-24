@@ -16,6 +16,7 @@ neon/version.py
 *.egg-info
 .venv
 venv
+*.cover
 .coverage
 build
 *.gz

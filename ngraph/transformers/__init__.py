@@ -50,3 +50,8 @@ try:
     import artransformer.artransformer  # noqa
 except ImportError:
     pass
+
+try:
+    import ngraph.transformers.pybindtransform  # noqa
+except ImportError:
+    pass

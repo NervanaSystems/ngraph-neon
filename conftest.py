@@ -102,6 +102,9 @@ def pytest_configure(config):
     config.flex_skip = pytest.mark.skipif(config.getvalue("transformer") == "flexgpu",
                                           reason="Randomly failing test for Flex")
     config.argon_skip = pytest.mark.skipif(config.getvalue("transformer") == "argon")
+    config.ngargon_skip = pytest.mark.skipif(config.getvalue("transformer") == "ngargon")
+    config.ngcpu_skip = pytest.mark.skipif(config.getvalue("transformer") == "ngcpu")
+    config.nggpu_skip = pytest.mark.skipif(config.getvalue("transformer") == "nggpu")
     config.flex_skip_now = pytest.skip if config.getvalue("transformer") == "flexgpu" \
         else pass_method
     config.argon_skip_now = pytest.skip if config.getvalue("transformer") == "argon" \

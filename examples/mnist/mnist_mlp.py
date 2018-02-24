@@ -68,9 +68,10 @@ train_outputs = dict(batch_cost=batch_cost)
 
 with Layer.inference_mode_on():
     inference_prob = seq1(inputs['image'])
-errors = ng.not_equal(ng.argmax(inference_prob, out_axes=[ax.N]), inputs['label'])
+# errors = ng.not_equal(ng.argmax(inference_prob, out_axes=[ax.N]), inputs['label'])
 eval_loss = ng.cross_entropy_binary(inference_prob, ng.one_hot(inputs['label'], axis=ax.Y))
-eval_outputs = dict(cross_ent_loss=eval_loss, misclass_pct=errors)
+# eval_outputs = dict(cross_ent_loss=eval_loss, misclass_pct=errors)
+eval_outputs = dict(cross_ent_loss=eval_loss)
 
 # Now bind the computations we are interested in
 with closing(ngt.make_transformer()) as transformer:
