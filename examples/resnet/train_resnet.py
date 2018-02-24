@@ -15,13 +15,6 @@
 # limitations under the License.
 # ******************************************************************************
 
-# HETR Usage:
-# - set environment variables for HETR_AEON_IP and HETR_AEON_PORT
-# - run the aeon-service on antoher linux terminal
-#   - cd <PATH_TO_AEON_SERVICE>
-#   - ./aeon-service --uri http://<HETR_AEON_IP>:<HETR_AEON_PORT>
-# - launch train_resnet.py with the desired arg parameters
-
 from __future__ import division, print_function
 import numpy as np
 import ngraph as ng
