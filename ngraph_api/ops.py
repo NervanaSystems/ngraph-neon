@@ -21,8 +21,8 @@ import numpy as np
 from pyngraph import Node
 
 from pyngraph.op import Abs, Add, AvgPool, Broadcast, Ceiling, Constant, Convert, Convolution, \
-    Divide, Dot, Equal, Exp, Floor, Greater, GreaterEq, Less, LessEq, Log, Maximum, Minimum, \
-    Multiply, Negative, Not, NotEqual, Parameter, Reshape, Sqrt, Subtract, Sum, Tanh
+    Divide, Dot, Equal, Exp, Floor, Greater, GreaterEq, Less, LessEq, Log, Maximum, MaxPool, \
+    Minimum, Multiply, Negative, Not, NotEqual, Parameter, Reshape, Sqrt, Subtract, Sum, Tanh
 
 from typing import Iterable, List
 
@@ -276,6 +276,26 @@ def avg_pooling(x,                      # type: Node
         padding_below = [0] * len(window_shape)
 
     return AvgPool(x, window_shape, strides, padding_above, padding_above, zero_pad)
+
+
+@nameable_op
+def max_pooling(x,                      # type: Node
+                window_shape,           # type: TensorShape
+                strides=None,           # type: List[int]
+                padding_above=None,     # type: List[int]
+                padding_below=None,     # type: List[int]
+                name=None,              # type: str
+                ):
+    # type: (...) -> Node
+    """Return max pooling node."""
+    if strides is None:
+        strides = [1] * len(window_shape)  # Default to as many 1s as spatial dimensions of input.
+    if padding_above is None:
+        padding_above = [0] * len(window_shape)
+    if padding_below is None:
+        padding_below = [0] * len(window_shape)
+
+    return MaxPool(x, window_shape, strides, padding_above, padding_above)
 
 
 # reduction ops

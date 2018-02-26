@@ -37,6 +37,7 @@ from ngraph_api.ops import less
 from ngraph_api.ops import less_eq
 from ngraph_api.ops import logical_not
 from ngraph_api.ops import maximum
+from ngraph_api.ops import max_pooling
 from ngraph_api.ops import minimum
 from ngraph_api.ops import multiply
 from ngraph_api.ops import negative
