@@ -93,14 +93,15 @@ class PybindComputation(Computation):
         # set tensor values for placeholders from args
         # use c++ backend write method to pass the tensor values
         for index, op in enumerate(self.computation_op.parameters):
-            tensor_size = self.get_tensor_size(op)
             if isinstance(args[index], np.ndarray):
                 if args[index].dtype == np.float32:
                     input_arg = args[index]
                 else:
                     input_arg = args[index].astype(dtype=np.float32)
+                    op.tensor.dtype = np.dtype('float32')
             else:
                 input_arg = np.array(args[index], dtype=np.float32)
+            tensor_size = self.get_tensor_size(op)
             # TODO - need to define dtype of numpy array's for *params based on op.dtype
             self.param_primary_tensor_view_list[index].write(util.numpy_to_c(
                 input_arg), 0, tensor_size)
