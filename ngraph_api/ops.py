@@ -258,16 +258,16 @@ def convolution(x,                      # type: Node
 
 
 @nameable_op
-def avg_pooling(x,                      # type: Node
-                window_shape,           # type: TensorShape
-                strides=None,           # type: List[int]
-                padding_above=None,     # type: List[int]
-                padding_below=None,     # type: List[int]
-                zero_pad=True,          # type: bool
-                name=None,              # type: str
-                ):
+def avg_pool(x,                      # type: Node
+             window_shape,           # type: TensorShape
+             strides=None,           # type: List[int]
+             padding_above=None,     # type: List[int]
+             padding_below=None,     # type: List[int]
+             zero_pad=True,          # type: bool
+             name=None,              # type: str
+             ):
     # type: (...) -> Node
-    """Return avg pooling node."""
+    """Return average pooling node."""
     if strides is None:
         strides = [1] * len(window_shape)  # Default to as many 1s as spatial dimensions of input.
     if padding_above is None:
@@ -279,13 +279,13 @@ def avg_pooling(x,                      # type: Node
 
 
 @nameable_op
-def max_pooling(x,                      # type: Node
-                window_shape,           # type: TensorShape
-                strides=None,           # type: List[int]
-                padding_above=None,     # type: List[int]
-                padding_below=None,     # type: List[int]
-                name=None,              # type: str
-                ):
+def max_pool(x,                      # type: Node
+             window_shape,           # type: TensorShape
+             strides=None,           # type: List[int]
+             padding_above=None,     # type: List[int]
+             padding_below=None,     # type: List[int]
+             name=None,              # type: str
+             ):
     # type: (...) -> Node
     """Return max pooling node."""
     if strides is None:
