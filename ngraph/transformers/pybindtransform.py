@@ -25,6 +25,7 @@ from ngraph.transformers.passes.pybindwrapperpass \
 import pyngraph.util as util
 from pyngraph import Type, Function
 from pyngraph.runtime import Manager
+from pyngraph.op import Parameter
 
 
 class PybindComputation(Computation):
@@ -286,7 +287,15 @@ class PybindComputation(Computation):
 
         # use the ngraph_cpp_op dict to built the parameter list for c++ backend
         for place_holders in self.computation_op.parameters:
-            self.parameter_list.append(self.ngraph_cpp_ops[place_holders.tensor])
+            if place_holders.tensor in self.ngraph_cpp_ops:
+                self.parameter_list.append(self.ngraph_cpp_ops[place_holders.tensor])
+            else:  # sometimes parameters can be unused/dead values in computation.
+                tensor = place_holders.tensor
+                op_element_type = Parameter(Type.f32, list(tensor.axes.lengths))
+                self.register_cpp_op(tensor, op_element_type)
+                if not tensor.is_placeholder:
+                    self.neon_variable_list.append(tensor)
+                self.parameter_list.append(op_element_type)
 
         # Add additional parameters (variables)
         for variable in self.neon_variable_list:
