@@ -17,11 +17,12 @@
 from __future__ import division
 from ngraph.transformers.passes.passes import PeepholeGraphPass
 from ngraph.util.generics import generic_method
-from ngraph.op_graph.op_graph import Op, Add, Multiply, BroadcastOp, TensorValueOp, \
-    DotOp, LogOp, ExpOp, Sum, Greater, GreaterEqual, Maximum, ReductionOp, AssignableTensorOp, \
-    OneHotOp, Divide, Subtract, NegativeOp, ReciprocalOp, TensorSizeOp, MapRolesOp, Minimum, \
-    Less, Max, NotEqual, SequentialOp, AssignOp, ParallelOp, ExpandDims, TensorSliceOp, \
-    Equal, SqrtOp, SquareOp, Flatten, Unflatten, ContiguousOp, Prod, ReorderAxes
+from ngraph.op_graph.op_graph import Op, Add, AssignableTensorOp, AssignOp, AxesCastOp, \
+     BroadcastOp, ContiguousOp, Divide, DotOp, Equal, ExpandDims, ExpOp, Flatten, Greater, \
+     GreaterEqual, Less, LogOp, MapRolesOp, Max, Maximum, Minimum, Multiply, NegativeOp, \
+     NotEqual, OneHotOp, ParallelOp, Prod, ReciprocalOp, ReductionOp, ReorderAxes, \
+     SequentialOp, SqrtOp, SquareOp, Subtract, Sum, TensorSliceOp, TensorSizeOp, TensorValueOp, \
+     Unflatten
 from ngraph.op_graph.pooling import PoolingOp, BpropPoolOp
 from ngraph.op_graph.convolution import ConvolutionOp, bprop_conv, update_conv
 import numpy as np
@@ -286,17 +287,18 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     def visit(self, op, x, y):
         self.binary_op(op, x, y)
 
+    @visit.on_type(AxesCastOp)
+    def visit(self, op, x):
+        self.computation.set_op_rank(op)
+        op_element_type = self.computation.lookup_cpp_op(x)
+        self.computation.register_cpp_op(op, op_element_type)
+
     @visit.on_type(BroadcastOp)
-    def visit(self, op, input):
+    def visit(self, op, x):
         self.computation.set_op_rank(op)
         axis_set = set()
-        element_type = Type.f32
-        # check if the op.args already have Paramterized view type.
-        if self.computation.has_cpp_op(op.args[0]):
-            op_element_type = self.computation.lookup_cpp_op(op.args[0])
-        else:
-            op_element_type = Parameter(
-                element_type, list(op.args[0].axes.lengths))
+        op_element_type = self.computation.lookup_cpp_op(op.args[0])
+
         # build axis_set
         broadcast_axes = op.axes.lengths
         broadcast_args_axes = op.args[0].axes.lengths

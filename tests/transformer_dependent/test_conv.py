@@ -89,6 +89,7 @@ def test_conv(n64_hw32_c32_3x3):
     assert np.allclose(gradF_ng, gradF_np, rtol=0, atol=2)
 
 
+@pytest.mark.skip(reason="Not implemented in pybindtransformer")
 @pytest.config.flex_disabled(reason="There is no kernel for DeconvolutionOp for flex - #1841")
 @pytest.config.argon_disabled(reason="DeconvolutionOp not yet supported - #1781")
 def test_deconv(deconv_n4_hw4_c1_5x5):
@@ -129,6 +130,7 @@ def test_deconv(deconv_n4_hw4_c1_5x5):
     assert np.allclose(gradF_ng, gradF_np, rtol=0.1, atol=0)
 
 
+@pytest.mark.skip(reason="Not implemented in pybindtransformer")
 @pytest.config.flex_disabled(reason="There is no kernel for DeconvolutionOp for flex - #1841")
 @pytest.config.argon_disabled(reason="DeconvolutionOp not yet supported - #1781")
 def test_2layer_deconv(deconv_n4_hw4_c1_5x5):
@@ -278,10 +280,10 @@ def test_conv_flatten_deriv(n4_hw12_c3_5x5):
     axes_nmpqk = ng.make_axes([cf.ax_o[-1], cf.ax_o[1], cf.ax_o[2], cf.ax_o[3], cf.ax_o[0]])
 
     # broadcast input / filter axes
-    input_var = ng.variable(cf.ax_i).named('input')
+    input_var = ng.placeholder(cf.ax_i).named('input')
     input_val = np.ones(input_var.axes.lengths)
 
-    filter_rsck_prime = ng.variable(axes_rsck_prime).named('filter')
+    filter_rsck_prime = ng.placeholder(axes_rsck_prime).named('filter')
     filter_var = filter_rsck_prime
     filter_rsck = ng.cast_axes(filter_rsck_prime, axes_rsck).named('frsck')
     filter_trsck = ng.expand_dims(filter_rsck, cf.ax_f[1], 0).named('ftrsck')
