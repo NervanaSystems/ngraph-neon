@@ -42,7 +42,7 @@ def get_root_ops(computation):
         values = computation.values
     # Handle arg to transformer.compuation()
     elif isinstance(computation, collections.Iterable):
-        values = [*computation]
+        values = list(computation)
     else:
         raise ValueError()
     return values
