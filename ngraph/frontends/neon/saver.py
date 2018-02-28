@@ -16,8 +16,36 @@
 # ******************************************************************************
 from __future__ import division, print_function, absolute_import
 
+import collections
+from operator import itemgetter
 import ngraph as ng
 from ngraph.frontends.neon.saverfile import SaverFile
+
+
+def get_root_ops(computation):
+    """
+    Get list of root Ops from a forest of computation graph
+
+    Arguments:
+        computation : All outputs of computation (An Op, list of Ops or dictionary of Ops)
+    Returns:
+        List of root Ops
+    """
+    # Handle arg to neon.make_bound_computation()
+    if isinstance(computation, dict):
+        computation_keys = tuple(sorted(computation.keys()))
+        outputs = itemgetter(*computation_keys)(computation)
+        outputs = [outputs] if len(computation_keys) == 1 else list(outputs)
+        values = type(outputs)(ng.as_op(output) for output in outputs)
+    # Handle arg to transformer.add_computation()
+    elif isinstance(computation, ng.ComputationOp):
+        values = computation.values
+    # Handle arg to transformer.compuation()
+    elif isinstance(computation, collections.Iterable):
+        values = [*computation]
+    else:
+        raise ValueError()
+    return values
 
 
 class Saver(object):
@@ -58,7 +86,9 @@ class Saver(object):
         """
         self.getter_op_names = None
         self.getter = None
+        self.getter_type = 'new'
         self.setter = None
+        self.setter_type = 'new'
 
     def setup_save(self, transformer, computation):
         """
@@ -66,9 +96,9 @@ class Saver(object):
 
         Arguments:
             transformer : transformer where the weights are stored
-            computation (ComputationOp): A ComputationOp of interest.
+            computation : All outputs of computation (An Op, list of Ops or dictionary of Ops)
         """
-        # collect and return a set of all AssignableTensorOp's
+        # collect and return a set of all Variables
         def find_ops(values):
             """
             Find and return all weights.
@@ -79,23 +109,17 @@ class Saver(object):
 
             def find_op(op_to_add):
                 """
-                find persistent and trainable AssignableTensorOp
+                find weight (trainable AssignableTensorOp)
                 """
-                if isinstance(op_to_add, ng.TensorValueOp):
-                    tensor = op_to_add.tensor
-                    if isinstance(tensor, ng.AssignableTensorOp):
-                        if tensor.is_persistent:
-                            if tensor.is_constant:
-                                pass
-                            elif tensor.is_placeholder:
-                                pass
-                            else:
-                                try:
-                                    prev_op = nodes[tensor.name]
-                                except KeyError:
-                                    prev_op = tensor
-                                    nodes[tensor.name] = tensor
-                                assert prev_op == tensor
+                tensor = op_to_add.tensor
+                if tensor.is_persistent and not (tensor.is_constant or tensor.is_placeholder):
+                    try:
+                        prev_op = nodes[tensor.name]
+                    except KeyError:
+                        prev_op = tensor
+                        nodes[tensor.name] = tensor
+                    assert prev_op == tensor
+
             while len(frontier) > 0:
                 op_to_visit = frontier.pop()
                 find_op(op_to_visit)
@@ -108,9 +132,14 @@ class Saver(object):
                         frontier.add(arg)
             return nodes
         # Traverse computation graph and extract persistent tensors and unique op instance name
-        save_variables = find_ops(computation.values)
+        save_variables = find_ops(get_root_ops(computation))
         self.getter_op_names, ops = zip(*save_variables.items())
-        self.getter = transformer.computation(ops)
+        if transformer.transformer_name not in ("ngcpu", "nginterp", "nggpu"):
+            self.getter = transformer.computation(ops)
+            self.getter_type = 'old'
+        else:
+            self.getter = transformer.neon_variable_buffer
+            self.getter_type = 'new'
 
     def save(self, filename, compress=False, transformer=None, computation=None):
         """
@@ -121,16 +150,19 @@ class Saver(object):
             compress: specify whether to compress the weights
             transformer : transformer where the weights are stored
                           required only if setup_save is not called
-            computation (ComputationOp): A ComputationOp of interest.
-                                         required only if setup_save
-                                         is not called
+            computation : All outputs of computation (An Op, list of Ops or dictionary of Ops)
+                          required only if setup_save is not called
         """
         if self.getter is None:
             self.setup_save(transformer=transformer,
                             computation=computation)
         tensors = dict()
-        tensors = {name: tensor.copy() for name, tensor in zip(self.getter_op_names,
-                                                               self.getter())}
+        if self.getter_type == 'old':
+            tensors = {name: tensor.copy() for name, tensor in zip(self.getter_op_names,
+                                                                   self.getter())}
+        else:
+            for op, tensor in self.getter.items():
+                tensors[op.name] = tensor
         # write dictionary to file
         savefile = SaverFile(filename)
         savefile.write_values(tensors, compress)
@@ -142,7 +174,7 @@ class Saver(object):
 
         Arguments:
             transformer : transformer where the weights will be restored
-            computation (ComputationOp): A ComputationOp of interest.
+            computation : All outputs of computation (An Op, list of Ops or dictionary of Ops)
             filename: name of file with saved weights
         """
         def match_ops(tensors, values):
@@ -155,21 +187,15 @@ class Saver(object):
 
             def match_op(op_to_add):
                 """
-                Match weight with loaded tensor value
+                Match a weight with loaded tensor value
                 """
-                if isinstance(op_to_add, ng.TensorValueOp):
-                    tensor = op_to_add.tensor
-                    if isinstance(tensor, ng.AssignableTensorOp):
-                        if tensor.is_persistent:
-                            if tensor.is_constant:
-                                pass
-                            elif tensor.is_placeholder:
-                                pass
-                            else:
-                                try:
-                                    nodes[tensor] = tensors[tensor.name]
-                                except KeyError:
-                                    print("Warning: Missing weight in save file: " + tensor.name)
+                tensor = op_to_add.tensor
+                if tensor.is_persistent and not (tensor.is_constant or tensor.is_placeholder):
+                    try:
+                        nodes[tensor] = tensors[tensor.name]
+                    except KeyError:
+                        print("Warning: Missing weight in save file: " + tensor.name)
+
             while len(frontier) > 0:
                 op_to_visit = frontier.pop()
                 match_op(op_to_visit)
@@ -184,11 +210,16 @@ class Saver(object):
         # load weight from file to tensors
         savefile = SaverFile(filename)
         tensors = savefile.read_values()
-        nodes = match_ops(tensors, computation.values)
-        restore_ops = []
-        for op_to_save, op_value in nodes.items():
-            restore_ops.append(ng.AssignOp(op_to_save, op_value))
-        self.setter = transformer.computation(restore_ops)
+        nodes = match_ops(tensors, get_root_ops(computation))
+        if transformer.transformer_name not in ("ngcpu", "nginterp", "nggpu"):
+            restore_ops = []
+            for op_to_save, op_value in nodes.items():
+                restore_ops.append(ng.AssignOp(op_to_save, op_value))
+            self.setter = transformer.computation(restore_ops)
+            self.setter_type = 'old'
+        else:
+            self.setter = (nodes, transformer.neon_variable_buffer)
+            self.setter_type = 'new'
 
     def restore(self, transformer=None, computation=None, filename=None):
         """
@@ -196,9 +227,8 @@ class Saver(object):
         Arguments:
             transformer : transformer where the weights will be restored
                           required only if setup_restore is not called
-            computation (ComputationOp): A ComputationOp of interest.
-                                         required only if setup_restore
-                                         is not called
+            computation : All outputs of computation (An Op, list of Ops or dictionary of Ops)
+                          required only if setup_restore is not called
             filename: name of file with saved weights
                       required only if setup_restore is not called
         """
@@ -206,4 +236,9 @@ class Saver(object):
             self.setup_restore(transformer=transformer,
                                computation=computation,
                                filename=filename)
-        self.setter()
+        if self.setter_type == 'old':
+            self.setter()
+        else:
+            nodes = self.setter[0]
+            for op in nodes:
+                self.setter[1][op] = nodes[op]

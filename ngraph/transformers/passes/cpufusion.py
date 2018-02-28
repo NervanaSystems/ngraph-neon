@@ -114,12 +114,13 @@ class CPUFusion(GraphRewritePass):
                     delta_exop = self.op_accessor.computation_decl.get_exop(delta_op)
                     # Look for reorder->sum
                     for delta_child in delta_exop.output_decls[0].user_input_decls:
-                        for delta_grandchild in delta_child.exop.output_decls[0].user_input_decls:
-                            # Bias grad op is a sum op on non-channel axis
-                            # It should also not claimed by a different convolution
-                            if isinstance(delta_grandchild.exop.op, Sum) \
-                                    and delta_grandchild.exop.op not in self.op_replacement_dict:
-                                dbias_exop = delta_grandchild.exop
+                        if delta_child.exop.output_decls:
+                            for delta_grandchild in delta_child.exop.output_decls[0].user_input_decls:
+                                # Bias grad op is a sum op on non-channel axis
+                                # It should also not claimed by a different convolution
+                                if isinstance(delta_grandchild.exop.op, Sum) \
+                                        and delta_grandchild.exop.op not in self.op_replacement_dict:
+                                    dbias_exop = delta_grandchild.exop
 
             if dbias_exop is None:
                 continue
