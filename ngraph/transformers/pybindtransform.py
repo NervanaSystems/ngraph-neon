@@ -18,7 +18,8 @@ import collections
 import numpy as np
 from ngraph.transformers.base import Computation
 from ngraph.transformers.base import Transformer
-from ngraph.op_graph.op_graph import Op, AssignableTensorOp, TensorValueOp, SequentialOp
+from ngraph.op_graph.op_graph import Op, AssignableTensorOp, TensorValueOp, SequentialOp, \
+    AssignOp
 from orderedset import OrderedSet
 from ngraph.transformers.passes.pybindwrapperpass \
     import PybindWrapperGenerator, PybindScopePass
@@ -103,15 +104,20 @@ class PybindComputation(Computation):
             else:
                 input_arg = np.array(args[index], dtype=np.float32)
             tensor_size = self.get_tensor_size(op)
+            # print("Parameter " + op.name + " " + str(tensor_size))
             # TODO - need to define dtype of numpy array's for *params based on op.dtype
             self.param_primary_tensor_view_list[index].write(util.numpy_to_c(
                 input_arg), 0, tensor_size)
         # set tensor values for weights from variable buffer
-        for index, op in enumerate(self.neon_variable_list):
-            tensor_size = self.get_tensor_size(op)
-            # TODO - need to define dtype of numpy array's for *params based on op.dtype
-            self.variable_primary_tensor_view_list[index].write(util.numpy_to_c(
-                self.transformer.neon_variable_buffer[op]), 0, tensor_size)
+        index = 0
+        for op in self.neon_variable_list:
+            if op not in self.computation_op.parameters:
+                tensor_size = self.get_tensor_size(op)
+                # print("In Variable " + op.name + " " + str(tensor_size))
+                # TODO - need to define dtype of numpy array's for *params based on op.dtype
+                self.variable_primary_tensor_view_list[index].write(util.numpy_to_c(
+                    self.transformer.neon_variable_buffer[op]), 0, tensor_size)
+                index += 1
         """
         print("Var In:")
         for var in self.transformer.neon_variable_buffer:
@@ -126,27 +132,27 @@ class PybindComputation(Computation):
         for index, result in enumerate(self.result_primary_tensor_view_list):
             result_op = self.neon_return_list[index]
             tensor_size = self.get_tensor_size(result_op)
+            # print("Result " + result_op.name + " " + str(tensor_size))
             result.read(util.numpy_to_c(self.neon_return_buffer[result_op]),
                         0,
                         tensor_size)
+            # print(self.neon_return_buffer[result_op])
 
         # now read updated weights into weight variables from the computated result
         for index, result in enumerate(self.update_primary_tensor_view_list):
             result_op = self.neon_update_list[index]
-            """
-            print('Read out ' + result_op.name)
-            """
             tensor_size = self.get_tensor_size(result_op)
+            # print("Out variable " + result_op.name + " " + str(tensor_size))
             result.read(util.numpy_to_c(self.neon_update_buffer[result_op]),
                         0,
                         tensor_size)
+
         """
-        print("Var Out:")
         for var in self.neon_update_buffer:
-            if var.name.startswith('GradientDescentMomentum/Sequential/Affine/Linear/W'):
-                print("Out: " + var.name)
-                print(np.sum(self.neon_update_buffer[var]))
+            print("Variable update: " + var.name)
+            print(self.neon_update_buffer[var])
         """
+
         # update weights
         for var in self.neon_update_buffer:
             np.copyto(self.transformer.neon_variable_buffer[var], self.neon_update_buffer[var])
@@ -162,6 +168,8 @@ class PybindComputation(Computation):
             return None
 
     def search_cpp_op(self, op):
+        if isinstance(op, SequentialOp):
+            op = op.ops[-1]
         if isinstance(op, TensorValueOp):
             tensor_op = op.tensor
             if not tensor_op.is_constant:
@@ -227,6 +235,8 @@ class PybindComputation(Computation):
         :param op:
         :return: int, op size in bytes
         """
+        if isinstance(op, AssignOp):
+            op = op.args[1]
         item_size = op.tensor.dtype.itemsize
         tensor_size = int((np.prod(op.axes.lengths)) * item_size)
         return tensor_size
@@ -264,17 +274,19 @@ class PybindComputation(Computation):
             self.neon_return_list = self.computation_op.returns
 
         for node in self.neon_return_list:
-            if isinstance(node, SequentialOp):
-                node = node.ops[-1]
-            self.result_nodes_list.append(self.ngraph_cpp_ops[node])
+            # print("Result: " + node.name)
+            if isinstance(node.tensor, AssignOp):
+                node = node.args[1]
+            ngraph_op = self.lookup_cpp_op(node)
+            print("Return " + str(ngraph_op))
+            self.result_nodes_list.append(ngraph_op)
 
         # Add additional results (updated variable)
         for variable in self.variables_cpp_op:
-            """
-            print("Update " + variable.name + " " + self.variables_cpp_op[variable][1].name)
-            """
+            # print("Update " + variable.name + " " + self.variables_cpp_op[variable][1].name) 
             self.neon_update_list.append(variable)
-            ngraph_op = self.ngraph_cpp_ops[self.variables_cpp_op[variable][1].tensor]
+            ngraph_op = self.lookup_cpp_op(self.variables_cpp_op[variable][1])
+            print("Outvar " + str(ngraph_op))
             """
             rhs = self.variables_cpp_op[variable][1].tensor
             for op in Op.ordered_ops([rhs]):
@@ -284,7 +296,7 @@ class PybindComputation(Computation):
             """
             self.update_nodes_list.append(ngraph_op)
             shape = list(variable.axes.lengths)
-            self.neon_update_buffer[variable] = np.empty(shape, dtype=np.float32)
+            self.neon_update_buffer[variable] = np.zeros(shape, dtype=np.float32)
 
         # use the ngraph_cpp_op dict to built the parameter list for c++ backend
         for place_holders in self.computation_op.parameters:
@@ -300,12 +312,13 @@ class PybindComputation(Computation):
 
         # Add additional parameters (variables)
         for variable in self.neon_variable_list:
-            self.variable_list.append(self.ngraph_cpp_ops[variable.tensor])
+            if variable not in self.computation_op.parameters:
+                self.variable_list.append(self.ngraph_cpp_ops[variable.tensor])
             # Allocate variable buffer - shared by computations
             # TODO - need to define dtype of numpy array's for variables based on dtype
             if variable not in self.transformer.neon_variable_buffer:
                 shape = list(variable.axes.lengths)
-                var_buffer = np.empty(shape, dtype=np.float32)
+                var_buffer = np.zeros(shape, dtype=np.float32)
                 self.transformer.neon_variable_buffer[variable] = var_buffer
                 if variable.initial_value is not None:
                     np.copyto(var_buffer, variable.initial_value)
@@ -327,14 +340,17 @@ class PybindComputation(Computation):
 
         # create the primary_tensor_view for result's using the ngraph++ initilized backend
         for node in self.neon_return_list:
-            shape = list(node.axes.lengths)
+            org_node = node
+            if isinstance(node.tensor, AssignOp):
+                node = node.args[1]
+            shape = list(node.tensor.axes.lengths)
             self.result_primary_tensor_view_list.append(
                 self.backend.make_primary_tensor_view(
                     self.element_type, shape))
             # Allocate return buffer
             # TODO - need to define dtype of numpy array's for results based on result.dtype
-            result_arr = np.empty(shape, dtype=np.float32)
-            self.neon_return_buffer[node] = result_arr
+            result_arr = np.zeros(shape, dtype=np.float32)
+            self.neon_return_buffer[org_node] = result_arr
 
         # prepare tensor_views for placeholders
         for node in self.computation_op.parameters:
@@ -345,10 +361,11 @@ class PybindComputation(Computation):
 
         # prepare tensor_views for input variables
         for node in self.neon_variable_list:
-            shape = list(node.axes.lengths)
-            self.variable_primary_tensor_view_list.append(
-                self.backend.make_primary_tensor_view(
-                    self.element_type, shape))
+            if node not in self.computation_op.parameters:
+                shape = list(node.axes.lengths)
+                self.variable_primary_tensor_view_list.append(
+                    self.backend.make_primary_tensor_view(
+                        self.element_type, shape))
 
         # prepare tensor_views for weights
         for node in self.neon_update_list:
@@ -428,6 +445,7 @@ class PybindTransformer(FunctionTransformer):
     """
     transformer_name = "pybind_translator"
     """
+    function_count = 1
 
     def __init__(self, **kwargs):
         """
@@ -439,7 +457,6 @@ class PybindTransformer(FunctionTransformer):
         """
         super(PybindTransformer, self).__init__(**kwargs)
         self.neon_variable_buffer = dict()
-        self.function_count = 0
 
     def make_computation(self, computation):
         """
@@ -452,8 +469,8 @@ class PybindTransformer(FunctionTransformer):
         return pybind_comp
 
     def get_function_name(self):
-        name = 'function' + str(self.function_count)
-        self.function_count += 1
+        name = 'function' + str(PybindTransformer.function_count)
+        PybindTransformer.function_count += 1
         return name
 
 
