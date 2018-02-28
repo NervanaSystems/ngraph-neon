@@ -267,6 +267,7 @@ def test_convolution_backprop(n128_hw32_c3_2x2):
         ng.testing.assert_allclose(dcdf_sym_val, dcdf_num_val, rtol=0.01)
 
 
+@pytest.mark.skip(reason="PybindTransfomer issue in handling ng.variable type of input")
 @pytest.config.flex_disabled(reason="Unknown problem yet")
 def test_conv_flatten_deriv(n4_hw12_c3_5x5):
     """
@@ -280,10 +281,10 @@ def test_conv_flatten_deriv(n4_hw12_c3_5x5):
     axes_nmpqk = ng.make_axes([cf.ax_o[-1], cf.ax_o[1], cf.ax_o[2], cf.ax_o[3], cf.ax_o[0]])
 
     # broadcast input / filter axes
-    input_var = ng.placeholder(cf.ax_i).named('input')
+    input_var = ng.variable(cf.ax_i).named('input')
     input_val = np.ones(input_var.axes.lengths)
 
-    filter_rsck_prime = ng.placeholder(axes_rsck_prime).named('filter')
+    filter_rsck_prime = ng.variable(axes_rsck_prime).named('filter')
     filter_var = filter_rsck_prime
     filter_rsck = ng.cast_axes(filter_rsck_prime, axes_rsck).named('frsck')
     filter_trsck = ng.expand_dims(filter_rsck, cf.ax_f[1], 0).named('ftrsck')
