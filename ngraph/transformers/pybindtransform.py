@@ -278,7 +278,7 @@ class PybindComputation(Computation):
             if isinstance(node.tensor, AssignOp):
                 node = node.args[1]
             ngraph_op = self.lookup_cpp_op(node)
-            print("Return " + str(ngraph_op))
+            # print("Return " + str(ngraph_op))
             self.result_nodes_list.append(ngraph_op)
 
         # Add additional results (updated variable)
@@ -286,7 +286,7 @@ class PybindComputation(Computation):
             # print("Update " + variable.name + " " + self.variables_cpp_op[variable][1].name) 
             self.neon_update_list.append(variable)
             ngraph_op = self.lookup_cpp_op(self.variables_cpp_op[variable][1])
-            print("Outvar " + str(ngraph_op))
+            # print("Outvar " + str(ngraph_op))
             """
             rhs = self.variables_cpp_op[variable][1].tensor
             for op in Op.ordered_ops([rhs]):
