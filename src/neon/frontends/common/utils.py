@@ -253,10 +253,17 @@ def make_poolparams(op, pool_shape, strides, padding):
     poolparams = dict()
     poolparams["op"] = op
 
-    for name, value in zip("JTRS", [pool_shape[nm] for nm in "CDHW"]):
+    pool_axis_names = ""
+    for name in pool_shape:
+        pool_axis_names += name
+
+    pool_filter_names = {"W": "S", "HW": "RS", "DHW": "TRS",
+                         "CHW": "JRS", "CDHW": "JTRS"}[pool_axis_names]
+
+    for name, value in zip(pool_filter_names, [pool_shape[nm] for nm in pool_axis_names]):
         poolparams[name] = value
 
-    for name in "CDHW":
+    for name in pool_axis_names:
         for prefix, prop in zip(("str", "pad"), (strides, padding)):
             poolparams["{}_{}".format(prefix, name.lower())] = prop[name]
 

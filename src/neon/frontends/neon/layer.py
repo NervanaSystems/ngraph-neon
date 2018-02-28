@@ -352,26 +352,29 @@ class ConvBase(Layer):
                                                                list(obj.keys())))
         self.init = init
 
-        # FixMe: allow shapes other than DHWK
+        filter_dim = len(filter_shape)
+        spatial_dim = filter_dim - 1
+        filter_keys = "DHWK"[-filter_dim:]
+        spatial_keys = "DHW"[-spatial_dim:]
 
         # Setup filter parameters
-        check_dict(filter_shape, "filter_shape", "DHWK")
+        check_dict(filter_shape, "filter_shape", filter_keys)
         self.nout = filter_shape.pop("K")
         self.filter_shape = filter_shape
 
         # Setup strides - default to 1
         check_dict(strides, "strides")
-        self.strides = {key: 1 for key in "DHW"}
+        self.strides = {key: 1 for key in spatial_keys}
         self.strides.update(strides)
 
         # Setup padding - default to 0
         check_dict(padding, "padding")
-        self.padding = {key: 0 for key in "DHW"}
+        self.padding = {key: 0 for key in spatial_keys}
         self.padding.update(padding)
 
         # Setup dilation - default to 1
         check_dict(dilation, "dilation")
-        self.dilation = {key: 1 for key in "DHW"}
+        self.dilation = {key: 1 for key in spatial_keys}
         self.dilation.update(dilation)
 
         self.W = None
@@ -690,18 +693,21 @@ class PoolBase(Layer):
 
         # FixMe: allow shapes other than CDHW
 
+        pool_dim = len(pool_shape)
+        pool_keys = self.pool_axis_names[-pool_dim:]
+
         # Setup pooling parameters
-        check_dict(pool_shape, "pool_shape", "CDHW")
+        check_dict(pool_shape, "pool_shape", pool_keys)
         self.pool_shape = pool_shape
 
         # Setup strides - default to 1
         check_dict(strides, "strides")
-        self.strides = {key: 1 for key in "CDHW"}
+        self.strides = {key: 1 for key in pool_keys}
         self.strides.update(strides)
 
         # Setup padding - default to 0
         check_dict(padding, "padding")
-        self.padding = {key: 0 for key in "CDHW"}
+        self.padding = {key: 0 for key in pool_keys}
         self.padding.update(padding)
 
     def _get_pad_int(self, axes):
@@ -712,7 +718,7 @@ class PoolBase(Layer):
         # Manual padding might be required for asymmetric paddings
         manual_pad = {}
         padding_int = {}
-        for name, ax in zip("CDHW", axes):
+        for name, ax in zip(self.pool_axis_names, axes):
             pad = utils.ConvParameters(ax.length,
                                        self.pool_shape[name],
                                        self.strides[name],
@@ -724,34 +730,37 @@ class PoolBase(Layer):
 
         return padding_int, manual_pad
 
-    def _output_axes(self, channel_axes, spatial_axes, batch_axis, pad_int):
+    def _output_axes(self, in_obj, pad_int):
         """
         Create the pooling output axes.
 
         TODO: This should be done in the core since it's fully determined.
         """
         output_axes = ng.make_axes()
-        for name, ax in zip("CDHW", (channel_axes,) + spatial_axes):
-            output_axes += ng.make_axis(name=ax.name,
-                                        length=utils.conv_output_dim(ax.length,
-                                                                     self.pool_shape[name],
-                                                                     pad_int[name],
-                                                                     self.strides[name],
-                                                                     pooling=True))
-        return output_axes + batch_axis
+        for ax in in_obj.axes:
+            name = ax.name
+            if name in self.pool_axis_names:
+                output_axes += ng.make_axis(name=name,
+                                            length=utils.conv_output_dim(ax.length,
+                                                                         self.pool_shape[name],
+                                                                         pad_int[name],
+                                                                         self.strides[name],
+                                                                         pooling=True))
+            else:
+                output_axes += ax
 
-    def _pool_op(self, in_obj, channel_axes, spatial_axes):
+        return output_axes
+
+    def _pool_op(self, in_obj, pool_axes):
         """
         Setup for the call to ng.pooling.
         """
         manual_pad = collections.OrderedDict([(ax.name, (0, 0)) for ax in in_obj.axes])
-        pad_int, extra_pad = self._get_pad_int((channel_axes, ) + spatial_axes)
+        pad_int, extra_pad = self._get_pad_int(pool_axes)
         manual_pad.update(extra_pad)
         if any((pad != (0, 0)) for pad in manual_pad.values()):
             in_obj = ng.pad(in_obj, manual_pad.values())
-            channel_axes = in_obj.axes.get_by_names(*ng.make_axes(channel_axes).names)
-            spatial_axes = in_obj.axes.get_by_names(*ng.make_axes(spatial_axes).names)
-        output_axes = self._output_axes(channel_axes, spatial_axes, in_obj.axes.batch_axis(),
+        output_axes = self._output_axes(in_obj,
                                         pad_int)
         poolparams = make_poolparams(self.pool_type,
                                      self.pool_shape,
@@ -773,27 +782,34 @@ class PoolBase(Layer):
                                   to "D", "H", and "W"
         """
         backend = kwargs.get('backend', 'cpu')
-        if isinstance(spatial_axes, dict):
-            spatial_axes = tuple(spatial_axes.get(name, name)
-                                 for name in ("D", "H", "W"))
-        elif isinstance(spatial_axes, tuple):
-            if len(spatial_axes) < 3:
-                raise ValueError("spatial_axes must have length 3 (e.g. ('D', 'H', 'W'))")
-            spatial_axes = tuple(name if name else default
-                                 for name, default in zip(spatial_axes, ("D", "H", "W")))
 
-        orig_axes = in_obj.axes
-        in_obj = reorder_spatial_axes(in_obj, channel_axes, spatial_axes)
-        channel_axes = in_obj.axes.get_by_names(channel_axes)
-        spatial_axes = in_obj.axes.get_by_names(*spatial_axes)
+        # orig_axes = in_obj.axes
+        # in_obj = reorder_spatial_axes(in_obj, channel_axes, spatial_axes)
+        if backend.startswith('ng'):
+            pool_axes = in_obj.axes.get_by_names(*self.pool_axis_names)
+        else:
+            # legacy backends: need full specification CDHW and reordering to CDHWN
+            default_pool_shape = {'C': 1, 'D': 1, 'H': 1, 'W': 1}
+            default_pool_shape.update(self.pool_shape)
+            default_pool_strides = {'C': 1, 'D': 1, 'H': 1, 'W': 1}
+            default_pool_strides.update(self.strides)
+            default_pool_padding = {'C': 0, 'D': 0, 'H': 0, 'W': 0}
+            default_pool_padding.update(self.padding)
+            self.pool_shape = default_pool_shape
+            self.strides = default_pool_strides
+            self.padding = default_pool_padding
+            self.pool_axis_names = "CDHW"
+            in_obj = reorder_spatial_axes(in_obj, channel_axes, spatial_axes)
+            pool_axes = in_obj.axes.get_by_names(*self.pool_axis_names)
 
-        output = self._pool_op(in_obj, channel_axes, spatial_axes)
+        output = self._pool_op(in_obj, pool_axes)
+        return output
         # Reorder the output to match the input order
-        output_axis_order = ng.make_axes([output.axes.find_by_name(ax.name)[0]
-                                          for ax in orig_axes])
+        # output_axis_order = ng.make_axes([output.axes.find_by_name(ax.name)[0]
+        #                                  for ax in orig_axes])
         # Remove introduced axes
-        slices = [0 if (ax not in orig_axes) else slice(None) for ax in output.axes]
-        return ng.axes_with_order(ng.tensor_slice(output, slices), output_axis_order)
+        # slices = [0 if (ax not in orig_axes) else slice(None) for ax in output.axes]
+        # return ng.axes_with_order(ng.tensor_slice(output, slices), output_axis_order)
 
 
 class Pooling(PoolBase):
@@ -826,22 +842,37 @@ class Pooling(PoolBase):
     """
     def __init__(self, pool_shape, strides=1, padding=0, pool_type='max', **kwargs):
 
+        pool_dim = len(pool_shape)
+
+        if isinstance(pool_shape, tuple):
+            spatial_dim = min(pool_dim, 3)
+        else:
+            spatial_dim = 0
+            if "D" in pool_shape:
+                spatial_dim += 1
+            if "H" in pool_shape:
+                spatial_dim += 1
+            if "W" in pool_shape:
+                spatial_dim += 1
+        pool_axis_names = "DHW"[-spatial_dim:]
+        self.spatial_axes_names = pool_axis_names
+        self.channel_axis_name = "C"
+        if pool_dim > spatial_dim:
+            pool_axis_names = "C" + pool_axis_names
+        self.pool_axis_names = pool_axis_names
         # FixMe: pool_shape does not need to be adjusted to CDHW
-        default_pool_shape = {k: 1 for k in "CDHW"}
+        default_pool_shape = {k: 1 for k in pool_axis_names}
         if isinstance(pool_shape, (list, tuple)):
             if (len(pool_shape) < 1) or (len(pool_shape) > 4):
-                raise ValueError("If pool_shape is a list, its length should be between 2 and 4, "
+                raise ValueError("If pool_shape is a list, its length should be between 1 and 4, "
                                  "specifying the pooling size for the channel axis and 1 to 3 "
                                  "spatial dimensions. Provided: {}".format(pool_shape))
-            axis_names = {1: "W", 2: "HW", 3: "DHW", 4: "CDHW"}[len(pool_shape)]
-            default_pool_shape.update(list(zip(axis_names, pool_shape)))
+            default_pool_shape.update(list(zip(pool_axis_names, pool_shape)))
             pool_shape = default_pool_shape
-        else:
-            axis_names = pool_shape.keys()
         if isinstance(strides, int):
-            strides = {k: strides for k in axis_names}
+            strides = {k: strides for k in pool_axis_names}
         if isinstance(padding, (int, six.string_types, tuple)):
-            padding = {k: padding for k in axis_names}
+            padding = {k: padding for k in pool_axis_names}
         super(Pooling, self).__init__(pool_shape, strides, padding, pool_type=pool_type,
                                       **kwargs)
 

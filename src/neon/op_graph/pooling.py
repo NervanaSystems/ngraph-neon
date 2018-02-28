@@ -42,10 +42,6 @@ class PoolingOp(TensorOp):
         Return:
         """
         super(PoolingOp, self).__init__(args=(inputs,), **kwargs)
-        if len(inputs.shape) != 5:
-            raise ValueError((
-                'pooling input shape must be length 5, found {}'
-            ).format(len(inputs.shape)))
 
         pooltype = pool_params['op']
         if pooltype not in ('max', 'avg'):
@@ -54,8 +50,13 @@ class PoolingOp(TensorOp):
                 "currently supported. ").format(pooltype=pooltype))
 
         self.pool_params = pool_params
-        self.channel_axes = inputs.axes[0]
-        self.spatial_axes = inputs.axes[1:4]
+        # FixMe: This is a hack
+        if inputs.axes[0].name == 'N':
+            self.channel_axes = inputs.axes[1]
+            self.spatial_axes = inputs.axes[2:3]
+        else:
+            self.channel_axes = inputs.axes[0]
+            self.spatial_axes = inputs.axes[1:4]
 
     def copy_with_new_args(self, args):
         return type(self)(self.pool_params, args[0], axes=self.axes)
