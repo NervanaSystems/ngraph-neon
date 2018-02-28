@@ -766,6 +766,7 @@ class PoolBase(Layer):
             spatial_axes (tuple): names of expected depth, height and width axis types - defaults
                                   to "D", "H", and "W"
         """
+        backend = kwargs.get('backend', 'cpu')
         if isinstance(spatial_axes, dict):
             spatial_axes = tuple(spatial_axes.get(name, name)
                                  for name in ("D", "H", "W"))
@@ -1054,6 +1055,7 @@ class Convolution(SubGraph):
             spatial_axes (tuple): names of expected depth, height and width axis types - defaults
                                   to "D", "H", and "W"
         """
+        backend = kwargs.get('backend', 'cpu')
         l_out = self.conv(in_obj, channel_axes=channel_axes, spatial_axes=spatial_axes)
         if self.batch_norm is not None:
             l_out = self.batch_norm(l_out)
@@ -1130,7 +1132,7 @@ class Deconvolution(Convolution):
         self.conv = make_conv(filter_shape, filter_init, strides, padding, dilation,
                               deconv=True, **kwargs)
 
-    def _slice_output(self, output, spatial_axes):
+    def _slice_output(self, output, spatial_axes, **kwargs):
         """
         Slice output to desired shape given by deconv_out_shape
 
@@ -1178,9 +1180,9 @@ class Deconvolution(Convolution):
             spatial_axes (tuple): names of expected depth, height and width axis types - defaults
                                   to "D", "H", and "W"
         """
-
-        output = super(Deconvolution, self).__call__(in_obj, channel_axes, spatial_axes)
-        return self._slice_output(output, spatial_axes)
+        backend = kwargs.get('backend', 'cpu')
+        output = super(Deconvolution, self).__call__(in_obj, channel_axes, spatial_axes, **kwargs)
+        return self._slice_output(output, spatial_axes, **kwargs)
 
 
 class BatchNorm(Layer):
