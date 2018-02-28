@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ******************************************************************************
+
 """
 Test the usage of ng.constant
 """
@@ -32,10 +33,7 @@ def test_constant_init():
     a = ng.constant(5)
     with executor(a) as ex:
         result = ex()
-    print(result)
-
     assert (result == 5)
-    print("pass constant initialization")
 
     nparray = np.array(range(5))
     a = ng.constant(nparray)
@@ -52,7 +50,6 @@ def test_constant_add():
 
     with executor(c) as ex:
         result = ex()
-    print(result)
     assert result == 3
 
 
@@ -124,7 +121,6 @@ def test_cputensor_multiply_constant():
 
     with executor(c) as ex:
         result = ex()
-    print(result)
     assert np.array_equal(result, np_c)
 
 
@@ -141,7 +137,6 @@ def test_cputensor_add_constant():
     c = ng.add(a, b)
     with executor(c) as ex:
         result = ex()
-    print(result)
     assert np.array_equal(result, np_c)
 
 
@@ -161,7 +156,6 @@ def test_cputensor_fusion():
 
     with executor(d) as ex:
         result = ex()
-    print(result)
     assert np.array_equal(result, np_d)
 
 
@@ -183,6 +177,4 @@ def test_cputensor_mlp():
     c = wx + b
     with executor(c) as ex:
         result = ex()
-    print(result)
-    print(np_c)
     assert np.array_equal(result, np_c)

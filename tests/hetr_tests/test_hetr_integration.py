@@ -13,19 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ******************************************************************************
-import numpy as np
-import pytest
+
+import os, sys, time, subprocess, random, tempfile, pytest
 from contextlib import closing
-from ngraph.testing import ExecutorFactory
+import numpy as np
+
 import ngraph as ng
 import ngraph.transformers as ngt
 from ngraph.transformers.hetr.mpilauncher import MPILauncher
-import time
-import os
-import subprocess
-import tempfile
-import random
-
+from ngraph.testing import ExecutorFactory
 
 pytestmark = pytest.mark.hetr_only
 STARTUP_TIME = 3
@@ -511,6 +507,7 @@ def test_rpc_transformer():
             np.testing.assert_equal(rpc_client_list[p].is_trans_built, False)
 
 
+@pytest.mark.skipif(sys.platform=='darwin', reason='Skip mpi test on MAC')
 def test_mpilauncher():
     os.environ["HETR_SERVER_PORTS"] = "51111, 51112"
     mpilauncher = MPILauncher()
