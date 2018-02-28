@@ -352,6 +352,8 @@ class ConvBase(Layer):
                                                                list(obj.keys())))
         self.init = init
 
+        # FixMe: allow shapes other than DHWK
+
         # Setup filter parameters
         check_dict(filter_shape, "filter_shape", "DHWK")
         self.nout = filter_shape.pop("K")
@@ -596,6 +598,8 @@ class DeconvBase(ConvBase):
 
 def make_conv(filter_shape, init, strides, padding, dilation, deconv=False,
               **kwargs):
+
+    # FixMe: filter_shape does not need to be adjusted to DHWK
     default_filter_shape = {k: 1 for k in "DHWK"}
     if isinstance(filter_shape, (list, tuple)):
         if (len(filter_shape) < 2) or (len(filter_shape) > 4):
@@ -683,6 +687,8 @@ class PoolBase(Layer):
         if self.pool_type not in ("max", "avg"):
             raise ValueError("pool_type must be one of {}, not {}".format(('max', 'avg'),
                                                                           pool_type))
+
+        # FixMe: allow shapes other than CDHW
 
         # Setup pooling parameters
         check_dict(pool_shape, "pool_shape", "CDHW")
@@ -820,6 +826,7 @@ class Pooling(PoolBase):
     """
     def __init__(self, pool_shape, strides=1, padding=0, pool_type='max', **kwargs):
 
+        # FixMe: pool_shape does not need to be adjusted to CDHW
         default_pool_shape = {k: 1 for k in "CDHW"}
         if isinstance(pool_shape, (list, tuple)):
             if (len(pool_shape) < 1) or (len(pool_shape) > 4):
