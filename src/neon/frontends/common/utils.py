@@ -226,10 +226,16 @@ def make_convparams(nout, filter_shape, strides, padding, dilation):
     convparams = dict()
     convparams["K"] = nout
 
-    for ng_name, filter_name in zip('TRS', 'DHW'):
+    conv_axis_names = ""
+    for name in filter_shape:
+        conv_axis_names += name
+
+    conv_filter_names = {"W": "S", "HW": "RS", "DHW": "TRS"}[conv_axis_names]
+
+    for ng_name, filter_name in zip(conv_filter_names, conv_axis_names):
         convparams[ng_name] = filter_shape[filter_name]
 
-    for name in "DHW":
+    for name in conv_axis_names:
         for prefix, prop in zip(("str", "pad", "dil"),
                                 (strides, padding, dilation)):
             convparams["{}_{}".format(prefix, name.lower())] = prop[name]

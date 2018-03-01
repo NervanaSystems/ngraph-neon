@@ -356,6 +356,7 @@ class ConvBase(Layer):
         spatial_dim = filter_dim - 1
         filter_keys = "DHWK"[-filter_dim:]
         spatial_keys = "DHW"[-spatial_dim:]
+        self.conv_axis_names = spatial_keys
 
         # Setup filter parameters
         check_dict(filter_shape, "filter_shape", filter_keys)
@@ -390,22 +391,28 @@ class ConvBase(Layer):
         f_axes += ng.make_axis(length=self.nout, name="K")
         return f_axes
 
-    def _output_axes(self, channel_axes, spatial_axes, batch_axis, pad_int):
+    def _output_axes(self, in_obj, pad_int):
         """
         Create the convolution output axes.
 
         TODO: This should be done in the core since it's fully determined.
         """
-        output_axes = ng.make_axis(length=self.nout, name=channel_axes.name)
-        for key, ax in zip("DHW", spatial_axes):
-            output_axes += ng.make_axis(name=ax.name,
-                                        length=utils.conv_output_dim(ax.length,
-                                                                     self.filter_shape[key],
-                                                                     pad_int[key],
-                                                                     self.strides[key],
-                                                                     False,
-                                                                     self.dilation[key]))
-        return output_axes + batch_axis
+        output_axes = ng.make_axes()
+        for ax in in_obj.axes:
+            name = ax.name
+            if name in self.conv_axis_names:
+                output_axes += ng.make_axis(name=ax.name,
+                                            length=utils.conv_output_dim(ax.length,
+                                                                         self.filter_shape[name],
+                                                                         pad_int[name],
+                                                                         self.strides[name],
+                                                                         False,
+                                                                         self.dilation[name]))
+            elif name == "C":
+                output_axes += ng.make_axis(name=name, length=self.nout)
+            else:
+                output_axes += ax
+        return output_axes
 
     def _get_pad_int(self, spatial_axes):
         """
@@ -437,8 +444,7 @@ class ConvBase(Layer):
         if any((pad != (0, 0)) for pad in manual_pad.values()):
             in_obj = ng.pad(in_obj, manual_pad.values())
             spatial_axes = in_obj.axes.get_by_names(*ng.make_axes(spatial_axes).names)
-        output_axes = self._output_axes(channel_axes, spatial_axes, in_obj.axes.batch_axis(),
-                                        pad_int)
+        output_axes = self._output_axes(in_obj, pad_int)
         convparams = utils.make_convparams(self.nout, self.filter_shape,
                                            self.strides, pad_int, self.dilation)
         return ng.convolution(convparams,
@@ -561,21 +567,28 @@ class DeconvBase(ConvBase):
         f_axes += channel_axis
         return f_axes
 
-    def _output_axes(self, channel_axis, spatial_axes, batch_axis, pad_int):
+    def _output_axes(self, in_obj, pad_int):
         """
         Create the deconvolution output axes.
 
         TODO: This should be done in the core since it's fully determined.
         """
-        output_axes = ng.make_axis(length=self.nout, name=channel_axis.name)
-        for key, ax in zip("DHW", spatial_axes):
-            output_axes += ng.make_axis(name=ax.name,
-                                        length=utils.deconv_output_dim(ax.length,
-                                                                       self.filter_shape[key],
-                                                                       pad_int[key],
-                                                                       self.strides[key],
-                                                                       self.dilation[key]))
-        return output_axes + batch_axis
+        output_axes = ng.make_axes()
+        for ax in in_obj.axes:
+            name = ax.name
+            if name in self.conv_axis_names:
+                output_axes += ng.make_axis(name=ax.name,
+                                            length=utils.deconv_output_dim(ax.length,
+                                                                           self.filter_shape[name],
+                                                                           pad_int[name],
+                                                                           self.strides[name],
+                                                                           self.dilation[name]))
+            elif name == "C":
+                output_axes += ng.make_axis(name=name, length=self.nout)
+            else:
+                output_axes += ax
+
+        return output_axes
 
     def _conv_op(self, in_obj, channel_axes, spatial_axes):
         """
@@ -589,7 +602,7 @@ class DeconvBase(ConvBase):
             in_obj = ng.pad(in_obj, manual_pad.values())
             spatial_axes = in_obj.axes.get_by_names(*ng.make_axes(spatial_axes).names)
 
-        output_axes = self._output_axes(channel_axes, spatial_axes, in_obj.axes.batch_axis(),
+        output_axes = self._output_axes(in_obj.axes,
                                         pad_int)
         convparams = utils.make_convparams(self.nout, self.filter_shape,
                                            self.strides, pad_int, self.dilation)
