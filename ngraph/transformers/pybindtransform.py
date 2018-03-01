@@ -201,7 +201,7 @@ class PybindComputation(Computation):
         else:
             return True
 
-    def register_cpp_op(self, op, cpp_op):
+    def register_cpp_op(self, op, cpp_op, set_name=True):
         if isinstance(op, SequentialOp):
             self.ngraph_cpp_ops[op] = cpp_op
             return
@@ -219,6 +219,10 @@ class PybindComputation(Computation):
 
         if tensor_op in self.ngraph_cpp_ops:
             raise RuntimeError("Cannot create register ngraph op twice: " + tensor_op.name)
+
+        if set_name:
+            cpp_op.name = tensor_op.name.replace('/', '_')
+
         self.ngraph_cpp_ops[tensor_op] = cpp_op
 
     def set_op_rank(self, op):
