@@ -84,7 +84,7 @@ class Computation:
             result_element_type, result_shape)
         result_arr = np.empty(result_shape, dtype=result_dtype)
 
-        function = Function(self.node, self.parameters, 'ngraph API computation')
+        function = Function(self.node, self.parameters, 'ngraph_API_computation')
         external = self.runtime.manager.compile(function)
         call_frame = self.runtime.backend.make_call_frame(external)
         call_frame.call(self.tensor_views, [result_view])
