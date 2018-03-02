@@ -93,7 +93,12 @@ class PybindScopePass:
             self.computation.parcount += 1
             return new_scope
 
+        visited = set()
+
         def visit_pre_order(scope, op):
+            if op in visited:
+                return
+            visited.add(op)
             if isinstance(op, TensorValueOp):
                 if op not in self.computation.scopevisited:
                     self.computation.scopevisited.add(op)
