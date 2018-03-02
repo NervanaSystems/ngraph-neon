@@ -490,8 +490,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         input_axes_names = op.args[0].axes.names
 
         # determine the axis order for the reshape
-        for input_axis_name in input_axes_names:
-            index = reorder_axes_names.index(input_axis_name)
+        for reorder_axis_name in reorder_axes_names:
+            index = input_axes_names.index(reorder_axis_name)
             axis_order.append(index)
         ngraph_input = self.computation.lookup_cpp_op(op.args[0])
         # print(ngraph_input.get_output_shape(0))
