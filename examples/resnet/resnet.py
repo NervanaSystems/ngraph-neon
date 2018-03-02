@@ -111,7 +111,7 @@ class BuildResnet(Sequential):
                         layers.append(ResidualModule(main_path, side_path))
                         layers.append(Activation(Rectlin()))
             # Do average pooling --> fully connected--> softmax.
-            layers.append(Pooling([8, 8], pool_type='avg'))
+            layers.append(Pooling((8, 8), pool_type='avg'))
             layers.append(Affine(axes=ax.Y, weight_init=KaimingInit(), batch_norm=batch_norm))
             layers.append(Activation(Softmax()))
         # For I1K dataset
@@ -129,7 +129,7 @@ class BuildResnet(Sequential):
                             batch_norm=batch_norm, activation=Rectlin(),
                             filter_init=KaimingInit()),
                 # Max Pooling
-                Pooling([3, 3], strides=2, pool_type='max', padding=1)]
+                Pooling((3, 3), strides=2, pool_type='max', padding=1)]
             first_resmod = True  # Indicates the first residual module for which strides are 1
             # Loop 4 times for each filter
             for fil in range(4):
@@ -165,7 +165,7 @@ class BuildResnet(Sequential):
                         layers.append(ResidualModule(main_path, side_path))
                         layers.append(Activation(Rectlin()))
             # Do average pooling --> fully connected--> softmax.
-            layers.append(Pooling([7, 7], pool_type='avg'))
+            layers.append(Pooling((7, 7), pool_type='avg'))
             layers.append(Affine(axes=ax.Y, weight_init=KaimingInit(),
                                  batch_norm=batch_norm))
             layers.append(Activation(Softmax()))

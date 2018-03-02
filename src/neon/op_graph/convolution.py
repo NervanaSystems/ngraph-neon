@@ -47,21 +47,12 @@ class ConvolutionOp(TensorOp):
         else:
             super(ConvolutionOp, self).__init__(args=(inputs, filters, bias), **kwargs)
 
-        if len(inputs.shape) != 5:
+        if not inputs.axes[1] == filters.axes[1]:
             raise ValueError((
-                'convolution input shape must be length 5, found {}'
-            ).format(len(inputs.shape)))
+                'number of channels in input {inputs} and filter {filters} are not the same.'
+            ).format(inputs=inputs.axes[1], filters=filters.axes[1]))
 
-        if len(filters.shape) != 5:
-            raise ValueError((
-                'convolution filter shape must be length 5, found {}'
-            ).format(len(filters.shape)))
-
-        if not inputs.axes[0] == filters.axes[0]:
-            raise ValueError((
-                'the first axis in input {inputs} and filter {filters} are not the same.'
-            ).format(inputs=inputs.axes[0], filters=filters.axes[0]))
-
+        """
         expected_keys = ['pad_h', 'pad_w', 'pad_d', 'str_h', 'str_w',
                          'str_d', 'dil_h', 'dil_w', 'dil_d']
         # TODO: meybe we should assume no padding and no dilitation when
@@ -71,10 +62,10 @@ class ConvolutionOp(TensorOp):
                 raise ValueError((
                     'Expected parameter {key} not present in convparams dict.'
                 ).format(key=k))
-
+        """
         self.conv_params = conv_params
-        self.channel_axes = inputs.axes[0]
-        self.spatial_axes = inputs.axes[1:4]
+        self.channel_axes = inputs.axes[1]
+        self.spatial_axes = inputs.axes[2:]
         self._has_side_effects = False
 
     def copy_with_new_args(self, args):
@@ -128,16 +119,7 @@ class DeconvolutionOp(TensorOp):
     def __init__(self, conv_params, inputs, filters, **kwargs):
         super(DeconvolutionOp, self).__init__(args=(inputs, filters), **kwargs)
 
-        if len(inputs.shape) != 5:
-            raise ValueError((
-                'convolution input shape must be length 5, found {}'
-            ).format(len(inputs.shape)))
-
-        if len(filters.shape) != 5:
-            raise ValueError((
-                'convolution filter shape must be length 5, found {}'
-            ).format(len(filters.shape)))
-
+        """
         expected_keys = ['pad_h', 'pad_w', 'pad_d', 'str_h', 'str_w',
                          'str_d', 'dil_h', 'dil_w', 'dil_d']
         # TODO: maybe we should assume no padding and no dilation when
@@ -147,10 +129,10 @@ class DeconvolutionOp(TensorOp):
                 raise ValueError((
                     'Expected parameter {key} not present in convparams dict.'
                 ).format(key=k))
-
+        """
         self.conv_params = conv_params
-        self.channel_axes = inputs.axes[0]
-        self.spatial_axes = inputs.axes[1:4]
+        self.channel_axes = inputs.axes[1]
+        self.spatial_axes = inputs.axes[2:]
         self._has_side_effects = False
 
     @property

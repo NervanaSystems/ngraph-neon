@@ -352,30 +352,31 @@ class ConvBase(Layer):
                                                                list(obj.keys())))
         self.init = init
 
-        filter_dim = len(filter_shape)
-        spatial_dim = filter_dim - 1
-        filter_keys = "DHWK"[-filter_dim:]
-        spatial_keys = "DHW"[-spatial_dim:]
-        self.conv_axis_names = spatial_keys
+        self.filter_dim = len(filter_shape)
+        self.spatial_dim = self.filter_dim - 1
+
+        self.spatial_keys = "DHW"[-self.spatial_dim:]
+        self.filter_keys = "K" + self.spatial_keys
+        self.conv_axis_names = self.spatial_keys
 
         # Setup filter parameters
-        check_dict(filter_shape, "filter_shape", filter_keys)
+        check_dict(filter_shape, "filter_shape", self.filter_keys)
         self.nout = filter_shape.pop("K")
-        self.filter_shape = filter_shape
+        self.filter_spatial_shape = filter_shape
 
         # Setup strides - default to 1
         check_dict(strides, "strides")
-        self.strides = {key: 1 for key in spatial_keys}
+        self.strides = {key: 1 for key in self.spatial_keys}
         self.strides.update(strides)
 
         # Setup padding - default to 0
         check_dict(padding, "padding")
-        self.padding = {key: 0 for key in spatial_keys}
+        self.padding = {key: 0 for key in self.spatial_keys}
         self.padding.update(padding)
 
         # Setup dilation - default to 1
         check_dict(dilation, "dilation")
-        self.dilation = {key: 1 for key in spatial_keys}
+        self.dilation = {key: 1 for key in self.spatial_keys}
         self.dilation.update(dilation)
 
         self.W = None
@@ -384,11 +385,13 @@ class ConvBase(Layer):
         """
         Create the filter axes. They are ordered as (C, D, H, W, K).
         """
-        f_axes = channel_axes
-        for key, ax in zip("DHW", spatial_axes):
-            f_axes += ng.make_axis(length=self.filter_shape[key],
-                                   name=ax.name)
+        f_axes = ng.make_axes()
         f_axes += ng.make_axis(length=self.nout, name="K")
+        f_axes += channel_axes
+        for key, ax in zip(self.spatial_keys, spatial_axes):
+            f_axes += ng.make_axis(length=self.filter_spatial_shape[key],
+                                   name=ax.name)
+
         return f_axes
 
     def _output_axes(self, in_obj, pad_int):
@@ -403,7 +406,7 @@ class ConvBase(Layer):
             if name in self.conv_axis_names:
                 output_axes += ng.make_axis(name=ax.name,
                                             length=utils.conv_output_dim(ax.length,
-                                                                         self.filter_shape[name],
+                                                                         self.filter_spatial_shape[name],
                                                                          pad_int[name],
                                                                          self.strides[name],
                                                                          False,
@@ -422,9 +425,9 @@ class ConvBase(Layer):
         # Manual padding might be required for asymmetric paddings
         manual_pad = {}
         padding_int = {}
-        for name, ax in zip("DHW", spatial_axes):
+        for name, ax in zip(self.spatial_keys, spatial_axes):
             pad = utils.ConvParameters(ax.length,
-                                       self.filter_shape[name],
+                                       self.filter_spatial_shape[name],
                                        self.strides[name],
                                        self.dilation[name]).get_padding_size(self.padding[name])
             symm_pad = min(pad)
@@ -445,7 +448,7 @@ class ConvBase(Layer):
             in_obj = ng.pad(in_obj, manual_pad.values())
             spatial_axes = in_obj.axes.get_by_names(*ng.make_axes(spatial_axes).names)
         output_axes = self._output_axes(in_obj, pad_int)
-        convparams = utils.make_convparams(self.nout, self.filter_shape,
+        convparams = utils.make_convparams(self.nout, self.filter_spatial_shape,
                                            self.strides, pad_int, self.dilation)
         return ng.convolution(convparams,
                               in_obj,
@@ -453,28 +456,13 @@ class ConvBase(Layer):
                               axes=output_axes)
 
     @SubGraph.scope_op_creation
-    def __call__(self, in_obj, channel_axes="C", spatial_axes=("D", "H", "W"), **kwargs):
+    def __call__(self, in_obj, **kwargs):
         """
         Arguments:
             in_obj (Op): Input op
-            channel_axes (str): name of the expected channel axis type - defaults to "C"
-            spatial_axes (tuple): names of expected depth, height and width axis types - defaults
-                                  to "D", "H", and "W"
         """
-        if isinstance(spatial_axes, dict):
-            spatial_axes = tuple(spatial_axes.get(name, name)
-                                 for name in ("D", "H", "W"))
-        elif isinstance(spatial_axes, tuple):
-            if len(spatial_axes) < 3:
-                raise ValueError("spatial_axes must have length 3 (e.g. ('D', 'H', 'W'))")
-            spatial_axes = tuple(name if name else default
-                                 for name, default in zip(spatial_axes, ("D", "H", "W")))
-
-        orig_axes = in_obj.axes
-        in_obj = reorder_spatial_axes(in_obj, channel_axes, spatial_axes)
-        channel_axes = in_obj.axes.get_by_names(channel_axes)
-        spatial_axes = in_obj.axes.get_by_names(*spatial_axes)
-
+        channel_axes = in_obj.axes.get_by_names("C")
+        spatial_axes = in_obj.axes.get_by_names(*self.spatial_keys)
         filter_axes = self._filter_axes(channel_axes, spatial_axes)
 
         # mark 'K' as a shadow axis for the initializers.
@@ -505,16 +493,7 @@ class ConvBase(Layer):
                 ))
 
         output = ng.map_roles(self._conv_op(in_obj, channel_axes, spatial_axes), axes_map)
-        # Reorder the output to match the input order
-        output_axis_order = ng.make_axes([output.axes.find_by_name(ax.name)[0]
-                                          for ax in orig_axes])
-        # Remove introduced axes. If their length is > 1, then perhaps they should be kept
-        slices = [0 if (ax not in orig_axes) and ax.length == 1 else slice(None)
-                  for ax in output.axes]
-        output = ng.tensor_slice(output, slices)
-        # New axes with length > 1 may have been introduced. Add them to the end.
-        output_axis_order = output_axis_order | output.axes
-        return ng.axes_with_order(output, output_axis_order)
+        return output
 
 
 class DeconvBase(ConvBase):
@@ -616,7 +595,7 @@ def make_conv(filter_shape, init, strides, padding, dilation, deconv=False,
               **kwargs):
 
     # FixMe: filter_shape does not need to be adjusted to DHWK
-    default_filter_shape = {k: 1 for k in "DHWK"}
+    default_filter_shape = {k: 1 for k in "DHWK"[-len(filter_shape):]}
     if isinstance(filter_shape, (list, tuple)):
         if (len(filter_shape) < 2) or (len(filter_shape) > 4):
             raise ValueError("If filter_shape is a list, its length should be between 2 and 4, "
@@ -796,33 +775,10 @@ class PoolBase(Layer):
         """
         backend = kwargs.get('backend', 'cpu')
 
-        # orig_axes = in_obj.axes
-        # in_obj = reorder_spatial_axes(in_obj, channel_axes, spatial_axes)
-        if backend.startswith('ng'):
-            pool_axes = in_obj.axes.get_by_names(*self.pool_axis_names)
-        else:
-            # legacy backends: need full specification CDHW and reordering to CDHWN
-            default_pool_shape = {'C': 1, 'D': 1, 'H': 1, 'W': 1}
-            default_pool_shape.update(self.pool_shape)
-            default_pool_strides = {'C': 1, 'D': 1, 'H': 1, 'W': 1}
-            default_pool_strides.update(self.strides)
-            default_pool_padding = {'C': 0, 'D': 0, 'H': 0, 'W': 0}
-            default_pool_padding.update(self.padding)
-            self.pool_shape = default_pool_shape
-            self.strides = default_pool_strides
-            self.padding = default_pool_padding
-            self.pool_axis_names = "CDHW"
-            in_obj = reorder_spatial_axes(in_obj, channel_axes, spatial_axes)
-            pool_axes = in_obj.axes.get_by_names(*self.pool_axis_names)
+        pool_axes = in_obj.axes.get_by_names(*self.pool_axis_names)
 
         output = self._pool_op(in_obj, pool_axes)
         return output
-        # Reorder the output to match the input order
-        # output_axis_order = ng.make_axes([output.axes.find_by_name(ax.name)[0]
-        #                                  for ax in orig_axes])
-        # Remove introduced axes
-        # slices = [0 if (ax not in orig_axes) else slice(None) for ax in output.axes]
-        # return ng.axes_with_order(ng.tensor_slice(output, slices), output_axis_order)
 
 
 class Pooling(PoolBase):
@@ -859,7 +815,7 @@ class Pooling(PoolBase):
 
         if isinstance(pool_shape, tuple):
             spatial_dim = min(pool_dim, 3)
-        else:
+        elif isinstance(pool_shape, dict):
             spatial_dim = 0
             if "D" in pool_shape:
                 spatial_dim += 1
@@ -867,6 +823,9 @@ class Pooling(PoolBase):
                 spatial_dim += 1
             if "W" in pool_shape:
                 spatial_dim += 1
+        else:
+            RuntimeError("Pooling: pool shape must be a tuple or dict")
+
         pool_axis_names = "DHW"[-spatial_dim:]
         self.spatial_axes_names = pool_axis_names
         self.channel_axis_name = "C"
@@ -1096,23 +1055,19 @@ class Convolution(SubGraph):
                               deconv=False, **kwargs)
 
     @SubGraph.scope_op_creation
-    def __call__(self, in_obj, channel_axes="C", spatial_axes=("D", "H", "W"), **kwargs):
+    def __call__(self, in_obj, **kwargs):
         """
         Compute a convolution over in_obj
 
         Arguments:
             in_obj (Op): Input op
-            channel_axes (str): name of the expected channel axis type - defaults to "C"
-            spatial_axes (tuple): names of expected depth, height and width axis types - defaults
-                                  to "D", "H", and "W"
         """
-        backend = kwargs.get('backend', 'cpu')
-        l_out = self.conv(in_obj, channel_axes=channel_axes, spatial_axes=spatial_axes)
+        l_out = self.conv(in_obj, **kwargs)
         if self.batch_norm is not None:
-            l_out = self.batch_norm(l_out)
+            l_out = self.batch_norm(l_out, **kwargs)
         elif self.bias is not None:
-            l_out = self.bias(l_out)
-        return self.activation(l_out)
+            l_out = self.bias(l_out, **kwargs)
+        return self.activation(l_out, **kwargs)
 
 
 class Deconvolution(Convolution):
@@ -1292,20 +1247,17 @@ class BatchNorm(Layer):
                                     metadata={"label": LABELS["bias"]}).named('beta')
             self.rho = ng.persistent_tensor(axes=(), initial_value=self.init_rho).named('rho')
 
-        in_obj = ng.flatten(ng.axes_with_order(in_obj, out_axes | red_axes),
-                            out_axes | red_axes.flatten(force=True))
-        xmean = ng.mean(in_obj, out_axes=out_axes)
-        xvar = ng.variance(in_obj, out_axes=out_axes)
-
         if Layer.inference_mode:
-            return ng.unflatten(self.gamma * ((in_obj - self.gmean) *
-                                ng.reciprocal(ng.sqrt(self.gvar + self.eps))) + self.beta)
+            return self.gamma * ((in_obj - self.gmean) *
+                                 ng.reciprocal(ng.sqrt(self.gvar + self.eps))) + self.beta
         else:
+            xmean = ng.mean(in_obj, out_axes=out_axes)
+            xvar = ng.variance(in_obj, out_axes=out_axes)
             return ng.sequential([
                 ng.assign(self.gmean, self.gmean * self.rho + xmean * (1.0 - self.rho)),
                 ng.assign(self.gvar, self.gvar * self.rho + xvar * (1.0 - self.rho)),
-                ng.unflatten(self.gamma * ((in_obj - xmean) *
-                             ng.reciprocal(ng.sqrt(xvar + self.eps))) + self.beta)
+                self.gamma * ((in_obj - xmean) * ng.reciprocal(ng.sqrt(xvar + self.eps))) +
+                self.beta
             ])
 
     @SubGraph.scope_op_creation
