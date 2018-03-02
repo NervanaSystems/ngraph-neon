@@ -28,7 +28,7 @@ from ngraph_api.utils.types import get_dtype, NumericData
 log = logging.getLogger(__file__)
 
 
-def runtime(manager_name='INTERPRETER'):  # type: (str) -> 'Runtime'
+def runtime(manager_name='CPU'):  # type: (str) -> 'Runtime'
     """Create a Runtime object (helper factory).
 
     Use signature to parametrize runtime as needed.
