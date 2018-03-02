@@ -291,7 +291,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     def visit(self, op, x):
         self.computation.set_op_rank(op)
         op_element_type = self.computation.lookup_cpp_op(x)
-        self.computation.register_cpp_op(op, op_element_type)
+        self.computation.register_cpp_op(op, op_element_type, set_name=False)
 
     @visit.on_type(BroadcastOp)
     def visit(self, op, x):

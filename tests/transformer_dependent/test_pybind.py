@@ -118,6 +118,27 @@ def test_broadcast():
         assert np.allclose(result, np_c)
 
 
+def test_cast_axis():
+    """
+    Test AxesCastOp
+    """
+    H = ng.make_axis(length=1, name='height')
+    W = ng.make_axis(length=4, name='width')
+    axes_input = [H, W]
+    a = ng.placeholder(axes=axes_input)
+    axes_output = ng.make_axes([ng.make_axis(name=ax.name + 'p', length=ax.length)
+                                for ax in axes_input])
+
+    b = ng.cast_axes(a, axes_output)
+
+    with executor(b, a) as _cast_axis:
+        a_val = np.array([10, 20, 30, 40], dtype=np.float32).reshape(1, 4)
+        b_val = _cast_axis(a_val)
+
+        b_val_ref = a_val
+        assert np.allclose(b_val, b_val_ref)
+
+
 def test_dot():
     H = ng.make_axis(length=1)
     W = ng.make_axis(length=4)
