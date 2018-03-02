@@ -98,7 +98,8 @@ class PybindScopePass:
                 self.computation.scopemark[op] = scope
             else:
                 old_scope = self.computation.scopemark[op]
-                if len(scope) > len(old_scope):
+                # if the new scope has a longer path, update the scope
+                if scope.count('/') > old_scope.count('/'):
                     self.computation.scopemark[op] = scope
 
         def visit_pre_order(scope, op):
