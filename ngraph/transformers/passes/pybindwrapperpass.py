@@ -93,50 +93,44 @@ class PybindScopePass:
             self.computation.parcount += 1
             return new_scope
 
-        visited = set()
+        def update_scopemark(op, scope):
+            if op not in self.computation.scopemark:
+                self.computation.scopemark[op] = scope
+            else:
+                old_scope = self.computation.scopemark[op]
+                if len(scope) > len(old_scope):
+                    self.computation.scopemark[op] = scope
 
         def visit_pre_order(scope, op):
-            if op in visited:
-                return
-            visited.add(op)
-            if isinstance(op, TensorValueOp):
-                if op not in self.computation.scopevisited:
-                    self.computation.scopevisited.add(op)
-                    self.computation.scopemark[op] = scope
-                    return
-                else:
-                    return
-            if isinstance(op, SequentialOp):
-                if op not in self.computation.scopevisited:
+            visited = set()
+            nodes_to_visit = [(op, scope)]
+
+            while nodes_to_visit:
+                op, scope = nodes_to_visit.pop()
+                if op in visited:
+                    continue
+                visited.add(op)
+                if isinstance(op, TensorValueOp):
+                    update_scopemark(op, scope)
+                elif isinstance(op, SequentialOp):
                     childscope = new_seq_scope(scope)
                     children = op.ops
-                    self.computation.scopevisited.add(op)
-                    self.computation.scopemark[op] = scope
+                    update_scopemark(op, scope)
                     for child in children:
-                        visit_pre_order(childscope, child)
-                    return
-                else:
-                    return
-            elif isinstance(op, ParallelOp):
-                if op not in self.computation.scopevisited:
+                        nodes_to_visit.append((child, childscope))
+                elif isinstance(op, ParallelOp):
                     childscope = new_par_scope(scope)
                     children = op.control_deps
-                    self.computation.scopevisited.add(op)
-                    self.computation.scopemark[op] = scope
+                    update_scopemark(op, scope)
                     for child in children:
-                        visit_pre_order(childscope, child)
-                    return
+                        nodes_to_visit.append((child, childscope))
                 else:
-                    return
-
-            tensor_op = op.tensor
-            if tensor_op not in self.computation.scopevisited:
-                childscope = scope
-                children = tensor_op.args
-                self.computation.scopevisited.add(tensor_op)
-                self.computation.scopemark[tensor_op] = scope
-                for child in children:
-                    visit_pre_order(childscope, child)
+                    tensor_op = op.tensor
+                    childscope = scope
+                    children = tensor_op.args
+                    update_scopemark(op, scope)
+                    for child in children:
+                        nodes_to_visit.append((child, childscope))
 
         for op in results:
             visit_pre_order('root', op)
