@@ -969,8 +969,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             """
             red_delta.name = op.name.replace('/', '_') + "_ReshapeDelta"
             inputs = op.inputs
-            ngraph_pool = PyngAvgPoolBackprop([inputs.axes[4].length, inputs.axes[0].length,
-                                              inputs.axes[2].length, inputs.axes[3].length],
+            ngraph_pool = PyngAvgPoolBackprop(Shape([inputs.axes[4].length, inputs.axes[0].length,
+                                              inputs.axes[2].length, inputs.axes[3].length]),
                                               red_delta,
                                               Shape([op.fprop.pool_params['R'],
                                                op.fprop.pool_params['S']]),
@@ -979,7 +979,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                                               Shape([op.fprop.pool_params['pad_h'],
                                                op.fprop.pool_params['pad_w']]),
                                               Shape([op.fprop.pool_params['pad_h'],
-                                               op.fprop.pool_params['pad_w']]))
+                                               op.fprop.pool_params['pad_w']]),
+                                              True)
             ngraph_pool.name = op.name.replace('/', '_') + "_AvgPoolBackprop"
             ordered = PyngReshape(ngraph_pool, AxisVector([1, 2, 3, 0]),
                                   Shape(list(op.axes.lengths)))
