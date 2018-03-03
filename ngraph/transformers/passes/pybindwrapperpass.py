@@ -29,6 +29,13 @@ import numpy as np
 
 from pyngraph import Type
 from pyngraph import Function as Function
+from pyngraph import Shape
+from pyngraph import AxisSet
+from pyngraph import AxisVector
+from pyngraph import Strides
+from pyngraph import CoordinateDiff
+from pyngraph import Coordinate
+from pyngraph import NodeVector
 from pyngraph.op import Parameter
 from pyngraph.op import AvgPool as PyngAvgPool
 from pyngraph.op import AvgPoolBackprop as PyngAvgPoolBackprop
@@ -308,7 +315,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                 axis_set.add(pos)
 
         self.computation.register_cpp_op(
-            op, PyngBroadcast(op_element_type, list(op.axes.lengths), axis_set))
+            op, PyngBroadcast(op_element_type, Shape(list(op.axes.lengths)),
+            AxisSet(axis_set)))
 
     def flatten(self, container):
         if isinstance(container, (list, tuple)):
@@ -329,11 +337,11 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             if tensor.is_constant:
                 # FIXME: make tensors based on data type
                 constant_op = Constant(Type.f32,
-                                       list(tensor.axes.lengths),
+                                       Shape(list(tensor.axes.lengths)),
                                        list(self.flatten(tensor.const.tolist())))
                 self.computation.register_cpp_op(tensor, constant_op)
             else:
-                op_element_type = Parameter(Type.f32, list(tensor.axes.lengths))
+                op_element_type = Parameter(Type.f32, Shape(list(tensor.axes.lengths)))
                 self.computation.register_cpp_op(tensor, op_element_type)
                 if not tensor.is_placeholder:
                     self.computation.neon_variable_list.append(tensor)
@@ -345,12 +353,12 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             if op.is_constant:
                 # FIXME: make tensors based on data type
                 constant_op = Constant(Type.f32,
-                                       list(op.axes.lengths),
+                                       Shape(list(op.axes.lengths)),
                                        list(self.flatten(op.const.tolist())))
 
                 self.computation.register_cpp_op(op, constant_op)
             else:
-                op_element_type = Parameter(Type.f32, list(op.axes.lengths))
+                op_element_type = Parameter(Type.f32, Shape(list(op.axes.lengths)))
                 self.computation.register_cpp_op(op, op_element_type)
                 if not op.is_placeholder:
                     self.computation.neon_variable_list.append(op)
@@ -410,12 +418,12 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         if reshape_input_needed:
             input1_op = PyngReshape(
                 self.computation.lookup_cpp_op(input1),
-                input1_axes_order,
-                input1_axes_shape)
+                AxisVector(input1_axes_order),
+                Shape(input1_axes_shape))
             input2_op = PyngReshape(
                 self.computation.lookup_cpp_op(input2),
-                input2_axes_order,
-                input2_axes_shape)
+                AxisVector(input2_axes_order),
+                Shape(input2_axes_shape))
         else:
             input1_op = self.computation.lookup_cpp_op(input1)
             input2_op = self.computation.lookup_cpp_op(input2)
@@ -426,8 +434,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         if reshape_output_needed:
             ngraph_op = PyngReshape(
                 ngraph_op,
-                list(range(0, 4 - 2*reduction_axes_count)),
-                list(op.x_out_axes.lengths) + list(op.y_out_axes.lengths))
+                AxisVector(list(range(0, 4 - 2*reduction_axes_count))),
+                Shape(list(op.x_out_axes.lengths) + list(op.y_out_axes.lengths)))
         # reshape output
         self.computation.register_cpp_op(op, ngraph_op)
 
@@ -470,7 +478,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
         ngraph_cpp_sum_op = PyngSum(
             self.computation.lookup_cpp_op(input),
-            set(axis_set))
+            AxisSet(set(axis_set)))
         self.computation.register_cpp_op(op, ngraph_cpp_sum_op)
 
     @visit.on_type(Maximum)
@@ -497,8 +505,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         # print(ngraph_input.get_output_shape(0))
         ngraph_cpp_reorder_op = PyngReshape(
             ngraph_input,
-            axis_order,
-            reorder_axes)
+            AxisVector(axis_order),
+            Shape(reorder_axes))
         self.computation.register_cpp_op(op, ngraph_cpp_reorder_op)
 
     @visit.on_type(OneHotOp)
@@ -508,7 +516,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         one_hot_axis = (op.axes).index(op.axis)
         ngraph_cpp_onehot_op = PyngOneHot(
             self.computation.lookup_cpp_op(op.args[0]),
-            onehot_shape,
+            Shape(onehot_shape),
             one_hot_axis)
         self.computation.register_cpp_op(op, ngraph_cpp_onehot_op)
 
@@ -521,11 +529,11 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         self.computation.set_op_rank(op)
         # Define the reduction function handle
         element_type = Type.f32
-        shape = []
+        shape = Shape([])
         f_a = Parameter(element_type, shape)
         f_b = Parameter(element_type, shape)
         ngraph_cpp_mul_op = PyngMultiply(f_a, f_b)
-        fn = Function([ngraph_cpp_mul_op], [f_a, f_b], self.transformer.get_function_name())
+        fn = Function(NodeVector([ngraph_cpp_mul_op]), [f_a, f_b], self.transformer.get_function_name())
 
         # define the reduction op with the above defined Function handle
         if isinstance(self.np_reduction_axis(op), tuple):
@@ -535,15 +543,15 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             axis_set += (self.np_reduction_axis(op),)
         g_a = self.computation.lookup_cpp_op(input)
         const_prod_default_value = [1.]
-        g_b = Constant(Type.f32, [], const_prod_default_value)
+        g_b = Constant(Type.f32, Shape([]), const_prod_default_value)
 
-        self.computation.register_cpp_op(op, PyngReduce(g_a, g_b, fn, set(axis_set)))
+        self.computation.register_cpp_op(op, PyngReduce(g_a, g_b, fn, AxisSet(set(axis_set))))
 
     @visit.on_type(ReciprocalOp)
     def visit(self, op, input):
         self.computation.set_op_rank(op)
         input_axes = list(input.axes.lengths)
-        constant_op = Constant(Type.f32, input_axes, [1])
+        constant_op = Constant(Type.f32, Shape(input_axes), [1])
         ngraph_cpp_reciprocal_op = constant_op \
             / self.computation.lookup_cpp_op(input)
         self.computation.register_cpp_op(op, ngraph_cpp_reciprocal_op)
@@ -555,7 +563,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         # Construct constant list with number of elements = reduction axes size
         constant_tensor = [op.reduction_axes.size]
         constant_op = Constant(Type.f32,
-                               [], constant_tensor)
+                               Shape([]), constant_tensor)
         self.computation.register_cpp_op(op, constant_op)
 
     @visit.on_type(MapRolesOp)
@@ -570,11 +578,11 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         self.computation.set_op_rank(op)
         # Define the reduction function handle
         element_type = Type.f32
-        shape = []
+        shape = Shape([])
         f_a = Parameter(element_type, shape)
         f_b = Parameter(element_type, shape)
         ngraph_cpp_min_op = PyngMaximum(f_a, f_b)
-        fn = Function([ngraph_cpp_min_op], [f_a, f_b], self.transformer.get_function_name())
+        fn = Function(NodeVector([ngraph_cpp_min_op]), [f_a, f_b], self.transformer.get_function_name())
 
         # define the reduction op with the above defined Function handle
         if isinstance(self.np_reduction_axis(op), tuple):
@@ -584,8 +592,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             axis_set += (self.np_reduction_axis(op),)
         g_a = self.computation.lookup_cpp_op(input)
         const_max_default_value = [float('-inf')]
-        g_b = Constant(Type.f32, [], const_max_default_value)
-        self.computation.register_cpp_op(op, PyngReduce(g_a, g_b, fn, set(axis_set)))
+        g_b = Constant(Type.f32, Shape([]), const_max_default_value)
+        self.computation.register_cpp_op(op, PyngReduce(g_a, g_b, fn, AxisSet(set(axis_set))))
 
     @visit.on_type(SequentialOp)
     def visit(self, op):
@@ -627,7 +635,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         axis_set = set()
         axis_set.add(op.dim)
         self.computation.register_cpp_op(op, PyngBroadcast(op_element_type,
-                                         list(op.axes.lengths), axis_set))
+                                         Shape(list(op.axes.lengths)),
+                                         AxisSet(axis_set)))
 
     """
     /// brief Constructs a batched convolution operation.
@@ -665,25 +674,25 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         print(filters.axes)
         """
         # print(op_element_type.get_output_shape(0))
-        reordered = PyngReshape(self.computation.lookup_cpp_op(inputs), [4, 0, 1, 2, 3],
-                                [inputs.axes[4].length, inputs.axes[0].length,
-                                inputs.axes[2].length, inputs.axes[3].length])
+        reordered = PyngReshape(self.computation.lookup_cpp_op(inputs), AxisVector([4, 0, 1, 2, 3]),
+                                Shape([inputs.axes[4].length, inputs.axes[0].length,
+                                inputs.axes[2].length, inputs.axes[3].length]))
         reordered.name = op.name.replace('/', '_') + "_ReshapeData"
-        filters_reordered = PyngReshape(self.computation.lookup_cpp_op(filters), [4, 0, 1, 2, 3],
-                                        [filters.axes[4].length, filters.axes[0].length,
-                                         filters.axes[2].length, filters.axes[3].length])
+        filters_reordered = PyngReshape(self.computation.lookup_cpp_op(filters), AxisVector([4, 0, 1, 2, 3]),
+                                        Shape([filters.axes[4].length, filters.axes[0].length,
+                                        filters.axes[2].length, filters.axes[3].length]))
         filters_reordered.name = op.name.replace('/', '_') + "_ReshapeFilter"
         ngraph_conv = PyngConvolution(
             reordered,
             filters_reordered,
-            [op.conv_params['str_h'], op.conv_params['str_w']],
-            [op.conv_params['dil_h'], op.conv_params['dil_w']],
-            [op.conv_params['pad_h'], op.conv_params['pad_w']],
-            [op.conv_params['pad_h'], op.conv_params['pad_w']],
-            [1, 1])
+            Strides([op.conv_params['str_h'], op.conv_params['str_w']]),
+            Strides([op.conv_params['dil_h'], op.conv_params['dil_w']]),
+            CoordinateDiff([op.conv_params['pad_h'], op.conv_params['pad_w']]),
+            CoordinateDiff([op.conv_params['pad_h'], op.conv_params['pad_w']]),
+            Strides([1, 1]))
         ngraph_conv.name = op.name.replace('/', '_') + "_Convolution"
-        ordered = PyngReshape(ngraph_conv, [1, 2, 3, 0],    #NCHW --> CDHWN
-                              list(op.axes.lengths))
+        ordered = PyngReshape(ngraph_conv, AxisVector([1, 2, 3, 0]),    #NCHW --> CDHWN
+                              Shape(list(op.axes.lengths)))
         ordered.name = op.name.replace('/', '_') + "_ReshapeOutput"
         self.computation.register_cpp_op(op, ordered, set_name=False)
 
@@ -724,27 +733,27 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         print(data.axes)
         print(conv_params)
         """
-        delta_reordered = PyngReshape(self.computation.lookup_cpp_op(delta), [4, 0, 1, 2, 3],
-                                      [delta.axes[4].length, delta.axes[0].length,
-                                       delta.axes[2].length, delta.axes[3].length])
+        delta_reordered = PyngReshape(self.computation.lookup_cpp_op(delta), AxisVector([4, 0, 1, 2, 3]),
+                                      Shape([delta.axes[4].length, delta.axes[0].length,
+                                       delta.axes[2].length, delta.axes[3].length]))
         delta_reordered.name = op.name.replace('/', '_') + "_ReshapeDelta"
-        filters_reordered = PyngReshape(self.computation.lookup_cpp_op(filters), [4, 0, 1, 2, 3],
-                                        [filters.axes[4].length, filters.axes[0].length,
-                                         filters.axes[2].length, filters.axes[3].length])
+        filters_reordered = PyngReshape(self.computation.lookup_cpp_op(filters), AxisVector([4, 0, 1, 2, 3]),
+                                        Shape([filters.axes[4].length, filters.axes[0].length,
+                                         filters.axes[2].length, filters.axes[3].length]))
         filters_reordered.name = op.name.replace('/', '_') + "_ReshapeFilters"
         ngraph_bprop_conv = PyngConvolutionBackpropData(
-            [data.axes[4].length, data.axes[0].length,
-             data.axes[2].length, data.axes[3].length],
+            Shape([data.axes[4].length, data.axes[0].length,
+            data.axes[2].length, data.axes[3].length]),
             filters_reordered,
             delta_reordered,
-            [conv_params['str_h'], conv_params['str_w']],
-            [conv_params['dil_h'], conv_params['dil_w']],
-            [conv_params['pad_h'], conv_params['pad_w']],
-            [conv_params['pad_h'], conv_params['pad_w']],
-            [1, 1])
+            Strides([conv_params['str_h'], conv_params['str_w']]),
+            Strides([conv_params['dil_h'], conv_params['dil_w']]),
+            CoordinateDiff([conv_params['pad_h'], conv_params['pad_w']]),
+            CoordinateDiff([conv_params['pad_h'], conv_params['pad_w']]),
+            Strides([1, 1]))
         ngraph_bprop_conv.name = op.name.replace('/', '_') + "_ConvolutionBackpropData"
-        ordered = PyngReshape(ngraph_bprop_conv, [1, 2, 3, 0],
-                              list(op.axes.lengths))
+        ordered = PyngReshape(ngraph_bprop_conv, AxisVector([1, 2, 3, 0]),
+                              Shape(list(op.axes.lengths)))
         ordered.name = op.name.replace('/', '_') + "_ReshapeOutput"
         self.computation.register_cpp_op(op, ordered, set_name=False)
 
@@ -787,27 +796,27 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         print(data.axes)
         print(conv_params)
         """
-        data_reordered = PyngReshape(self.computation.lookup_cpp_op(data), [4, 0, 1, 2, 3],
-                                     [data.axes[4].length, data.axes[0].length,
-                                      data.axes[2].length, data.axes[3].length])
+        data_reordered = PyngReshape(self.computation.lookup_cpp_op(data), AxisVector([4, 0, 1, 2, 3]),
+                                     Shape([data.axes[4].length, data.axes[0].length,
+                                      data.axes[2].length, data.axes[3].length]))
         data_reordered.name = op.name.replace('/', '_') + "_ReshapeData"
-        delta_reordered = PyngReshape(self.computation.lookup_cpp_op(delta), [4, 0, 1, 2, 3],
-                                      [delta.axes[4].length, delta.axes[0].length,
-                                      delta.axes[2].length, delta.axes[3].length])
+        delta_reordered = PyngReshape(self.computation.lookup_cpp_op(delta), AxisVector([4, 0, 1, 2, 3]),
+                                      Shape([delta.axes[4].length, delta.axes[0].length,
+                                      delta.axes[2].length, delta.axes[3].length]))
         delta_reordered.name = op.name.replace('/', '_') + "_ReshapeDelta"
         ngraph_update_conv = PyngConvolutionBackpropFilters(
             data_reordered,
-            [filters.axes[4].length, filters.axes[0].length,
-             filters.axes[2].length, filters.axes[3].length],
+            Shape([filters.axes[4].length, filters.axes[0].length,
+            filters.axes[2].length, filters.axes[3].length]),
             delta_reordered,
-            [conv_params['str_h'], conv_params['str_w']],
-            [conv_params['dil_h'], conv_params['dil_w']],
-            [conv_params['pad_h'], conv_params['pad_w']],
-            [conv_params['pad_h'], conv_params['pad_w']],
-            [1, 1])
+            Strides([conv_params['str_h'], conv_params['str_w']]),
+            Strides([conv_params['dil_h'], conv_params['dil_w']]),
+            CoordinateDiff([conv_params['pad_h'], conv_params['pad_w']]),
+            CoordinateDiff([conv_params['pad_h'], conv_params['pad_w']]),
+            Strides([1, 1]))
         ngraph_update_conv.name = op.name.replace('/', '_') + "_ConvolutionBackpropFilters"
-        ordered = PyngReshape(ngraph_update_conv, [1, 2, 3, 0],
-                              list(op.axes.lengths))
+        ordered = PyngReshape(ngraph_update_conv, AxisVector([1, 2, 3, 0]),
+                              Shape(list(op.axes.lengths)))
         ordered.name = op.name.replace('/', '_') + "_ReshapeOutput"
         self.computation.register_cpp_op(op, ordered, set_name=False)
 
@@ -841,46 +850,46 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             print(inputs.axes)
             print(op.axes)
             """
-            reordered = PyngReshape(self.computation.lookup_cpp_op(inputs), [4, 0, 1, 2, 3],
-                                    [inputs.axes[4].length, inputs.axes[0].length,
-                                    inputs.axes[2].length, inputs.axes[3].length])
+            reordered = PyngReshape(self.computation.lookup_cpp_op(inputs), AxisVector([4, 0, 1, 2, 3]),
+                                    Shape([inputs.axes[4].length, inputs.axes[0].length,
+                                    inputs.axes[2].length, inputs.axes[3].length]))
             reordered.name = op.name.replace('/', '_') + "_ReshapeInput"
             ngraph_pool = PyngMaxPool(reordered,
-                                      [op.pool_params['R'],
-                                          op.pool_params['S']],
-                                      [op.pool_params['str_h'],
-                                          op.pool_params['str_w']],
-                                      [op.pool_params['pad_h'],
-                                          op.pool_params['pad_w']],
-                                      [op.pool_params['pad_h'],
-                                          op.pool_params['pad_w']])
+                                      Shape([op.pool_params['R'],
+                                       op.pool_params['S']]),
+                                      Strides([op.pool_params['str_h'],
+                                       op.pool_params['str_w']]),
+                                      Shape([op.pool_params['pad_h'],
+                                       op.pool_params['pad_w']]),
+                                      Shape([op.pool_params['pad_h'],
+                                       op.pool_params['pad_w']]))
             ngraph_pool.name = op.name.replace('/', '_') + "_MaxPool"
-            ordered = PyngReshape(ngraph_pool, [1, 2, 3, 0],
-                                  list(op.axes.lengths))
+            ordered = PyngReshape(ngraph_pool, AxisVector([1, 2, 3, 0]),
+                                  Shape(list(op.axes.lengths)))
             ordered.name = op.name.replace('/', '_') + "_ReshapeOuput"
             self.computation.register_cpp_op(op, ordered, set_name=False)
         elif 'avg' == op.pool_params['op']:
-            reordered = PyngReshape(self.computation.lookup_cpp_op(inputs), [4, 0, 1, 2, 3],
-                                    [inputs.axes[4].length, inputs.axes[0].length,
-                                    inputs.axes[2].length, inputs.axes[3].length])
+            reordered = PyngReshape(self.computation.lookup_cpp_op(inputs), AxisVector([4, 0, 1, 2, 3]),
+                                    Shape([inputs.axes[4].length, inputs.axes[0].length,
+                                    inputs.axes[2].length, inputs.axes[3].length]))
             reordered.name = op.name.replace('/', '_') + "_ReshapeInput"
             ngraph_pool = PyngAvgPool(reordered,
-                                      [op.pool_params['R'],
-                                          op.pool_params['S']],
-                                      [op.pool_params['str_h'],
-                                          op.pool_params['str_w']],
-                                      [op.pool_params['pad_h'],
-                                          op.pool_params['pad_w']],
-                                      [op.pool_params['pad_h'],
-                                          op.pool_params['pad_w']],
+                                      Shape([op.pool_params['R'],
+                                       op.pool_params['S']]),
+                                      Strides([op.pool_params['str_h'],
+                                       op.pool_params['str_w']]),
+                                      Shape([op.pool_params['pad_h'],
+                                       op.pool_params['pad_w']]),
+                                      Shape([op.pool_params['pad_h'],
+                                       op.pool_params['pad_w']]),
                                       True)
             """
             print(list(op.axes.lengths))
             print(ngraph_pool.get_output_shape(0))
             """
             ngraph_pool.name = op.name.replace('/', '_') + "_AvgPool"
-            ordered = PyngReshape(ngraph_pool, [1, 2, 3, 0],
-                                  list(op.axes.lengths))
+            ordered = PyngReshape(ngraph_pool, AxisVector([1, 2, 3, 0]),
+                                  Shape(list(op.axes.lengths)))
             ordered.name = op.name.replace('/', '_') + "_ReshapeOuput"
             self.computation.register_cpp_op(op, ordered, set_name=False)
         else:
@@ -908,13 +917,13 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             print(op.axes)
             """
             inputs = op.inputs
-            reordered = PyngReshape(self.computation.lookup_cpp_op(inputs), [4, 0, 1, 2, 3],
-                                    [inputs.axes[4].length, inputs.axes[0].length,
-                                    inputs.axes[2].length, inputs.axes[3].length])
+            reordered = PyngReshape(self.computation.lookup_cpp_op(inputs), AxisVector([4, 0, 1, 2, 3]),
+                                    Shape([inputs.axes[4].length, inputs.axes[0].length,
+                                    inputs.axes[2].length, inputs.axes[3].length]))
             reordered.name = op.name.replace('/', '_') + "_ReshapeInput"
-            red_delta = PyngReshape(self.computation.lookup_cpp_op(delta), [4, 0, 1, 2, 3],
-                                    [delta.axes[4].length, delta.axes[0].length,
-                                     delta.axes[2].length, delta.axes[3].length])
+            red_delta = PyngReshape(self.computation.lookup_cpp_op(delta), AxisVector([4, 0, 1, 2, 3]),
+                                    Shape([delta.axes[4].length, delta.axes[0].length,
+                                     delta.axes[2].length, delta.axes[3].length]))
             red_delta.name = op.name.replace('/', '_') + "_ReshapeDelta"
             ngraph_fprop = self.computation.lookup_cpp_op(op.fprop).get_input_op(0)
             """
@@ -923,18 +932,18 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             """
             ngraph_pool = PyngMaxPoolBackprop(reordered,
                                               red_delta,
-                                              [op.fprop.pool_params['R'],
-                                                  op.fprop.pool_params['S']],
-                                              [op.fprop.pool_params['str_h'],
-                                                  op.fprop.pool_params['str_w']],
-                                              [op.fprop.pool_params['pad_h'],
-                                                  op.fprop.pool_params['pad_w']],
-                                              [op.fprop.pool_params['pad_h'],
-                                                  op.fprop.pool_params['pad_w']],
+                                              Shape([op.fprop.pool_params['R'],
+                                               op.fprop.pool_params['S']]),
+                                              Strides([op.fprop.pool_params['str_h'],
+                                               op.fprop.pool_params['str_w']]),
+                                              Shape([op.fprop.pool_params['pad_h'],
+                                               op.fprop.pool_params['pad_w']]),
+                                              Shape([op.fprop.pool_params['pad_h'],
+                                               op.fprop.pool_params['pad_w']]),
                                               ngraph_fprop)
             ngraph_pool.name = op.name.replace('/', '_') + "_MaxPoolBackprop"
-            ordered = PyngReshape(ngraph_pool, [1, 2, 3, 0],
-                                  list(op.axes.lengths))
+            ordered = PyngReshape(ngraph_pool, AxisVector([1, 2, 3, 0]),
+                                  Shape(list(op.axes.lengths)))
             ordered.name = op.name.replace('/', '_') + "_ReshapeOutput"
             self.computation.register_cpp_op(op, ordered, set_name=False)
         elif 'avg' == op.pool_params['op']:
@@ -951,9 +960,9 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             print(op.inputs.axes)
             print(op.axes)
             """
-            red_delta = PyngReshape(self.computation.lookup_cpp_op(delta), [4, 0, 1, 2, 3],
-                                    [delta.axes[4].length, delta.axes[0].length,
-                                    delta.axes[2].length, delta.axes[3].length])
+            red_delta = PyngReshape(self.computation.lookup_cpp_op(delta), AxisVector([4, 0, 1, 2, 3]),
+                                    Shape([delta.axes[4].length, delta.axes[0].length,
+                                    delta.axes[2].length, delta.axes[3].length]))
             """
             print(red_delta.get_output_shape(0))
             print(ngraph_fprop.get_output_shape(0))
@@ -963,17 +972,17 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             ngraph_pool = PyngAvgPoolBackprop([inputs.axes[4].length, inputs.axes[0].length,
                                               inputs.axes[2].length, inputs.axes[3].length],
                                               red_delta,
-                                              [op.fprop.pool_params['R'],
-                                                  op.fprop.pool_params['S']],
-                                              [op.fprop.pool_params['str_h'],
-                                                  op.fprop.pool_params['str_w']],
-                                              [op.fprop.pool_params['pad_h'],
-                                                  op.fprop.pool_params['pad_w']],
-                                              [op.fprop.pool_params['pad_h'],
-                                                  op.fprop.pool_params['pad_w']])
+                                              Shape([op.fprop.pool_params['R'],
+                                               op.fprop.pool_params['S']]),
+                                              Strides([op.fprop.pool_params['str_h'],
+                                               op.fprop.pool_params['str_w']]),
+                                              Shape([op.fprop.pool_params['pad_h'],
+                                               op.fprop.pool_params['pad_w']]),
+                                              Shape([op.fprop.pool_params['pad_h'],
+                                               op.fprop.pool_params['pad_w']]))
             ngraph_pool.name = op.name.replace('/', '_') + "_AvgPoolBackprop"
-            ordered = PyngReshape(ngraph_pool, [1, 2, 3, 0],
-                                  list(op.axes.lengths))
+            ordered = PyngReshape(ngraph_pool, AxisVector([1, 2, 3, 0]),
+                                  Shape(list(op.axes.lengths)))
             ordered.name = op.name.replace('/', '_') + "_ReshapeOutput"
             self.computation.register_cpp_op(op, ordered, set_name=False)
         else:
@@ -1008,11 +1017,12 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                 else:
                     uppers.append(s.stop)
         op_element_type = self.computation.lookup_cpp_op(x)
-        ngraph_sliced = PyngSlice(op_element_type, lowers, uppers, strides)
+        ngraph_sliced = PyngSlice(op_element_type, Coordinate(lowers),
+                        Coordinate(uppers), Strides(strides))
         if axes_to_remove:
             ngraph_sliced = PyngReshape(ngraph_sliced,
-                                        list(range(0, len(x.axes))),
-                                        list(op.axes.lengths))
+                                        AxisVector(list(range(0, len(x.axes)))),
+                                        Shape(list(op.axes.lengths)))
 
         self.computation.register_cpp_op(op, ngraph_sliced)
 
@@ -1028,8 +1038,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     def visit(self, op, x):
         self.computation.set_op_rank(op)
         ngraph_flatten = PyngReshape(self.computation.lookup_cpp_op(x),
-                                     list(range(0, len(x.axes))),
-                                     list(op.axes.lengths))
+                                     AxisVector(list(range(0, len(x.axes)))),
+                                     Shape(list(op.axes.lengths)))
         self.computation.register_cpp_op(op, ngraph_flatten)
 
     @visit.on_type(Unflatten)
@@ -1037,8 +1047,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         self.computation.set_op_rank(op)
         self.computation.set_op_rank(op)
         ngraph_unflatten = PyngReshape(self.computation.lookup_cpp_op(x),
-                                       list(range(0, len(x.axes))),
-                                       list(op.axes.lengths))
+                                       AxisVector(list(range(0, len(x.axes)))),
+                                       Shape(list(op.axes.lengths)))
         self.computation.register_cpp_op(op, ngraph_unflatten)
 
     @visit.on_type(ContiguousOp)
