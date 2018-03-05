@@ -24,7 +24,7 @@ from orderedset import OrderedSet
 from ngraph.transformers.passes.pybindwrapperpass \
     import PybindWrapperGenerator, PybindScopePass
 import pyngraph.util as util
-from pyngraph import Type, Function
+from pyngraph import Type, Function, NodeVector, Shape
 from pyngraph.runtime import Manager
 from pyngraph.op import Parameter
 
@@ -308,7 +308,7 @@ class PybindComputation(Computation):
                 self.parameter_list.append(self.ngraph_cpp_ops[place_holders.tensor])
             else:  # sometimes parameters can be unused/dead values in computation.
                 tensor = place_holders.tensor
-                op_element_type = Parameter(Type.f32, list(tensor.axes.lengths))
+                op_element_type = Parameter(Type.f32, Shape(list(tensor.axes.lengths)))
                 self.register_cpp_op(tensor, op_element_type)
                 if not tensor.is_placeholder:
                     self.neon_variable_list.append(tensor)
@@ -328,8 +328,8 @@ class PybindComputation(Computation):
                     np.copyto(var_buffer, variable.initial_value)
 
         # TODO - what's the role of the string argument? for now just passing 'test'
-        self.function = Function(
-            self.result_nodes_list + self.update_nodes_list,
+        self.function = Function(NodeVector(
+            self.result_nodes_list + self.update_nodes_list),
             self.parameter_list + self.variable_list,
             self.transformer.get_function_name())
 
@@ -350,7 +350,7 @@ class PybindComputation(Computation):
             shape = list(node.tensor.axes.lengths)
             self.result_primary_tensor_view_list.append(
                 self.backend.make_primary_tensor_view(
-                    self.element_type, shape))
+                    self.element_type, Shape(shape)))
             # Allocate return buffer
             # TODO - need to define dtype of numpy array's for results based on result.dtype
             result_arr = np.zeros(shape, dtype=np.float32)
@@ -361,7 +361,7 @@ class PybindComputation(Computation):
             shape = list(node.axes.lengths)
             self.param_primary_tensor_view_list.append(
                 self.backend.make_primary_tensor_view(
-                    self.element_type, shape))
+                    self.element_type, Shape(shape)))
 
         # prepare tensor_views for input variables
         for node in self.neon_variable_list:
@@ -369,14 +369,14 @@ class PybindComputation(Computation):
                 shape = list(node.axes.lengths)
                 self.variable_primary_tensor_view_list.append(
                     self.backend.make_primary_tensor_view(
-                        self.element_type, shape))
+                        self.element_type, Shape(shape)))
 
         # prepare tensor_views for weights
         for node in self.neon_update_list:
             shape = list(node.axes.lengths)
             self.update_primary_tensor_view_list.append(
                 self.backend.make_primary_tensor_view(
-                    self.element_type, shape))
+                    self.element_type, Shape(shape)))
 
 
 class FunctionTransformer(Transformer):
