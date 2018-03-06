@@ -18,6 +18,7 @@ import collections
 import numpy as np
 from neon.transformers.base import Computation
 from neon.transformers.base import Transformer
+from neon.transformers import set_transformer_factory, make_transformer_factory
 from neon.op_graph.op_graph import Op, AssignableTensorOp, TensorValueOp, SequentialOp, \
     AssignOp
 from orderedset import OrderedSet
@@ -524,3 +525,6 @@ class PybindARGONTransformer(PybindTransformer):
     def __init__(self, **kwargs):
         self.ngraph_backend = "ARGON"
         super(PybindARGONTransformer, self).__init__(**kwargs)
+
+set_transformer_factory(
+make_transformer_factory(PybindCPUTransformer.transformer_name))

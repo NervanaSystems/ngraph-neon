@@ -94,7 +94,7 @@ class NeonArgparser(configargparse.ArgumentParser):
         be_grp.add_argument('-z', '--batch_size', type=int, default=128)
         be_grp.add_argument('-b', '--backend',
                             choices=self.backend_names(),
-                            default='cpu',
+                            default='ngcpu',
                             help='backend type')
         be_grp.add_argument('-r', '--rng_seed', type=int,
                             default=self.defaults.get('rng_seed', None),

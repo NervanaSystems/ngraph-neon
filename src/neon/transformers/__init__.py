@@ -26,7 +26,7 @@ __all__ = [
     'make_transformer_factory',
     'set_transformer_factory',
     'transformer_choices',
-    'Transformer'
+    'Transformer',
 ]
 
 try:

@@ -10,7 +10,11 @@ numpy==1.13.1
 h5py==2.6.0
 appdirs==1.4.0
 
+# tensorflow & protobuf
 six==1.10.0
+tensorflow==0.12.1
+scipy==0.18.1
+protobuf==3.2.0
 
 # other requirements
 requests==2.13.0
@@ -23,7 +27,6 @@ future==0.16.0
 configargparse==0.11.0
 cachetools==2.0.0
 decorator==4.0.11
-pynvrtc==7.5
 # Python 2 and 3 compatible monotonic clock for tracing
 monotonic==1.3
 

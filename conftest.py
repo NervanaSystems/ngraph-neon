@@ -21,13 +21,11 @@ import neon.op_graph.serde.serde as serde
 def pytest_addoption(parser):
     parser.addoption("--batch_size", type=int, default=8,
                      help="Batch size for tests using input_tensor fixture.")
-    parser.addoption("--transformer", default="cpu", choices=ngt.transformer_choices(),
+    parser.addoption("--transformer", default="ngcpu", choices=ngt.transformer_choices(),
                      help="Select from available transformers")
     parser.addoption("--serialization_integration_test", action="store_true",
                      help="Force all unit tests to serialize and deserialize the graph before \
                      transformer compilation.")
-    parser.addoption('--hetr_device', action='append', default=[],
-                     help='Set hetr device (cpu, gpu, etc.)')
 
 
 def pytest_xdist_node_collection_finished(node, ids):
@@ -35,11 +33,7 @@ def pytest_xdist_node_collection_finished(node, ids):
 
 
 def pytest_generate_tests(metafunc):
-    # define hetr_device parametrization and enable passing from command line
-    if 'hetr_device' in metafunc.fixturenames:
-        metafunc.parametrize("hetr_device",
-                             metafunc.config.getoption('hetr_device'))
-
+    pass
 
 @pytest.fixture(scope="module", autouse=True)
 def transformer_factory(request):
@@ -53,7 +47,7 @@ def transformer_factory(request):
     yield set_and_get_factory(name)
 
     # Reset transformer factory to default
-    ngt.set_transformer_factory(ngt.make_transformer_factory("cpu"))
+    ngt.set_transformer_factory(ngt.make_transformer_factory("ngcpu"))
 
 
 @pytest.fixture(autouse=True)
@@ -85,27 +79,6 @@ def pytest_configure(config):
 
     # when marking argon_disabled for a whole test, but flex_disabled only on one
     # parametrized version of that test, the argon marking disappeared
-    config.flex_and_argon_disabled = pytest.mark.xfail(config.getvalue("transformer") == "flexgpu" or
-                                                       config.getvalue("transformer") == "argon",
-                                                       reason="Not supported by argon or flex backend",
-                                                       strict=True)
-    config.argon_disabled = pytest.mark.xfail(config.getvalue("transformer") == "argon",
-                                              reason="Not supported by argon backend",
-                                              strict=True)
-    config.flex_disabled = pytest.mark.xfail(config.getvalue("transformer") == "flexgpu",
-                                             reason="Failing test for Flex",
-                                             strict=True)
-    config.hetr_and_cpu_enabled_only = pytest.mark.xfail(config.getvalue("transformer") != "hetr" and
-                                                         config.getvalue("transformer") != "cpu",
-                                                         reason="Only Hetr/CPU and CPU transformers supported",
-                                                         strict=True)
-    config.flex_skip = pytest.mark.skipif(config.getvalue("transformer") == "flexgpu",
-                                          reason="Randomly failing test for Flex")
-    config.argon_skip = pytest.mark.skipif(config.getvalue("transformer") == "argon")
     config.ngargon_skip = pytest.mark.skipif(config.getvalue("transformer") == "ngargon")
     config.ngcpu_skip = pytest.mark.skipif(config.getvalue("transformer") == "ngcpu")
     config.nggpu_skip = pytest.mark.skipif(config.getvalue("transformer") == "nggpu")
-    config.flex_skip_now = pytest.skip if config.getvalue("transformer") == "flexgpu" \
-        else pass_method
-    config.argon_skip_now = pytest.skip if config.getvalue("transformer") == "argon" \
-        else pass_method
