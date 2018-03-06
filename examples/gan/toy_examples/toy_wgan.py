@@ -22,18 +22,18 @@ adapted from https://github.com/igul222/improved_wgan_training
 usage: python toy_wgan.py -b gpu -t 100000
 """
 from contextlib import closing
-import ngraph.transformers as ngt
-from ngraph.frontends.neon import Adam, Affine, Rectlin, Sequential
-from ngraph.frontends.neon import ConstantInit, KaimingInit
-from ngraph.frontends.neon import make_bound_computation, NgraphArgparser
-from ngraph.frontends.neon.logging import ProgressBar
-import ngraph as ng
+import neon.transformers as ngt
+from neon.frontends.neon import Adam, Affine, Rectlin, Sequential
+from neon.frontends.neon import ConstantInit, KaimingInit
+from neon.frontends.neon import make_bound_computation, NeonArgparser
+from neon.frontends.neon.logging import ProgressBar
+import neon as ng
 import os
 import numpy as np
 from toy_utils import DataGenerator, NormalNoise, generate_plot
 
 
-parser = NgraphArgparser()
+parser = NeonArgparser()
 parser.add_argument('--plot_interval', type=int, default=200,
                     help='Plot results every this many iterations')
 parser.add_argument('--loss_type', type=str, default='WGAN-GP',

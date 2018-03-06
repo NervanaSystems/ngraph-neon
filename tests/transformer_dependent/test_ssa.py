@@ -15,8 +15,8 @@
 # ******************************************************************************
 import pytest
 import numpy as np
-import ngraph as ng
-from ngraph.testing import ExecutorFactory
+import neon as ng
+from neon.testing import ExecutorFactory
 
 pytestmark = pytest.mark.transformer_dependent
 

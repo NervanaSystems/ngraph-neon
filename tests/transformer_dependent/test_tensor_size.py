@@ -19,8 +19,8 @@ On GPU, ng.tensor_size uses FillKernel
 """
 
 import numpy as np
-import ngraph as ng
-from ngraph.testing import executor
+import neon as ng
+from neon.testing import executor
 import pytest
 
 

@@ -25,9 +25,9 @@ https://stackoverflow.com/questions/37987839/how-can-i-run-tensorboard-on-a-remo
 """
 from __future__ import print_function
 from contextlib import closing
-import ngraph as ng
-import ngraph.transformers as ngt
-from ngraph.op_graph.tensorboard.tensorboardpass import TensorBoardPass
+import neon as ng
+import neon.transformers as ngt
+from neon.op_graph.tensorboard.tensorboardpass import TensorBoardPass
 import argparse
 
 parser = argparse.ArgumentParser()

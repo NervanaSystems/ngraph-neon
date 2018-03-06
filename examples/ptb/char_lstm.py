@@ -33,19 +33,19 @@ Usage:
 
 """
 from contextlib import closing
-import ngraph as ng
-from ngraph.frontends.neon import (Layer, Sequential, Preprocess, LSTM,
+import neon as ng
+from neon.frontends.neon import (Layer, Sequential, Preprocess, LSTM,
                                    Affine, Softmax, Tanh, Logistic)
-from ngraph.frontends.neon import UniformInit, RMSProp
-from ngraph.frontends.neon import ax, loop_train
-from ngraph.frontends.neon import NgraphArgparser, make_bound_computation, make_default_callbacks
-from ngraph.frontends.neon import SequentialArrayIterator
-import ngraph.transformers as ngt
+from neon.frontends.neon import UniformInit, RMSProp
+from neon.frontends.neon import ax, loop_train
+from neon.frontends.neon import NeonArgparser, make_bound_computation, make_default_callbacks
+from neon.frontends.neon import SequentialArrayIterator
+import neon.transformers as ngt
 
-from ngraph.frontends.neon import PTB
+from neon.frontends.neon import PTB
 
 # parse the command line arguments
-parser = NgraphArgparser(__doc__)
+parser = NeonArgparser(__doc__)
 parser.add_argument('--layer_type', default='lstm', choices=['lstm'],
                     help='type of recurrent layer to use (lstm)')
 parser.set_defaults()

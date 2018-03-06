@@ -17,11 +17,11 @@ import os
 from copy import deepcopy
 
 import numpy as np
-import ngraph as ng
-from ngraph.op_graph.op_graph import Op
-import ngraph.op_graph.serde.serde as ser
-from ngraph.op_graph.serde.serde_pass import SerializationPass
-from ngraph.testing.hetr_utils import create_send_recv_graph
+import neon as ng
+from neon.op_graph.op_graph import Op
+import neon.op_graph.serde.serde as ser
+from neon.op_graph.serde.serde_pass import SerializationPass
+from neon.testing.hetr_utils import create_send_recv_graph
 
 
 def get_simple_graph():

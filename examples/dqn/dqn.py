@@ -2,10 +2,10 @@ from __future__ import division
 import random
 from collections import deque
 
-import ngraph as ng
+import neon as ng
 import numpy as np
 from gym import spaces
-from ngraph.frontends import neon
+from neon.frontends import neon
 
 
 class Namespace(object):

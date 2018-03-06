@@ -5,11 +5,11 @@
 #
 # In order to simplify the presentation we choose to use Adagrad directly over both
 # #streams.
-import ngraph as ng
+import neon as ng
 from contextlib import closing
-import ngraph.transformers as ngt
-from ngraph.frontends.neon import NgraphArgparser
-from ngraph.frontends.neon import Adagrad, Rectlin
+import neon.transformers as ngt
+from neon.frontends.neon import NeonArgparser
+from neon.frontends.neon import Adagrad, Rectlin
 from model import WideDeepClassifier
 from tqdm import tqdm
 import numpy as np
@@ -48,7 +48,7 @@ def make_placeholders(batch_size, data):
     return placeholders
 
 
-parser = NgraphArgparser(description=__doc__)
+parser = NeonArgparser(description=__doc__)
 parser.add_argument("--learning_rate", type=float, default=0.01,
                     help="Learning rate")
 parser.add_argument("--epochs", type=int, default=41,

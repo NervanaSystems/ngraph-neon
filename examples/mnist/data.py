@@ -15,7 +15,7 @@
 # ******************************************************************************
 import os
 from aeon import DataLoader
-from ngraph.util.persist import get_data_cache_or_nothing
+from neon.util.persist import get_data_cache_or_nothing
 from mnist import ingest_mnist
 
 

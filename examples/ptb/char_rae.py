@@ -23,18 +23,18 @@ the same sequence in reverse order.
 
 import numpy as np
 from contextlib import closing
-import ngraph as ng
-from ngraph.frontends.neon import Layer, Preprocess, Recurrent, Affine, Softmax, Tanh
-from ngraph.frontends.neon import UniformInit, RMSProp
-from ngraph.frontends.neon import ax, loop_train
-from ngraph.frontends.neon import NgraphArgparser, make_bound_computation, make_default_callbacks
-from ngraph.frontends.neon import SequentialArrayIterator
-import ngraph.transformers as ngt
+import neon as ng
+from neon.frontends.neon import Layer, Preprocess, Recurrent, Affine, Softmax, Tanh
+from neon.frontends.neon import UniformInit, RMSProp
+from neon.frontends.neon import ax, loop_train
+from neon.frontends.neon import NeonArgparser, make_bound_computation, make_default_callbacks
+from neon.frontends.neon import SequentialArrayIterator
+import neon.transformers as ngt
 
-from ngraph.frontends.neon import PTB
+from neon.frontends.neon import PTB
 
 # parse the command line arguments
-parser = NgraphArgparser(__doc__)
+parser = NeonArgparser(__doc__)
 parser.set_defaults(batch_size=128, num_iterations=2000)
 args = parser.parse_args()
 

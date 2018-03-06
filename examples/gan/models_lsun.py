@@ -1,7 +1,7 @@
 
-from ngraph.frontends.neon import (Sequential, Deconvolution, Convolution, Rectlin, Affine,
+from neon.frontends.neon import (Sequential, Deconvolution, Convolution, Rectlin, Affine,
                                    Tanh, GaussianInit)
-import ngraph as ng
+import neon as ng
 
 filter_init = GaussianInit(var=0.02)
 relu = Rectlin(slope=0)

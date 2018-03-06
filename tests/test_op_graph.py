@@ -15,7 +15,7 @@
 # ******************************************************************************
 import pytest
 
-import ngraph as ng
+import neon as ng
 
 
 @pytest.fixture()

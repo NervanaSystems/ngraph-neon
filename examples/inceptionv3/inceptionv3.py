@@ -31,11 +31,11 @@ import numpy as np
 import pickle
 from tqdm import tqdm
 from contextlib import closing
-import ngraph as ng
-import ngraph.transformers as ngt
-from ngraph.frontends.neon import NgraphArgparser
-from ngraph.frontends.neon import Layer
-from ngraph.frontends.neon import ax, RMSProp, GradientDescentMomentum
+import neon as ng
+import neon.transformers as ngt
+from neon.frontends.neon import NeonArgparser
+from neon.frontends.neon import Layer
+from neon.frontends.neon import ax, RMSProp, GradientDescentMomentum
 from data import make_aeon_loaders
 import inception
 
@@ -75,7 +75,7 @@ def eval_loop(dataset, computation, metric_names):
     return all_results, reduced_results
 
 
-parser = NgraphArgparser(description=__doc__)
+parser = NeonArgparser(description=__doc__)
 parser.add_argument('--mini', default=False, dest='mini', action='store_true',
                     help='If given, builds a mini version of Inceptionv3')
 parser.add_argument("--image_dir", default='/dataset/aeon/I1K/i1k-extracted/',

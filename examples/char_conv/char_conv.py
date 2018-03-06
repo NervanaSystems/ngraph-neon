@@ -14,16 +14,16 @@
 # ----------------------------------------------------------------------------
 from contextlib import closing
 import numpy as np
-import ngraph as ng
-import ngraph.transformers as ngt
-from ngraph.frontends.neon import ax
-from ngraph.frontends.neon import NgraphArgparser, ArrayIterator
-from ngraph.frontends.neon import GaussianInit, ConstantInit
-from ngraph.frontends.neon import Sequential, Layer, Convolution, \
+import neon as ng
+import neon.transformers as ngt
+from neon.frontends.neon import ax
+from neon.frontends.neon import NeonArgparser, ArrayIterator
+from neon.frontends.neon import GaussianInit, ConstantInit
+from neon.frontends.neon import Sequential, Layer, Convolution, \
     Pooling, Affine, LookupTable, Dropout
-from ngraph.frontends.neon import Rectlin, Softmax
-from ngraph.frontends.neon import GradientDescentMomentum
-from ngraph.frontends.neon import make_bound_computation, loop_train, \
+from neon.frontends.neon import Rectlin, Softmax
+from neon.frontends.neon import GradientDescentMomentum
+from neon.frontends.neon import make_bound_computation, loop_train, \
     loop_eval, make_default_callbacks
 from dataset import CrepeDataset
 
@@ -99,7 +99,7 @@ def make_layers(use_large, vocab_size):
 
 
 # parse the command line arguments
-parser = NgraphArgparser(__doc__)
+parser = NeonArgparser(__doc__)
 parser.add_argument('--sentence_length', type=int, default=1014,
                     help='the number of characters in a sentence')
 parser.add_argument('--use_uppercase', action='store_true', default=False,

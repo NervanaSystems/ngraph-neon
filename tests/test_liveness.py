@@ -15,9 +15,9 @@
 # ******************************************************************************
 import pytest
 
-import ngraph as ng
-from ngraph.transformers.passes.memlayout import MemoryManager
-from ngraph.testing import ExecutorFactory
+import neon as ng
+from neon.transformers.passes.memlayout import MemoryManager
+from neon.testing import ExecutorFactory
 
 
 def test_liveness():

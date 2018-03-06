@@ -23,20 +23,20 @@ https://github.com/soumith/convnet-benchmarks
 """
 
 import numpy as np
-import ngraph as ng
-import ngraph.transformers as ngt
+import neon as ng
+import neon.transformers as ngt
 from tqdm import tqdm
 from contextlib import closing
 
-from ngraph.frontends.neon import NgraphArgparser, ArrayIterator
-from ngraph.frontends.neon import GaussianInit, UniformInit
-from ngraph.frontends.neon import Affine, Convolution, Pooling, Sequential
-from ngraph.frontends.neon import Rectlin, Softmax, GradientDescentMomentum
-from ngraph.frontends.neon import ax
+from neon.frontends.neon import NeonArgparser, ArrayIterator
+from neon.frontends.neon import GaussianInit, UniformInit
+from neon.frontends.neon import Affine, Convolution, Pooling, Sequential
+from neon.frontends.neon import Rectlin, Softmax, GradientDescentMomentum
+from neon.frontends.neon import ax
 
 np.seterr(all='raise')
 
-parser = NgraphArgparser(description='Train convnet-overfeat model on random dataset')
+parser = NeonArgparser(description='Train convnet-overfeat model on random dataset')
 # Default batch_size for convnet-overfeat is 128.
 parser.set_defaults(batch_size=128, num_iterations=100)
 args = parser.parse_args()

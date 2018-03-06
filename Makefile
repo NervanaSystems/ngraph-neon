@@ -33,13 +33,8 @@ STYLE_CHECK_DIRS := ngraph tests examples
 # pytest options
 TEST_OPTS := --timeout=600 --cov=ngraph --timeout_method=thread
 TEST_DIRS := tests/
-TEST_DIRS_COMMON := ngraph/frontends/common/tests
-TEST_DIRS_NEON := ngraph/frontends/neon/tests
-TEST_DIRS_TENSORFLOW := ngraph/frontends/tensorflow/tests
-TEST_DIRS_CAFFE2 := ngraph/frontends/caffe2/tests
-TEST_DIRS_MXNET := ngraph/frontends/mxnet/tests
-TEST_DIRS_CNTK := ngraph/frontends/cntk/tests
-TEST_DIRS_ONNX := ngraph/frontends/onnx/tests
+TEST_DIRS_COMMON := src/neon/frontends/common/tests
+TEST_DIRS_NEON := src/neon/frontends/neon/tests
 TEST_DIRS_INTEGRATION := integration_tests/
 
 # Set parallel execution by setting the NUM_PROCS variable in the environment
@@ -78,17 +73,11 @@ install:
 	pip install -r requirements.txt
 	pip install -e .
 
-install_all: gpu_prepare test_prepare examples_prepare doc_prepare install
+install_all: test_prepare examples_prepare doc_prepare install
 	# viz_prepare is ignored since it requires installation of system package
 
-gpu_prepare:
-	pip install -r gpu_requirements.txt > /dev/null 2>&1
-
-multinode_prepare:
-	pip install -r multinode_requirements.txt > /dev/null 2>&1
-
 test_prepare:
-	pip install -r test_requirements.txt 
+	pip install -r test_requirements.txt
 
 examples_prepare:
 	pip install -r examples_requirements.txt > /dev/null 2>&1
@@ -96,70 +85,22 @@ examples_prepare:
 doc_prepare:
 	pip install -r doc_requirements.txt > /dev/null 2>&1
 
-# for internal use only
-# the private autoflex repo is expected to be installed in ../autoflex
-# update the pip install command below to reference the path to the autoflex directory
-autoflex_prepare:
-	@echo
-	@echo Attempting to update autoflex to the latest version in ../autoflex
-	pip install ../autoflex --upgrade
-
 uninstall:
-	pip uninstall -y ngraph
+	pip uninstall -y neon
 	pip uninstall -r requirements.txt
 
 uninstall_all: uninstall
-	pip uninstall -y -r gpu_requirements.txt -r test_requirements.txt \
-	-r examples_requirements.txt -r doc_requirements.txt -r viz_requirements.txt \
-	-r multinode_requirements.txt
+	pip uninstall -y -r test_requirements.txt \
+	-r examples_requirements.txt -r doc_requirements.txt -r viz_requirements.txt
 
 clean:
 	find . -name "*.py[co]" -type f -delete
 	find . -name "__pycache__" -type d -delete
 	rm -f .coverage .coverage.*
-	rm -rf ngraph.egg-info
+	rm -rf neon.egg-info
 	@echo
 
-test_all_transformers: test_cpu test_hetr test_gpu test_flex
-
-test_flex: gpu_prepare test_prepare clean
-	@echo
-	@echo The autoflex package is required for flex testing ...
-	@echo WARNING: flex tests will report the following message if autoflex has not been installed:
-	@echo
-	@echo "     argument --transformer: invalid choice: 'flexgpu' (choose from 'cpu', 'gpu', \
-	'hetr')"
-
-	@echo
-	@echo "In case of test failures, clone the private autoflex repo in ../autoflex and execute \
-	make autoflex_prepare"
-	@echo
-	@echo Running flex unit tests...
-	py.test --boxed --transformer flexgpu -m "transformer_dependent and not hetr_only or flex_only" \
-	--junit-xml=testout_test_flex_$(PY).xml --timeout=1200 --cov=ngraph \
-	$(TEST_DIRS) $(TEST_DIRS_NEON) ${TEST_DIRS_TENSORFLOW} ${TEST_DIRS_ONNX} ${TEST_DIRS_COMMON}
-	coverage xml -i -o coverage_test_flex_$(PY).xml
-
-test_mkldnn: export PYTHONHASHSEED=0
-test_mkldnn: export MKL_TEST_ENABLE=1
-test_mkldnn: export LD_PRELOAD+=:./mkldnn_engine.so
-test_mkldnn: export LD_PRELOAD+=:${WARP_CTC_PATH}/libwarpctc.so
-test_mkldnn: multinode_prepare test_prepare clean
-test_mkldnn:
-	@echo Running unit tests for core and cpu transformer tests...
-	py.test -m "transformer_dependent and not hetr_only and not flex_only" --boxed \
-	--junit-xml=testout_test_mkldnn_cpu_$(PY).xml \
-	$(TEST_OPTS) $(TEST_DIRS)
-	@echo Running unit tests for hetr dependent transformer tests...
-	unset http_proxy && \
-	unset https_proxy && \
-	unset HTTP_PROXY && \
-	unset HTTPS_PROXY && \
-	py.test --transformer hetr -m "transformer_dependent and not flex_only or hetr_only" --boxed \
-	--junit-xml=testout_test_mkldnn_hetr_$(PY).xml \
-	--cov-append \
-	$(TEST_OPTS) $(TEST_DIRS) $(TEST_DIRS_NEON) $(TEST_DIRS_TENSORFLOW) ${TEST_DIRS_ONNX} ${TEST_DIRS_COMMON}
-	coverage xml -i -o coverage_test_mkldnn_$(PY).xml
+test_all_transformers: test_cpu
 
 test_cpu: export LD_PRELOAD+=:${WARP_CTC_PATH}/libwarpctc.so
 test_cpu: export PYTHONHASHSEED=0
@@ -167,70 +108,8 @@ test_cpu: test_prepare clean
 	echo Running unit tests for core and cpu transformer tests...
 	py.test -m "not hetr_only and not flex_only and not hetr_gpu_only" --boxed \
 	--junit-xml=testout_test_cpu_$(PY).xml \
-	$(TEST_OPTS) $(TEST_DIRS) $(TEST_DIRS_NEON) $(TEST_DIRS_TENSORFLOW) ${TEST_DIRS_ONNX} ${TEST_DIRS_COMMON}
+	$(TEST_OPTS) $(TEST_DIRS) $(TEST_DIRS_NEON) ${TEST_DIRS_COMMON}
 	coverage xml -i -o coverage_test_cpu_$(PY).xml
-
-test_gpu: export LD_PRELOAD+=:${WARP_CTC_PATH}/libwarpctc.so
-test_gpu: export PYTHONHASHSEED=0
-test_gpu: gpu_prepare test_prepare clean
-	echo Running unit tests for gpu dependent transformer tests...
-	py.test --transformer hetr -m "hetr_gpu_only" \
-	--boxed \
-	--junit-xml=testout_test_gpu_hetr_only_$(PY).xml \
-	$(TEST_OPTS) $(TEST_DIRS)
-	py.test --transformer gpu -m "transformer_dependent and not flex_only and not hetr_only and \
-	not separate_execution" \
-	--boxed $(PARALLEL_OPTS) --junit-xml=testout_test_gpu_tx_dependent_$(PY).xml --cov-append \
-	$(TEST_OPTS) $(TEST_DIRS) $(TEST_DIRS_NEON) $(TEST_DIRS_TENSORFLOW) ${TEST_DIRS_COMMON}
-	py.test --transformer gpu -m "transformer_dependent and not flex_only and not hetr_only and \
-	separate_execution" \
-	--boxed --junit-xml=testout_test_gpu_tx_dependent_separate_execution_$(PY).xml --cov-append \
-	$(TEST_OPTS) $(TEST_DIRS)
-	coverage xml -i -o coverage_test_gpu_$(PY).xml
-
-test_hetr: export LD_PRELOAD+=:${WARP_CTC_PATH}/libwarpctc.so
-test_hetr: export PYTHONHASHSEED=0
-test_hetr: multinode_prepare test_prepare clean
-	echo Running unit tests for hetr dependent transformer tests...
-	unset http_proxy && \
-	unset https_proxy && \
-	unset HTTP_PROXY && \
-	unset HTTPS_PROXY && \
-	py.test --transformer hetr -m "transformer_dependent and not flex_only or hetr_only" \
-	--hetr_device cpu --boxed \
-	--junit-xml=testout_test_hetr_$(PY).xml \
-	$(TEST_OPTS) $(TEST_DIRS) $(TEST_DIRS_NEON) $(TEST_DIRS_TENSORFLOW) ${TEST_DIRS_ONNX} ${TEST_DIRS_COMMON}
-	coverage xml -i -o coverage_test_hetr_$(PY).xml
-
-test_mgpu: export LD_PRELOAD+=:${WARP_CTC_PATH}/libwarpctc.so
-test_mgpu: export PYTHONHASHSEED=0
-test_mgpu: multinode_prepare test_prepare clean
-	echo Running unit tests for hetr dependent transformer tests...
-	unset http_proxy && \
-	unset https_proxy && \
-	unset HTTP_PROXY && \
-	unset HTTPS_PROXY && \
-	py.test --transformer hetr -m multi_device --hetr_device gpu --boxed \
-	--junit-xml=testout_test_mgpu_$(PY).xml \
-	$(TEST_OPTS) $(TEST_DIRS) $(TEST_DIRS_NEON) $(TEST_DIRS_TENSORFLOW) ${TEST_DIRS_ONNX} ${TEST_DIRS_COMMON}
-	coverage xml -i -o coverage_test_mgpu_$(PY).xml
-
-test_mxnet: test_prepare clean
-	echo Running unit tests for mxnet frontend...
-	py.test --cov=ngraph \
-	--junit-xml=testout_test_mxnet_$(PY).xml \
-	$(TEST_OPTS) $(TEST_DIRS_MXNET)
-	coverage xml -i coverage_test_mxnet_$(PY).xml
-
-test_cntk: test_prepare clean
-	echo Running unit tests for cntk frontend...
-	py.test --cov=ngraph --junit-xml=testout_test_cntk_$(PY).xml $(TEST_OPTS) $(TEST_DIRS_CNTK)
-	coverage xml -i -o coverage_test_cntk_$(PY).xml
-
-test_caffe2: test_prepare clean
-	echo Running unit tests for caffe2 frontend...
-	py.test --cov=ngraph --junit-xml=testout_test_caffe2_$(PY).xml $(TEST_OPTS) $(TEST_DIRS_CAFFE2)
-	coverage xml -i -o coverage_test_caffe2_$(PY).xml
 
 test_integration: test_prepare clean
 	echo Running integration tests...
@@ -240,9 +119,6 @@ test_integration: test_prepare clean
 
 examples: examples_prepare
 	for file in `find examples -type f -executable`; do echo Running $$file... ; ./$$file ; done
-
-gpu_examples: examples_prepare gpu_prepare
-	for file in `find examples -type f -executable | grep -v hetr`; do echo Running $$file... ; ./$$file -b gpu; done
 
 style: test_prepare
 	flake8 --output-file style.txt --tee $(STYLE_CHECK_OPTS) $(STYLE_CHECK_DIRS)
@@ -261,7 +137,7 @@ check: test_prepare
 	echo
 	echo "Number of missing docstrings is..."
 	-pylint --disable=all --enable=missing-docstring -r n \
-	 ngraph | grep "^C" | wc -l
+	 src/neon | grep "^C" | wc -l
 	echo
 	echo "Running unit tests..."
 	-py.test $(TEST_DIRS) | tail -1 | cut -f 2,3 -d ' '
@@ -302,13 +178,6 @@ release: check
 	echo
 
 UNAME=$(shell uname)
-onnx_dependency:
-ifeq ("$(UNAME)", "Darwin")
-	brew install protobuf
-else ifeq ("$(UNAME)", "Linux")
-	sudo apt-get install protobuf-compiler libprotobuf-dev
-endif
-
 viz_prepare:
 ifeq ("$(UNAME)", "Darwin")
 	brew install graphviz

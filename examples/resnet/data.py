@@ -18,9 +18,9 @@ import os
 import numpy as np
 from PIL import Image
 from tqdm import tqdm
-from ngraph.frontends.neon.aeon_shim import AeonDataLoader
-from ngraph.util.persist import get_data_cache_or_nothing
-from ngraph.frontends.neon import CIFAR10, CIFAR100
+from neon.frontends.neon.aeon_shim import AeonDataLoader
+from neon.util.persist import get_data_cache_or_nothing
+from neon.frontends.neon import CIFAR10, CIFAR100
 
 
 def ingest_cifar100(root_dir, overwrite=False):

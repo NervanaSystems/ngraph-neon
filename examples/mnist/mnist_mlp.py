@@ -30,19 +30,19 @@ from __future__ import print_function
 from contextlib import closing
 import os
 import numpy as np
-import ngraph as ng
-from ngraph.frontends.neon import Layer, Affine, Preprocess, Sequential
-from ngraph.frontends.neon import GaussianInit, Rectlin, Logistic, GradientDescentMomentum
-from ngraph.frontends.neon import ax, loop_train, make_bound_computation, make_default_callbacks
-from ngraph.frontends.neon import loop_eval
-from ngraph.frontends.neon import NgraphArgparser
-from ngraph.frontends.neon import ArrayIterator
+import neon as ng
+from neon.frontends.neon import Layer, Affine, Preprocess, Sequential
+from neon.frontends.neon import GaussianInit, Rectlin, Logistic, GradientDescentMomentum
+from neon.frontends.neon import ax, loop_train, make_bound_computation, make_default_callbacks
+from neon.frontends.neon import loop_eval
+from neon.frontends.neon import NeonArgparser
+from neon.frontends.neon import ArrayIterator
 
-from ngraph.frontends.neon import MNIST
-from ngraph.frontends.neon import Saver
-import ngraph.transformers as ngt
+from neon.frontends.neon import MNIST
+from neon.frontends.neon import Saver
+import neon.transformers as ngt
 
-parser = NgraphArgparser(description='Train simple mlp on mnist dataset')
+parser = NeonArgparser(description='Train simple mlp on mnist dataset')
 parser.add_argument('--save_file', type=str, default=None, help="File to save weights")
 parser.add_argument('--load_file', type=str, default=None, help="File to load weights")
 parser.add_argument('--inference', action="store_true", help="Run Inference with loaded weight")

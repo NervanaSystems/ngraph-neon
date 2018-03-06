@@ -14,7 +14,7 @@
 # limitations under the License.
 # ******************************************************************************
 import numpy as np
-import ngraph as ng
+import neon as ng
 from future.utils import viewitems
 
 

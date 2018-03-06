@@ -16,9 +16,9 @@
 import numpy as np
 import pytest
 
-import ngraph as ng
-from ngraph.op_graph.axes import TensorDescription
-from ngraph.testing import ExecutorFactory
+import neon as ng
+from neon.op_graph.axes import TensorDescription
+from neon.testing import ExecutorFactory
 
 pytestmark = pytest.mark.transformer_dependent
 

@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ******************************************************************************
-import ngraph as ng
-from ngraph.op_graph.op_graph import as_op
-from ngraph.transformers.passes.passes import SimplePrune
+import neon as ng
+from neon.op_graph.op_graph import as_op
+from neon.transformers.passes.passes import SimplePrune
 from orderedset import OrderedSet
 
 

@@ -5,12 +5,12 @@ Created on Fri Aug 25 01:04:05 2017
 @author: mphielipp
 """
 
-import ngraph as ng
-from ngraph.frontends.neon import LookupTable
-from ngraph.frontends.neon import UniformInit
-from ngraph.frontends.neon import Affine, Sequential, XavierInit
-from ngraph.frontends.neon import Dropout
-from ngraph.frontends.neon import SubGraph
+import neon as ng
+from neon.frontends.neon import LookupTable
+from neon.frontends.neon import UniformInit
+from neon.frontends.neon import Affine, Sequential, XavierInit
+from neon.frontends.neon import Dropout
+from neon.frontends.neon import SubGraph
 
 
 # Please read data.py to understand how the data is being preprocess.

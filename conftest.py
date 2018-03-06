@@ -14,8 +14,8 @@
 # limitations under the License.
 # ******************************************************************************
 import pytest
-import ngraph.transformers as ngt
-import ngraph.op_graph.serde.serde as serde
+import neon.transformers as ngt
+import neon.op_graph.serde.serde as serde
 
 
 def pytest_addoption(parser):

@@ -15,10 +15,10 @@
 # limitations under the License.
 # ******************************************************************************
 
-import ngraph as ng
+import neon as ng
 from benchmark import Benchmark
 from examples.deepspeech.deepspeech import Deepspeech
-from ngraph.frontends.neon import ax, GradientDescentMomentum, NgraphArgparser
+from neon.frontends.neon import ax, GradientDescentMomentum, NeonArgparser
 from fake_data_generator import generate_ds2_data
 
 
@@ -74,7 +74,7 @@ def run_mini_ds2_benchmark(args, **kwargs):
 
 
 if __name__ == "__main__":
-    parser = NgraphArgparser(description='Train mini deep speech 2')
+    parser = NeonArgparser(description='Train mini deep speech 2')
     parser.add_argument('--nfilters', type=int,
                         help='Number of convolutional filters in the first layer',
                         default=2)

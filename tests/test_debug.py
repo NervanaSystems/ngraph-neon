@@ -14,8 +14,8 @@
 # limitations under the License.
 # ******************************************************************************
 import numpy as np
-import ngraph as ng
-from ngraph.testing import check_derivative, executor, RandomTensorGenerator
+import neon as ng
+from neon.testing import check_derivative, executor, RandomTensorGenerator
 
 rng = RandomTensorGenerator(0, np.float32)
 

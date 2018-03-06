@@ -22,21 +22,21 @@ usage(WGAN-GP): python mnist_gan.py -b gpu -z 64 -t 15000 --loss_type 'WGAN-GP'
 
 import numpy as np
 from contextlib import closing
-import ngraph as ng
+import neon as ng
 import os
-import ngraph.transformers as ngt
-from ngraph.frontends.neon import (Sequential, Deconvolution, Convolution,
+import neon.transformers as ngt
+from neon.frontends.neon import (Sequential, Deconvolution, Convolution,
                                    Rectlin, Logistic, Tanh,
                                    Adam, ArrayIterator,
                                    KaimingInit, make_bound_computation)
-from ngraph.frontends.neon import NgraphArgparser
-from ngraph.frontends.neon import MNIST
-from ngraph.frontends.neon.logging import ProgressBar
-from ngraph.util.names import name_scope
+from neon.frontends.neon import NeonArgparser
+from neon.frontends.neon import MNIST
+from neon.frontends.neon.logging import ProgressBar
+from neon.util.names import name_scope
 from utils import save_plots, get_image, train_schedule, Noise
 
 # parse command line arguments
-parser = NgraphArgparser()
+parser = NeonArgparser()
 parser.add_argument('--plot_interval', type=int, default=200,
                     help='Save generated images with a period of this many iterations')
 parser.add_argument('--loss_type', default='WGAN-GP',

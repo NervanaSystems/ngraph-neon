@@ -16,8 +16,8 @@
 
 import pytest
 import numpy as np
-import ngraph as ng
-from ngraph.testing import executor, assert_allclose
+import neon as ng
+from neon.testing import executor, assert_allclose
 
 np.random.seed(0)
 

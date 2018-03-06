@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ******************************************************************************
-import ngraph as ng
-from ngraph.util.names import NameableValue
+import neon as ng
+from neon.util.names import NameableValue
 
 
 class Dummy(NameableValue):

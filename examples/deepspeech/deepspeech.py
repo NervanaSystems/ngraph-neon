@@ -17,13 +17,13 @@
 from __future__ import division
 import time
 from contextlib import closing
-import ngraph as ng
-import ngraph.transformers as ngt
-from ngraph.frontends.neon import (GaussianInit, GlorotInit, ConstantInit, Convolution, Rectlin,
+import neon as ng
+import neon.transformers as ngt
+from neon.frontends.neon import (GaussianInit, GlorotInit, ConstantInit, Convolution, Rectlin,
                                    Rectlinclip, BiRNN, GradientDescentMomentum, Affine, Softmax,
                                    Sequential, Layer)
-from ngraph.frontends.neon import ax
-from ngraph.frontends.neon.data import Librispeech
+from neon.frontends.neon import ax
+from neon.frontends.neon.data import Librispeech
 from data import make_aeon_dataloader
 from decoder import ArgMaxDecoder
 
@@ -144,10 +144,10 @@ def decode_outputs(probs, inds, decoder):
 
 if __name__ == "__main__":
     import logging
-    from ngraph.frontends.neon.logging import ProgressBar, PBStreamHandler
-    from ngraph.frontends.neon import NgraphArgparser
+    from neon.frontends.neon.logging import ProgressBar, PBStreamHandler
+    from neon.frontends.neon import NeonArgparser
 
-    parser = NgraphArgparser()
+    parser = NeonArgparser()
     structure = parser.add_argument_group("Network Structure")
     structure.add_argument('--nfilters', type=int,
                            help='Number of convolutional filters in the first layer',

@@ -31,12 +31,12 @@ from __future__ import division, print_function
 from builtins import range
 from contextlib import closing
 import numpy as np
-import ngraph as ng
-from ngraph.frontends.neon import Layer, Sequential, LSTM, Affine, Softmax, Preprocess, LookupTable
-from ngraph.frontends.neon import UniformInit, Tanh, Logistic
-from ngraph.frontends.neon import NgraphArgparser, GradientDescentMomentum
-import ngraph.transformers as ngt
-from ngraph.frontends.neon import Shakespeare, SequentialArrayIterator
+import neon as ng
+from neon.frontends.neon import Layer, Sequential, LSTM, Affine, Softmax, Preprocess, LookupTable
+from neon.frontends.neon import UniformInit, Tanh, Logistic
+from neon.frontends.neon import NeonArgparser, GradientDescentMomentum
+import neon.transformers as ngt
+from neon.frontends.neon import Shakespeare, SequentialArrayIterator
 
 
 def eval_loop(inputs, eval_set, eval_function):
@@ -160,7 +160,7 @@ def expand_onehot(x):
 
 
 # parse the command line arguments
-parser = NgraphArgparser(__doc__)
+parser = NeonArgparser(__doc__)
 parser.add_argument('--use_embedding', default=False, dest='use_embedding', action='store_true',
                     help='If given, embedding layer is used as the first layer')
 parser.add_argument('--seq_len', type=int,

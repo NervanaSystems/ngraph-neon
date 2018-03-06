@@ -14,8 +14,8 @@
 # limitations under the License.
 # ******************************************************************************
 from __future__ import division
-from ngraph.frontends.neon import ax
-import ngraph as ng
+from neon.frontends.neon import ax
+import neon as ng
 import numpy as np
 
 

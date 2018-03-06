@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ----------------------------------------------------------------------------
-from ngraph.frontends.neon.aeon_shim import AeonDataLoader
-from ngraph.util.persist import get_data_cache_or_nothing
+from neon.frontends.neon.aeon_shim import AeonDataLoader
+from neon.util.persist import get_data_cache_or_nothing
 
 '''
 Contains the helper functions for video_c3d.py

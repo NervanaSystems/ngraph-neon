@@ -16,8 +16,8 @@
 import numpy as np
 import pytest
 
-import ngraph as ng
-from ngraph.testing import check_derivative, RandomTensorGenerator, executor
+import neon as ng
+from neon.testing import check_derivative, RandomTensorGenerator, executor
 
 
 rng = RandomTensorGenerator(0, np.float32)

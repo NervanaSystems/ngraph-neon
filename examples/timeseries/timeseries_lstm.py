@@ -51,19 +51,19 @@ In addition, generates future values of the sequence based on an initial seed
 
 from __future__ import division, print_function
 from contextlib import closing
-import ngraph as ng
-from ngraph.frontends.neon import Layer, Sequential, LSTM, Affine
-from ngraph.frontends.neon import UniformInit, Tanh, Logistic, Identity, Adam
-from ngraph.frontends.neon import NgraphArgparser, loop_train
-from ngraph.frontends.neon import make_bound_computation, make_default_callbacks
-import ngraph.transformers as ngt
-from ngraph.frontends.neon import ArrayIterator
+import neon as ng
+from neon.frontends.neon import Layer, Sequential, LSTM, Affine
+from neon.frontends.neon import UniformInit, Tanh, Logistic, Identity, Adam
+from neon.frontends.neon import NeonArgparser, loop_train
+from neon.frontends.neon import make_bound_computation, make_default_callbacks
+import neon.transformers as ngt
+from neon.frontends.neon import ArrayIterator
 import timeseries
 import utils
 import imp
 
 # parse the command line arguments
-parser = NgraphArgparser(__doc__)
+parser = NeonArgparser(__doc__)
 parser.add_argument('--predict_seq', default=False, dest='predict_seq', action='store_true',
                     help='If given, seq_len future timepoints are predicted')
 parser.add_argument('--look_ahead', type=int,

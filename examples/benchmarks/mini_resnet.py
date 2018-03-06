@@ -23,10 +23,10 @@ from __future__ import division
 from __future__ import print_function
 from .benchmark import Benchmark
 from .fake_data_generator import generate_data
-from ngraph.frontends.neon import GradientDescentMomentum
-from ngraph.frontends.neon import ax, NgraphArgparser
-from ngraph.frontends.neon import ArrayIterator
-import ngraph as ng
+from neon.frontends.neon import GradientDescentMomentum
+from neon.frontends.neon import ax, NeonArgparser
+from neon.frontends.neon import ArrayIterator
+import neon as ng
 from examples.resnet.resnet import BuildResnet
 
 
@@ -92,7 +92,7 @@ def run_resnet_benchmark(dataset, num_iterations, n_skip, batch_size, device_id,
 
 
 if __name__ == "__main__":
-    parser = NgraphArgparser(description='Train deep residual network')
+    parser = NeonArgparser(description='Train deep residual network')
     parser.add_argument('-data', '--data_set', default='cifar10',
                         choices=['cifar10', 'i1k'], help="data set name")
     parser.add_argument('-s', '--skip_iter', type=int, default=1,

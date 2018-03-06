@@ -14,10 +14,10 @@
 # limitations under the License.
 # ******************************************************************************
 
-from ngraph.testing import check_derivative, RandomTensorGenerator
+from neon.testing import check_derivative, RandomTensorGenerator
 import numpy as np
 import pytest
-import ngraph as ng
+import neon as ng
 rng = RandomTensorGenerator(0, np.float32)
 
 pytestmark = pytest.mark.transformer_dependent
@@ -42,7 +42,7 @@ def test_flatten_deriv_simplified():
 
 @pytest.mark.xfail(strict=True)
 def test_flatten_deriv():
-    from ngraph.frontends.neon import ax
+    from neon.frontends.neon import ax
     np.random.seed(0)
 
     # set shape

@@ -26,12 +26,12 @@ Builds the WGAN and Improved WGAN (WGAN with gradient penality (GP)) models on L
 import numpy as np
 import os
 from contextlib import closing
-import ngraph as ng
-import ngraph.transformers as ngt
-from ngraph.frontends.neon import (Adam, RMSProp, make_bound_computation)
-from ngraph.frontends.neon import NgraphArgparser
-from ngraph.frontends.neon.logging import ProgressBar
-from ngraph.util.names import name_scope
+import neon as ng
+import neon.transformers as ngt
+from neon.frontends.neon import (Adam, RMSProp, make_bound_computation)
+from neon.frontends.neon import NeonArgparser
+from neon.frontends.neon.logging import ProgressBar
+from neon.util.names import name_scope
 from lsun_data import make_aeon_loaders
 from utils import train_schedule, Noise, save_plots, get_image
 from models_lsun import (make_generator_gp, make_generator,
@@ -50,7 +50,7 @@ def make_optimizer(name=None, weight_clip_value=None, loss_type="WGAN-GP"):
     return optimizer
 
 
-parser = NgraphArgparser(description='WGAN on LSUN bedroom dataset')
+parser = NeonArgparser(description='WGAN on LSUN bedroom dataset')
 parser.add_argument('--plot_interval', type=int, default=500,
                     help='display generated samples at this frequency')
 parser.add_argument('--lsun_dir', default="/dataset/lsun", help='LSUN data directory')

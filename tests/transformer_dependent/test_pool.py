@@ -17,10 +17,10 @@
 import numpy as np
 import pytest
 
-import ngraph as ng
-from ngraph.op_graph.pooling import BpropPoolOp
-from ngraph.testing import executor
-from ngraph.frontends.common.utils import conv_output_dim
+import neon as ng
+from neon.op_graph.pooling import BpropPoolOp
+from neon.testing import executor
+from neon.frontends.common.utils import conv_output_dim
 
 
 class PoolParams(object):

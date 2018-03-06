@@ -1,7 +1,7 @@
 from __future__ import division
 import numpy as np
-from ngraph.frontends.neon.aeon_shim import AeonDataLoader
-from ngraph.util.persist import get_data_cache_or_nothing
+from neon.frontends.neon.aeon_shim import AeonDataLoader
+from neon.util.persist import get_data_cache_or_nothing
 
 
 def make_aeon_dataloader(manifest_filename, audio_length, transcript_length,

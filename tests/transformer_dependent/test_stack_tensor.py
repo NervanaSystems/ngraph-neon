@@ -15,8 +15,8 @@
 # ******************************************************************************
 import numpy as np
 
-import ngraph as ng
-from ngraph.testing import ExecutorFactory, RandomTensorGenerator
+import neon as ng
+from neon.testing import ExecutorFactory, RandomTensorGenerator
 import pytest
 
 

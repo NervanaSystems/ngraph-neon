@@ -16,8 +16,8 @@
 from __future__ import print_function
 from functools import wraps
 from collections import OrderedDict
-import ngraph.transformers as ngt
-import ngraph.transformers.passes.nviz
+import neon.transformers as ngt
+import neon.transformers.passes.nviz
 import numpy as np
 import time
 from contextlib import closing

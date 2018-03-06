@@ -10,11 +10,7 @@ numpy==1.13.1
 h5py==2.6.0
 appdirs==1.4.0
 
-# tensorflow & protobuf
 six==1.10.0
-tensorflow==0.12.1
-scipy==0.18.1
-protobuf==3.2.0
 
 # other requirements
 requests==2.13.0
@@ -43,5 +39,3 @@ cffi>=1.0
 parsel==1.2.0
 pillow==4.2.0
 
-# onnx frontend
-onnx==0.2

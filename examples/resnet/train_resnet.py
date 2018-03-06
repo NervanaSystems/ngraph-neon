@@ -18,16 +18,16 @@
 from __future__ import division, print_function
 import sys
 import numpy as np
-import ngraph as ng
-import ngraph.transformers as ngt
-from ngraph.frontends.neon import ax, NgraphArgparser
+import neon as ng
+import neon.transformers as ngt
+from neon.frontends.neon import ax, NeonArgparser
 from tqdm import tqdm
 from data import make_aeon_loaders
-from ngraph.frontends.neon import GradientDescentMomentum
-from ngraph.frontends.neon import Layer
+from neon.frontends.neon import GradientDescentMomentum
+from neon.frontends.neon import Layer
 from resnet import BuildResnet
 from contextlib import closing
-from ngraph.frontends.neon import Saver
+from neon.frontends.neon import Saver
 from utils import get_network_params, set_lr
 
 
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     print("Nesterov:          " + str(nesterov))
 
     # Command Line Parser
-    parser = NgraphArgparser(description="Resnet for Imagenet and Cifar10")
+    parser = NeonArgparser(description="Resnet for Imagenet and Cifar10")
     parser.add_argument('--dataset', type=str, default="cifar10", help="Enter cifar10 or i1k")
     parser.add_argument('--size', type=int, default=56, help="Enter size of resnet")
     parser.add_argument('--tb', action="store_true", help="1- Enables tensorboard")
@@ -142,7 +142,7 @@ with ng.metadata(device=device, device_id=device_id, parallel=ax.N):
     # Tensorboard
     if(args.tb):
         try:
-            from ngraph.op_graph.tensorboard.tensorboard import TensorBoard
+            from neon.op_graph.tensorboard.tensorboard import TensorBoard
         except:
             print("Tensorboard not installed")
         seq1 = BuildResnet(args.dataset, args.size, en_bottleneck, num_resnet_mods)

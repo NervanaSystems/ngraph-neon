@@ -18,9 +18,9 @@ from builtins import range
 
 import numpy as np
 
-import ngraph as ng
-from ngraph.testing import ExecutorFactory, executor
-from ngraph.testing import raise_all_numpy_errors
+import neon as ng
+from neon.testing import ExecutorFactory, executor
+from neon.testing import raise_all_numpy_errors
 import pytest
 
 pytestmark = [pytest.mark.transformer_dependent, pytest.mark.separate_execution]

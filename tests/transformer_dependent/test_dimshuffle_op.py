@@ -2,9 +2,9 @@ from __future__ import print_function
 
 import numpy as np
 import pytest
-from ngraph.testing import executor
+from neon.testing import executor
 
-import ngraph as ng
+import neon as ng
 
 pytestmark = pytest.mark.transformer_dependent
 

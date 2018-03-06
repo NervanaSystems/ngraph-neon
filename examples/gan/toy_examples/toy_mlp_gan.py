@@ -23,15 +23,15 @@ toy example with 1-D Gaussian data distribution
 import numpy as np
 from contextlib import closing
 
-import ngraph as ng
-import ngraph.transformers as ngt
-from ngraph.frontends.neon import Affine, Sequential
-from ngraph.frontends.neon import Rectlin, Identity, Tanh, Logistic
-from ngraph.frontends.neon import GaussianInit, ConstantInit
-from ngraph.frontends.neon import GradientDescentMomentum
-from ngraph.frontends.neon import ArrayIterator
-from ngraph.frontends.neon import make_bound_computation
-from ngraph.frontends.neon import NgraphArgparser
+import neon as ng
+import neon.transformers as ngt
+from neon.frontends.neon import Affine, Sequential
+from neon.frontends.neon import Rectlin, Identity, Tanh, Logistic
+from neon.frontends.neon import GaussianInit, ConstantInit
+from neon.frontends.neon import GradientDescentMomentum
+from neon.frontends.neon import ArrayIterator
+from neon.frontends.neon import make_bound_computation
+from neon.frontends.neon import NeonArgparser
 
 
 def affine_layer(h_dim, activation, name):
@@ -94,7 +94,7 @@ class ToyGAN(object):
         return self.train_set
 
 
-parser = NgraphArgparser(description='MLP GAN example')
+parser = NeonArgparser(description='MLP GAN example')
 args = parser.parse_args()
 
 #  model parameters

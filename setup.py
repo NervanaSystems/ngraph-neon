@@ -14,57 +14,10 @@
 # limitations under the License.
 # ******************************************************************************
 from setuptools import setup, Extension, find_packages
-from setuptools.command.build_ext import build_ext as _build_ext
 import sys
 import sysconfig
 import os
 
-
-class build_ext(_build_ext):
-    """
-    Class to build Extensions without platform suffixes
-    ex: mkldnn_engine.cpython-35m-x86_64-linux-gnu.so => mkldnn_engine.so
-    """
-    def get_ext_filename(self, ext_name):
-
-        _filename = _build_ext.get_ext_filename(self, ext_name)
-        return self.get_ext_filename_without_suffix(_filename)
-
-    def get_ext_filename_without_suffix(self, _filename):
-        name, ext = os.path.splitext(_filename)
-        ext_suffix = sysconfig.get_config_var('EXT_SUFFIX')
-
-        if ext_suffix == ext or ext_suffix == None:
-            return _filename
-
-        ext_suffix = ext_suffix.replace(ext, '')
-        idx = name.find(ext_suffix)
-
-        if idx == -1:
-            return _filename
-        else:
-            return name[:idx] + ext
-
-ext_modules = []
-if "MKLDNN_ROOT" in os.environ:
-    MKLDNNROOT=os.environ['MKLDNN_ROOT']
-    if sys.platform == 'darwin':
-        extra_link_args = ["-Wl,-rpath,%s/lib"%(MKLDNNROOT)]
-    else:
-        extra_link_args = ["-shared", "-Wl,-rpath,%s/lib"%(MKLDNNROOT)]
-    ext_modules.append(Extension('mkldnn_engine',
-                        include_dirs = ['%s/include'%(MKLDNNROOT)],
-			extra_compile_args = ["-std=gnu99"],
-                        extra_link_args = extra_link_args,
-                        library_dirs = ['%s/lib'%(MKLDNNROOT)],
-                        libraries = ['mkldnn'],
-                        sources = ['ngraph/transformers/cpu/convolution.c', \
-                                   'ngraph/transformers/cpu/elementwise.c', \
-                                   'ngraph/transformers/cpu/innerproduct.c', \
-                                   'ngraph/transformers/cpu/mkldnn_engine.c',\
-                                   'ngraph/transformers/cpu/relu.c', \
-                                   'ngraph/transformers/cpu/pooling.c', \
-                                   'ngraph/transformers/cpu/batchnorm.c']))
 
 """
 List requirements here as loosely as possible but include known limitations.
@@ -81,9 +34,6 @@ requirements = [
     "h5py",
     "appdirs",
     "six",
-    "tensorflow",
-    "scipy",
-    "protobuf",
     "requests",
     "frozendict",
     "cached-property",
@@ -94,7 +44,6 @@ requirements = [
     "configargparse",
     "cachetools",
     "decorator",
-    "pynvrtc",
     "monotonic",
     "pillow",
     "jupyter",
@@ -107,17 +56,14 @@ requirements = [
 
 
 setup(
-    name="ngraph",
-    version="0.4.0",
+    name="neon",
+    version="3.0",
     packages=find_packages(exclude=["tests"]),
     install_requires=requirements,
-    author='Nervana Systems',
-    author_email='info@nervanasys.com',
-    url='http://www.nervanasys.com',
-    license='License :: Apache 2.0',
-    cmdclass={
-        'build_ext': build_ext,
-    },
+    author='Intel',
+    author_email='intelnervana@intel.com',
+    url='http://www.intelnervana.com',
+    license='License :: OSI Approved :: Apache Software License',
     ext_modules=ext_modules,
-    package_data={'ngraph': ['logging.json']},
+    package_data={'neon': ['logging.json']},
 )

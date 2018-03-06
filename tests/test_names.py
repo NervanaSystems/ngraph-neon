@@ -1,4 +1,4 @@
-from ngraph.util.names import ScopedNameableValue, name_scope
+from neon.util.names import ScopedNameableValue, name_scope
 
 
 def test_nested_namescope():

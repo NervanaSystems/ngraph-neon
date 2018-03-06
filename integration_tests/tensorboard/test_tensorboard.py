@@ -1,7 +1,7 @@
 import numpy as np
-import ngraph as ng
-from ngraph.op_graph.tensorboard.tensorboard import TensorBoard
-from ngraph.op_graph.tensorboard.graph_def import ngraph_to_tf_graph_def
+import neon as ng
+from neon.op_graph.tensorboard.tensorboard import TensorBoard
+from neon.op_graph.tensorboard.graph_def import neon_to_tf_graph_def
 
 
 tb = TensorBoard("/tmp/test_tensorboard_integration")
@@ -25,8 +25,8 @@ def get_simple_graph():
 
 def test_graph_def_conversion():
     base, graph = get_simple_graph()
-    tf_graphdef = ngraph_to_tf_graph_def(graph)
-    tf_graphdef_2 = ngraph_to_tf_graph_def([base, graph])
+    tf_graphdef = neon_to_tf_graph_def(graph)
+    tf_graphdef_2 = neon_to_tf_graph_def([base, graph])
     assert len(tf_graphdef.node) == 5
     assert tf_graphdef == tf_graphdef_2
 

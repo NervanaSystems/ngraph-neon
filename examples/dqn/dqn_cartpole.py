@@ -1,10 +1,10 @@
 from __future__ import print_function
 
 import gym
-import ngraph as ng
+import neon as ng
 import dqn
 import rl_loop
-from ngraph.frontends import neon
+from neon.frontends import neon
 
 
 def model(action_axes):
@@ -80,8 +80,8 @@ def main():
 
 
 if __name__ == "__main__":
-    from ngraph.frontends.neon import NgraphArgparser
+    from neon.frontends.neon import NeonArgparser
 
-    parser = NgraphArgparser()
+    parser = NeonArgparser()
     parser.parse_args()
     main()

@@ -18,9 +18,9 @@ from builtins import range
 
 import numpy as np
 import pytest
-import ngraph as ng
+import neon as ng
 import collections
-from ngraph.testing import check_derivative, ExecutorFactory, \
+from neon.testing import check_derivative, ExecutorFactory, \
     RandomTensorGenerator, numeric_derivative, executor
 
 pytestmark = pytest.mark.transformer_dependent

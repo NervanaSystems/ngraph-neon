@@ -16,9 +16,9 @@
 import numpy as np
 import pytest
 
-import ngraph as ng
-from ngraph.op_graph.axes import FlattenedAxis, TensorDescription, slice_axis
-from ngraph.op_graph.axes import AxesMap, DuplicateAxisNames
+import neon as ng
+from neon.op_graph.axes import FlattenedAxis, TensorDescription, slice_axis
+from neon.op_graph.axes import AxesMap, DuplicateAxisNames
 
 
 def test_duplicate_axis():

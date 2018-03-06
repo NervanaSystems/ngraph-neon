@@ -16,10 +16,10 @@
 import itertools as itt
 import numpy as np
 
-import ngraph as ng
-import ngraph.transformers as ngt
-from ngraph.testing import RandomTensorGenerator, ExecutorFactory
-from ngraph.frontends.neon import ax
+import neon as ng
+import neon.transformers as ngt
+from neon.testing import RandomTensorGenerator, ExecutorFactory
+from neon.frontends.neon import ax
 from third_party.warp_ctc.ctc import CTC
 import pytest
 

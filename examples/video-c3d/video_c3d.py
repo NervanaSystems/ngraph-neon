@@ -19,15 +19,15 @@ usage: python video_c3d.py -b gpu
 """
 import os
 import numpy as np
-import ngraph as ng
+import neon as ng
 
-from ngraph.frontends.neon import GaussianInit, ConstantInit
-from ngraph.frontends.neon import Layer, Affine, Convolution, Pooling, Sequential
-from ngraph.frontends.neon import Softmax, Rectlin, Dropout, GradientDescentMomentum
-from ngraph.frontends.neon import ax, make_bound_computation
-from ngraph.frontends.neon import NgraphArgparser
+from neon.frontends.neon import GaussianInit, ConstantInit
+from neon.frontends.neon import Layer, Affine, Convolution, Pooling, Sequential
+from neon.frontends.neon import Softmax, Rectlin, Dropout, GradientDescentMomentum
+from neon.frontends.neon import ax, make_bound_computation
+from neon.frontends.neon import NeonArgparser
 
-import ngraph.transformers as ngt
+import neon.transformers as ngt
 from tqdm import tqdm, trange
 from contextlib import closing
 from data import make_train_loader, make_validation_loader
@@ -232,7 +232,7 @@ if __name__ == "__main__":
     # Load training configuration and parse arguments
     train_config = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'train.cfg')
     config_files = [train_config] if os.path.exists(train_config) else []
-    parser = NgraphArgparser(__doc__, default_config_files=config_files)
+    parser = NeonArgparser(__doc__, default_config_files=config_files)
 
     parser.add_argument('--subset_pct', type=float, default=100,
                         help='subset of training dataset to use (percentage)')

@@ -2,7 +2,7 @@ import gym
 import simple_environments  # NOQA
 import dqn
 import rl_loop
-from ngraph.frontends import neon
+from neon.frontends import neon
 import numpy as np
 
 

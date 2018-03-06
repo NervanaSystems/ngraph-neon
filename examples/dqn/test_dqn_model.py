@@ -1,7 +1,7 @@
-from ngraph.examples.dqn import dqn
+from neon.examples.dqn import dqn
 import pytest
 import numpy as np
-from ngraph.frontends import neon
+from neon.frontends import neon
 
 
 def small_model(action_axes):

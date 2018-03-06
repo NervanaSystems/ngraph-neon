@@ -21,17 +21,17 @@ Reference paper: https://arxiv.org/pdf/1506.03134.pdf
 from __future__ import division
 from __future__ import print_function
 from contextlib import closing
-import ngraph as ng
-from ngraph.frontends.neon import UniformInit, RMSProp, ax, Tanh, Logistic
-from ngraph.frontends.neon import NgraphArgparser, make_bound_computation
-from ngraph.frontends.neon import LSTM
-import ngraph.transformers as ngt
-from ngraph.frontends.neon.data.tsp import TSP
+import neon as ng
+from neon.frontends.neon import UniformInit, RMSProp, ax, Tanh, Logistic
+from neon.frontends.neon import NeonArgparser, make_bound_computation
+from neon.frontends.neon import LSTM
+import neon.transformers as ngt
+from neon.frontends.neon.data.tsp import TSP
 from tsp_seqarrayiter import TSPSequentialArrayIterator
 from utils import save_plot
 
 # parse the command line arguments
-parser = NgraphArgparser(__doc__)
+parser = NeonArgparser(__doc__)
 parser.add_argument('--train_file', default='tsp5.txt',
                     choices=['tsp5.txt', 'tsp10.txt'],
                     help='specify training filename')

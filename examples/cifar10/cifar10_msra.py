@@ -27,14 +27,14 @@ For full training, the number of iterations should be 64000 with batch size 128.
 from __future__ import division, print_function
 from builtins import range
 import numpy as np
-import ngraph as ng
-from ngraph.frontends.neon import Layer, Sequential
-from ngraph.frontends.neon import Affine, Preprocess, Convolution, Pooling, BatchNorm, Activation
-from ngraph.frontends.neon import KaimingInit, Rectlin, Softmax, GradientDescentMomentum
-from ngraph.frontends.neon import ax, NgraphArgparser
-from ngraph.frontends.neon import make_bound_computation, make_default_callbacks, loop_train  # noqa
+import neon as ng
+from neon.frontends.neon import Layer, Sequential
+from neon.frontends.neon import Affine, Preprocess, Convolution, Pooling, BatchNorm, Activation
+from neon.frontends.neon import KaimingInit, Rectlin, Softmax, GradientDescentMomentum
+from neon.frontends.neon import ax, NeonArgparser
+from neon.frontends.neon import make_bound_computation, make_default_callbacks, loop_train  # noqa
 from tqdm import tqdm
-import ngraph.transformers as ngt
+import neon.transformers as ngt
 
 ######################
 # Model specification
@@ -127,7 +127,7 @@ def loop_eval(dataset, computation, metric_names):
 
 
 if __name__ == "__main__":
-    parser = NgraphArgparser(description='Train deep residual network on cifar10 dataset')
+    parser = NeonArgparser(description='Train deep residual network on cifar10 dataset')
     parser.add_argument('--stage_depth', type=int, default=2,
                         help='depth of each stage (network depth will be 9n+2)')
     parser.add_argument('--use_aeon', action='store_true', help='whether to use aeon dataloader')
@@ -142,8 +142,8 @@ if __name__ == "__main__":
                                                  args.batch_size,
                                                  args.num_iterations)
     else:
-        from ngraph.frontends.neon import ArrayIterator  # noqa
-        from ngraph.frontends.neon import CIFAR10  # noqa
+        from neon.frontends.neon import ArrayIterator  # noqa
+        from neon.frontends.neon import CIFAR10  # noqa
         train_data, valid_data = CIFAR10(args.data_dir).load_data()
         train_set = ArrayIterator(train_data, args.batch_size,
                                   total_iterations=args.num_iterations)

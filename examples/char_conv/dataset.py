@@ -15,7 +15,7 @@
 import string
 import csv
 import numpy as np
-from ngraph.util.persist import valid_path_append
+from neon.util.persist import valid_path_append
 
 
 class CrepeDataset(object):

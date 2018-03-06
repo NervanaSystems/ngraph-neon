@@ -41,8 +41,8 @@ The ``mnist_mlp.py`` example provides an introduction into the neon frontend. Si
 
 .. code-block:: python
 
-	from ngraph.frontends.neon import NgraphArgparser
-	parser = NgraphArgparser(description='Train simple mlp on mnist dataset')
+	from neon.frontends.neon import NeonArgparser
+	parser = NeonArgparser(description='Train simple mlp on mnist dataset')
 	args = parser.parse_args()
 
 To provision data to the model, we use the ``ArrayIterator`` object, which is a Python iterator that returns a minibatch of inputs and targets to the model with each call. We also provide a helper function for handling the MNIST dataset and providing NumPY arrays with the image and target data.
@@ -50,7 +50,7 @@ To provision data to the model, we use the ``ArrayIterator`` object, which is a 
 .. code-block:: python
 
 	from mnist import MNIST
-	from ngraph.frontends.neon import ArrayIterator
+	from neon.frontends.neon import ArrayIterator
 
 	# Create the dataloader
 	train_data, valid_data = MNIST(args.data_dir).load_data()

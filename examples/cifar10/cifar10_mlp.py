@@ -29,17 +29,17 @@ from __future__ import division
 from __future__ import print_function
 from contextlib import closing
 import numpy as np
-import ngraph as ng
-from ngraph.frontends.neon import Layer, Affine, Preprocess, Sequential
-from ngraph.frontends.neon import UniformInit, Rectlin, Softmax, GradientDescentMomentum
-from ngraph.frontends.neon import ax, loop_train, make_bound_computation, make_default_callbacks
-from ngraph.frontends.neon import NgraphArgparser
-from ngraph.frontends.neon import ArrayIterator
+import neon as ng
+from neon.frontends.neon import Layer, Affine, Preprocess, Sequential
+from neon.frontends.neon import UniformInit, Rectlin, Softmax, GradientDescentMomentum
+from neon.frontends.neon import ax, loop_train, make_bound_computation, make_default_callbacks
+from neon.frontends.neon import NeonArgparser
+from neon.frontends.neon import ArrayIterator
 
-from ngraph.frontends.neon import CIFAR10
-import ngraph.transformers as ngt
+from neon.frontends.neon import CIFAR10
+import neon.transformers as ngt
 
-parser = NgraphArgparser(description='Train simple mlp on cifar10 dataset')
+parser = NeonArgparser(description='Train simple mlp on cifar10 dataset')
 args = parser.parse_args()
 
 np.random.seed(args.rng_seed)

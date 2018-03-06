@@ -16,11 +16,11 @@
 import itertools as itt
 import numpy as np
 
-import ngraph as ng
-from ngraph.op_graph.lookuptable import lookuptable_update
-import ngraph.transformers as ngt
-from ngraph.testing import RandomTensorGenerator, ExecutorFactory
-from ngraph.frontends.neon import ax
+import neon as ng
+from neon.op_graph.lookuptable import lookuptable_update
+import neon.transformers as ngt
+from neon.testing import RandomTensorGenerator, ExecutorFactory
+from neon.frontends.neon import ax
 import pytest
 
 pytestmark = pytest.mark.transformer_dependent

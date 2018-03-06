@@ -16,9 +16,9 @@
 import numpy as np
 import pytest
 
-import ngraph as ng
-from ngraph.op_graph.convolution import bprop_conv, update_conv
-from ngraph.testing import ExecutorFactory, RandomTensorGenerator, executor, ConvParams, \
+import neon as ng
+from neon.op_graph.convolution import bprop_conv, update_conv
+from neon.testing import ExecutorFactory, RandomTensorGenerator, executor, ConvParams, \
     reference_deconv_fprop, reference_deconv_bprop, reference_conv, is_flex_factory
 
 pytestmark = [pytest.mark.transformer_dependent, pytest.mark.separate_execution]

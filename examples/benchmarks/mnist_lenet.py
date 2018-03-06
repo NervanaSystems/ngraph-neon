@@ -36,17 +36,17 @@ from __future__ import division
 from __future__ import print_function
 from contextlib import closing
 import numpy as np
-import ngraph as ng
-from ngraph.frontends.neon import Layer, Affine, Preprocess, Convolution, Pooling, Sequential
-from ngraph.frontends.neon import XavierInit, Rectlin, Softmax, GradientDescentMomentum
-from ngraph.frontends.neon import ax, loop_train
-from ngraph.frontends.neon import NgraphArgparser, make_bound_computation, make_default_callbacks
-from ngraph.frontends.neon import ArrayIterator
+import neon as ng
+from neon.frontends.neon import Layer, Affine, Preprocess, Convolution, Pooling, Sequential
+from neon.frontends.neon import XavierInit, Rectlin, Softmax, GradientDescentMomentum
+from neon.frontends.neon import ax, loop_train
+from neon.frontends.neon import NeonArgparser, make_bound_computation, make_default_callbacks
+from neon.frontends.neon import ArrayIterator
 
-from ngraph.frontends.neon import MNIST
-import ngraph.transformers as ngt
+from neon.frontends.neon import MNIST
+import neon.transformers as ngt
 
-parser = NgraphArgparser(description='Train LeNet topology on Mnist dataset')
+parser = NeonArgparser(description='Train LeNet topology on Mnist dataset')
 args = parser.parse_args()
 
 np.random.seed(args.rng_seed)

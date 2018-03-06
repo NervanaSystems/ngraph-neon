@@ -19,11 +19,11 @@ from six import BytesIO
 from google.protobuf.json_format import Parse
 
 import numpy as np
-import ngraph as ng
-from ngraph.op_graph.serde import ops_pb2
-from ngraph.op_graph.serde import serde_weights
-from ngraph.op_graph.serde import serde
-from ngraph.testing import executor, ExecutorFactory
+import neon as ng
+from neon.op_graph.serde import ops_pb2
+from neon.op_graph.serde import serde_weights
+from neon.op_graph.serde import serde
+from neon.testing import executor, ExecutorFactory
 
 
 def assign_ops(ops, values):

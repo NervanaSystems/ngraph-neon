@@ -18,8 +18,8 @@
 import numpy as np
 import pytest
 
-import ngraph as ng
-from ngraph.testing import ExecutorFactory, executor
+import neon as ng
+from neon.testing import ExecutorFactory, executor
 
 
 def test_add_with_scalar():

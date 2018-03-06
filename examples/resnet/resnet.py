@@ -16,12 +16,12 @@
 # ******************************************************************************
 from __future__ import division, print_function
 import numpy as np
-import ngraph as ng
-from ngraph.frontends.neon import Sequential
-from ngraph.frontends.neon import Affine, Preprocess, Convolution, Pooling, Activation
-from ngraph.frontends.neon import KaimingInit, Rectlin, Softmax
-from ngraph.frontends.neon.model import ResidualModule
-from ngraph.frontends.neon import ax
+import neon as ng
+from neon.frontends.neon import Sequential
+from neon.frontends.neon import Affine, Preprocess, Convolution, Pooling, Activation
+from neon.frontends.neon import KaimingInit, Rectlin, Softmax
+from neon.frontends.neon.model import ResidualModule
+from neon.frontends.neon import ax
 
 
 # Helpers

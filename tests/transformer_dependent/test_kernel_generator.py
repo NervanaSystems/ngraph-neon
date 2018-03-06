@@ -16,10 +16,10 @@
 from __future__ import division
 import numpy as np
 import pytest
-import ngraph as ng
+import neon as ng
 
-from ngraph.testing import executor, ExecutorFactory, is_flex_factory
-from ngraph.testing.random import RandomTensorGenerator
+from neon.testing import executor, ExecutorFactory, is_flex_factory
+from neon.testing.random import RandomTensorGenerator
 
 rng = RandomTensorGenerator()
 

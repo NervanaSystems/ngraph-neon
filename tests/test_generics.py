@@ -14,7 +14,7 @@
 # limitations under the License.
 # ******************************************************************************
 
-from ngraph.util.generics import generic_function, generic_method
+from neon.util.generics import generic_function, generic_method
 
 
 class A(object):
