@@ -90,8 +90,6 @@ def test_conv(n64_hw32_c32_3x3):
 
 
 @pytest.mark.skip(reason="Not implemented in pybindtransformer")
-@pytest.config.flex_disabled(reason="There is no kernel for DeconvolutionOp for flex - #1841")
-@pytest.config.argon_disabled(reason="DeconvolutionOp not yet supported - #1781")
 def test_deconv(deconv_n4_hw4_c1_5x5):
     cf = ConvParams(**deconv_n4_hw4_c1_5x5)
 
@@ -131,8 +129,6 @@ def test_deconv(deconv_n4_hw4_c1_5x5):
 
 
 @pytest.mark.skip(reason="Not implemented in pybindtransformer")
-@pytest.config.flex_disabled(reason="There is no kernel for DeconvolutionOp for flex - #1841")
-@pytest.config.argon_disabled(reason="DeconvolutionOp not yet supported - #1781")
 def test_2layer_deconv(deconv_n4_hw4_c1_5x5):
     cf1 = ConvParams(**deconv_n4_hw4_c1_5x5)
 
@@ -242,8 +238,6 @@ def test_first_axes_not_same():
             filters=filters.axes[0])
 
 
-@pytest.config.flex_disabled(reason="GitHub #1822 - FlexConvUpdateKernel does not change DEC, "
-                                    "it use default from autoflex")
 def test_convolution_backprop(n128_hw32_c3_2x2):
     """
     test convolution backprop path
@@ -268,7 +262,6 @@ def test_convolution_backprop(n128_hw32_c3_2x2):
 
 
 @pytest.mark.skip(reason="PybindTransfomer issue in handling ng.variable type of input")
-@pytest.config.flex_disabled(reason="Unknown problem yet")
 def test_conv_flatten_deriv(n4_hw12_c3_5x5):
     """
     Test deriv of conv followed by flatten

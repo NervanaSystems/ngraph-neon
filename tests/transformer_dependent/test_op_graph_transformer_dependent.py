@@ -57,7 +57,6 @@ def M():
     return ng.make_axis(length=3)
 
 
-@pytest.config.argon_disabled(reason="Argon Transformer error")  # TODO triage
 def test_sign():
     x_np = np.array([-1.2, 2.3, 0.0, 1.2])
     N = ng.make_axis(len(x_np))
@@ -108,7 +107,6 @@ def test_sequential_reduce(M):
         assert np.allclose(p_val, x2_np)
 
 
-@pytest.config.flex_disabled(reason='Results mismatch')
 def test_sequential_side(M):
     x1_np = 2
     x2_np = 3
@@ -177,7 +175,6 @@ def test_concatenate(concatenate_variables):
         ng.testing.assert_allclose(e_d.copy(), np.ones(x_list[0].axes.lengths))
 
 
-@pytest.config.argon_disabled(reason="Argon Transformer error")  # TODO triage
 def test_concat_different_axis_lengths():
     ax1 = ng.make_axis(length=3, name="concat")
     ax2 = ng.make_axis(length=2, name="concat")
@@ -217,7 +214,6 @@ def test_initial_value():
     ng.testing.assert_allclose(result, np.asarray(w, dtype=np.float32))
 
 
-@pytest.config.argon_disabled(reason="#2219 - ArgonSim ValueError: axes don't match array")
 def test_multiple_computations():
     """
     Create multiple computations for the same value.

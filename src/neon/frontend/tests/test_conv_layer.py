@@ -73,7 +73,6 @@ def spatial_onehot(input_size, width, batch_size):
     return value
 
 
-@pytest.config.argon_disabled(reason="Argon Transformer error")  # TODO triage
 def test_causal_convolution(conv1d_placeholder, spatial_onehot, output_size, width):
     """ Test that causal convolutions only operate on leftward inputs"""
     conv_layer = Convolution((3, output_size), lambda x: 1, padding="causal")
@@ -193,7 +192,6 @@ def test_dilated_conv(dilation):
          "{} != {}").format(np.shape(output), (batch_size, N_filters, out_size, out_size))
 
 
-@pytest.config.argon_disabled(reason="Argon Transformer error")  # TODO triage
 @pytest.mark.parametrize('filter_width', [3])
 @pytest.mark.parametrize('num_filters', [2])
 @pytest.mark.parametrize('strides', [1])
@@ -233,9 +231,7 @@ def test_conv1d(transformer_factory, filter_width, num_filters, strides, padding
 
 
 # TODO: add other configurations?
-@pytest.config.argon_disabled(reason="Argon Transformer error")  # TODO triage
 @pytest.mark.transformer_dependent
-@pytest.config.flex_disabled(reason="#1841, deconv is not yet supported by flex")
 def test_deconv():
     """
     basic test of deconv fprop.

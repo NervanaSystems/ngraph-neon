@@ -61,7 +61,6 @@ def test_use_state():
         assert np.allclose(x_np + x_np, xx_val)
 
 
-@pytest.config.flex_disabled
 def test_modify_state():
     with ExecutorFactory() as ex:
         N = ng.make_axis(3, name='N')

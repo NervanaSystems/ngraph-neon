@@ -112,7 +112,6 @@ def make_weights(input_placeholder, hidden_size, weight_initializer, bias_initia
     return W_in, W_rec, b, init_state, init_state_value
 
 
-@pytest.config.argon_disabled  # TODO triage
 @pytest.mark.transformer_dependent
 @pytest.mark.parametrize("batch_size", [1])
 @pytest.mark.parametrize("sequence_length", [3])
@@ -172,7 +171,6 @@ def test_rnn_fprop(sequence_length, input_size, hidden_size, batch_size, return_
         ng.testing.assert_allclose(fprop_neon, h_ref_list, rtol=fprop_rtol, atol=fprop_atol)
 
 
-@pytest.config.argon_disabled  # TODO triage
 @pytest.mark.transformer_dependent
 @pytest.mark.parametrize("batch_size", [1])
 @pytest.mark.parametrize("sequence_length", [3])
@@ -246,8 +244,6 @@ def test_rnn_deriv_ref(sequence_length, input_size, hidden_size, batch_size, ret
                                        rtol=bprop_rtol, atol=bprop_atol)
 
 
-@pytest.config.flex_disabled(reason="Several: Tensor description, placeholder (deriv), tolerance")
-@pytest.config.argon_disabled  # TODO triage
 @pytest.mark.transformer_dependent
 @pytest.mark.parametrize("batch_size", [1])
 @pytest.mark.parametrize("sequence_length", [3])

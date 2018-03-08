@@ -116,7 +116,6 @@ def test_idempotent_axes_c():
         assert np.array_equal(grad_comp_ng, grad_comp_np)
 
 
-@pytest.config.argon_disabled(reason="Argon Transformer error - TODO triage")
 def test_scalar_broadcast():
     """
     Test broadcasting a scalar into a tensor

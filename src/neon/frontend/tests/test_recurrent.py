@@ -112,7 +112,6 @@ def make_weights(input_placeholder, hidden_size, weight_initializer, bias_initia
     return W_in, W_rec, b, init_state, init_state_value
 
 
-@pytest.config.argon_disabled(reason="#2219 - ArgonSim ValueError: axes don't match array")
 @pytest.mark.transformer_dependent
 @pytest.mark.parametrize("batch_size", [1])
 @pytest.mark.parametrize("sequence_length", [3])
@@ -171,8 +170,6 @@ def test_rnn_fprop(sequence_length, input_size, hidden_size, batch_size,
         ng.testing.assert_allclose(fprop_neon, h_ref_list, rtol=fprop_rtol, atol=fprop_atol)
 
 
-@pytest.config.flex_disabled(reason="#1954 UnsliceOp (Slice deriv) - not yet supported")
-@pytest.config.argon_disabled(reason="#2219 - ArgonSim ValueError: axes don't match array")
 @pytest.mark.transformer_dependent
 @pytest.mark.parametrize("batch_size", [1])
 @pytest.mark.parametrize("sequence_length", [3])
@@ -244,8 +241,6 @@ def test_rnn_deriv_ref(sequence_length, input_size, hidden_size, batch_size, ret
                                        rtol=bprop_rtol, atol=bprop_atol)
 
 
-@pytest.config.flex_disabled(reason="#1954 UnsliceOp (Slice deriv) - not yet supported")
-@pytest.config.argon_disabled(reason="#2219 -  ArgonSim ValueError: axes don't match array")
 @pytest.mark.transformer_dependent
 @pytest.mark.parametrize("batch_size", [1])
 @pytest.mark.parametrize("sequence_length", [3])
@@ -301,7 +296,6 @@ def test_rnn_deriv_numerical(sequence_length, input_size, hidden_size, batch_siz
                                            rtol=num_rtol, atol=num_atol)
 
 
-@pytest.config.argon_disabled(reason="Argon Transformer error")  # TODO triage
 @pytest.mark.transformer_dependent
 @pytest.mark.parametrize("batch_size", [1])
 @pytest.mark.parametrize("sequence_length", [3])
@@ -368,8 +362,6 @@ def test_birnn_fprop(sequence_length, input_size, hidden_size, batch_size, retur
 
 
 # direct xfail - because of the very long time of execution
-@pytest.config.argon_skip(reason="Argon Transformer error")  # TODO triage
-@pytest.config.flex_disabled(reason="BiRNN is not yet supported with Flex")
 @pytest.mark.transformer_dependent
 @pytest.mark.parametrize("batch_size", [1])
 @pytest.mark.parametrize("sequence_length", [3])
@@ -496,8 +488,6 @@ def test_stacked_birnn_construction(recurrent_input, output_size, weight_initial
     rnn2(out)
 
 
-@pytest.config.argon_disabled(reason="#2219 - ArgonSim ValueError: axes don't match array")
-@pytest.config.flex_disabled(reason="Seq2Seq is not yet supported with Flex")
 @pytest.mark.transformer_dependent
 @pytest.mark.parametrize("batch_size", [1])
 @pytest.mark.parametrize("sequence_length_enc", [5])
@@ -594,7 +584,6 @@ def test_seq2seq_deriv_ref(batch_size, sequence_length_enc, sequence_length_dec,
                                        atol=1e-4)
 
 
-@pytest.config.argon_disabled(reason="#2219 - ArgonSim ValueError: axes don't match array")
 @pytest.mark.parametrize("recurrent_layer_cls", [Recurrent, LSTM])
 @pytest.mark.parametrize("batch_size", [4])
 @pytest.mark.parametrize("sequence_length", [6])

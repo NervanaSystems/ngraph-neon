@@ -242,7 +242,6 @@ def random_momentum_coef():
     return np.random.random()
 
 
-@pytest.config.flex_skip(reason="The most cases fail because of too strict assert tolerance")
 @pytest.mark.parametrize("wdecay", [0.0005, 0.000, 0.001, 0.1])
 @pytest.mark.parametrize("nesterov", [False, True])
 @pytest.mark.parametrize("select_variables", [False, True])
@@ -265,7 +264,6 @@ def test_gdm(random_learning_rate, random_momentum_coef, wdecay, nesterov,
         compare_optimizer(gdm, gdm_ref)
 
 
-@pytest.config.flex_disabled(reason="Results totally mismatch")
 @pytest.mark.parametrize("decay_rate", [0.95, 1])
 @pytest.mark.parametrize("wdecay", [0.0005, 0.000, 0.001, 0.1])
 @pytest.mark.parametrize("epsilon", [1e-6])
@@ -298,9 +296,6 @@ def random_beta_2():
     return np.random.uniform(low=0.0, high=1.0)
 
 
-@pytest.config.argon_disabled(reason="Argon Transformer error")  # TODO triage
-@pytest.config.flex_skip(reason="Usually all cases fail but very rarely some pass for flex - "
-                                "because of the random character of the parameters")
 @pytest.mark.parametrize("epsilon", [1e-8])
 @pytest.mark.parametrize("select_variables", [False, True])
 def test_adam(random_learning_rate, random_beta_1, random_beta_2, epsilon, select_variables):
@@ -321,7 +316,6 @@ def test_adam(random_learning_rate, random_beta_1, random_beta_2, epsilon, selec
         compare_optimizer(adam, adam_reference)
 
 
-@pytest.config.flex_disabled(reason="Results totally mismatch")
 @pytest.mark.parametrize("epsilon", [1e-6])
 @pytest.mark.parametrize("select_variables", [False, True])
 def test_adagrad(random_learning_rate, epsilon, select_variables):
@@ -338,8 +332,6 @@ def test_adagrad(random_learning_rate, epsilon, select_variables):
         compare_optimizer(adagrad, adagrad_ref)
 
 
-@pytest.config.argon_disabled(reason="Argon Transformer error")  # TODO triage
-@pytest.config.flex_disabled(reason="Unknown problem yet")
 def test_learning_policy_step():
     base_learning_rate = 1.0
     drop_factor = 0.1
@@ -389,7 +381,6 @@ def test_learning_policy_fixed_without_input():
         ng.testing.assert_allclose(baseline_value, base_learning_rate, rtol=1e-6)
 
 
-@pytest.config.argon_disabled(reason="Argon Transformer error")  # TODO triage
 @pytest.mark.parametrize("drop_factor", [0.1,
                                          [0.1, 0.2, 0.3, 0.4, 0.5]])
 def test_learning_policy_schedule(drop_factor):

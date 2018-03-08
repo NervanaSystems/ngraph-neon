@@ -33,7 +33,6 @@ def input_tensor():
     return ng.persistent_tensor(axes, initial_value=10.0)
 
 
-@pytest.config.argon_disabled(reason="Argon Transformer error")  # TODO triage
 def test_uniform_range_pos(input_tensor):
     """TODO."""
     ng_a = ng.uniform(input_tensor, low=0.0, high=0.5)
@@ -47,7 +46,6 @@ def test_uniform_range_pos(input_tensor):
     assert not np.all(result == 0.0)
 
 
-@pytest.config.argon_disabled(reason="Argon Transformer error")  # TODO triage
 def test_uniform_range_posneg(input_tensor):
     """TODO."""
     ng_a = ng.uniform(input_tensor, low=-0.5, high=0.5)
@@ -61,7 +59,6 @@ def test_uniform_range_posneg(input_tensor):
     assert not np.all(result >= 0.0)
 
 
-@pytest.config.argon_disabled(reason="Argon Transformer error")  # TODO triage
 def test_rng_repetition():
     """
     Tests rng ops, to make sure they run every execution and not just initialization
@@ -78,7 +75,6 @@ def test_rng_repetition():
     trans.close()
 
 
-@pytest.config.argon_disabled(reason="Argon Transformer error")  # TODO triage
 def test_normal_negative_mean():
     """TODO."""
     M = ng.make_axis(100).named('M')

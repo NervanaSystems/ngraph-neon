@@ -103,7 +103,6 @@ def test_tensor_constant():
     ng.testing.assert_allclose(cval, aval)
 
 
-@pytest.config.flex_disabled(reason='Results mismatch')
 def test_placeholder():
     W = ng.make_axis(length=10)
     H = ng.make_axis(length=20)
@@ -181,7 +180,6 @@ def test_reduction(reduction, sub_axes):
             red=reduction, axes=reduction_axes)
 
 
-@pytest.config.argon_disabled(reason="Argon Transformer error")  # TODO Triage
 def test_reduction_deriv(reduction, sub_axes):
     if reduction in ('max', 'min'):
         pytest.skip("max/min needed to be tested differently")
@@ -228,7 +226,6 @@ def prod_constant(request):
     return np_axis, map(lambda x: axes_dict[x], axes_names), axes_dict.values()
 
 
-@pytest.config.argon_disabled(reason="Argon Transformer error")  # TODO triage
 def test_prod_constant(prod_constant):
     """
     Test reduce product of constants
@@ -724,7 +721,6 @@ def np_cross_entropy_multi(y, t, axis=None):
     return -np.sum(safelog(y) * t, axis=axis)
 
 
-@pytest.config.flex_disabled(reason="Results mismatch - too strict tolerance (rtol, atol)")
 def test_softmax(input_tensor):
     """TODO."""
     p_x = input_tensor
@@ -1049,7 +1045,6 @@ def test_argmax():
         ng.testing.assert_allclose(baseline, expected)
 
 
-@pytest.config.argon_disabled(reason="Argon Transformer error")  # TODO triage
 def test_fill_slice():
     axes = ng.make_axes([ng.make_axis(length=2), ng.make_axis(length=8)])
     a = ng.placeholder(axes=axes)
@@ -1186,8 +1181,6 @@ def test_wrong_placeholders():
         assert c(1) == 1
 
 
-@pytest.config.argon_disabled(reason="#2220 - ArgonSim ValueError: "
-                                     "total size of new array must be unchanged")
 def test_broadcast_deriv_reorder():
     H = ng.make_axis(2)
     W = ng.make_axis(3)
