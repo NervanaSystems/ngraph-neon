@@ -27,6 +27,8 @@ from neon.transformers.base import UnsupportedTransformerException
 from neon.op_graph.convolution import convolution, deconvolution
 from neon.op_graph.pooling import pooling
 from neon.op_graph.lookuptable import lookuptable
+from neon.op_graph.batchnorm import batchnorm, batchnorminference
+from neon.op_graph.relu import relu
 from neon.op_graph.ctc import ctc
 from neon.op_graph.debug import PrintOp
 from neon.op_graph.op_graph import *

@@ -30,7 +30,7 @@ an environment where an existing version of these required packages exists and s
 not be upgraded/downgraded by our install unless absolutely necessary.
 """
 requirements = [
-    "numpy==1.13.1",
+    "numpy==1.14.1",
     "h5py==2.6.0",
     "appdirs==1.4.0",
     "six==1.10.0",
