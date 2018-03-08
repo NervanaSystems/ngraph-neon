@@ -13,11 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ******************************************************************************
-from setuptools import setup, Extension, find_packages
-import sys
-import sysconfig
-import os
-
+from setuptools import setup, find_packages
 
 with open('requirements.txt') as req:
     requirements = req.read().splitlines()
