@@ -89,7 +89,6 @@ def test_fill_state():
         assert np.allclose(-1, x_val)
 
 
-@pytest.config.argon_disabled(reason="Argon Transformer error")  # TODO triage
 def test_concatenate():
     with ExecutorFactory() as ex:
         A = ng.make_axis(name='A', length=3)
@@ -106,7 +105,6 @@ def test_concatenate():
         ng.testing.assert_allclose(j_val, j_np)
 
 
-@pytest.config.hetr_and_cpu_enabled_only(reason="Only CPU supports dynamic graph changes")
 def test_specific_slice_deriv():
     #
     with ExecutorFactory() as ex:
@@ -129,8 +127,6 @@ def test_specific_slice_deriv():
                 ng.testing.assert_allclose(dslice_dx_val, dslice_dx_np)
 
 
-@pytest.config.flex_disabled(reason="#1954, UnsliceOp multiple slicing not yet supported by flex")
-@pytest.config.argon_disabled(rason="#2219 - ArgonSim ValueError: axes don't match array")
 def test_slice_deriv():
     C = ng.make_axis(length=2)
     D = ng.make_axis(length=3)
