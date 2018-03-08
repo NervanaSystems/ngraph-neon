@@ -153,13 +153,12 @@ if __name__ == "__main__":
     train_loss = ng.cross_entropy_multi(resnet(inputs['image']),
                                         ng.one_hot(label_indices, axis=ax.Y))
     batch_cost = ng.sequential([optimizer(train_loss), ng.mean(train_loss, out_axes=())])
-    train_outputs = dict(batch_cost = batch_cost)
+    train_outputs = dict(batch_cost=batch_cost)
 
     with Layer.inference_mode_on():
         inference_prob = resnet(inputs['image'])
-        errors = ng.not_equal(ng.argmax(inference_prob, out_axes=[ax.N]), label_indices)
         eval_loss = ng.cross_entropy_multi(inference_prob, ng.one_hot(label_indices, axis=ax.Y))
-        eval_outputs = dict(cross_ent_loss=eval_loss, misclass_pct=errors)
+        eval_outputs = dict(results=inference_prob, cross_ent_loss=eval_loss)
 
     # Now bind the computations we are interested in
     with closing(ngt.make_transformer()) as transformer:
@@ -172,6 +171,7 @@ if __name__ == "__main__":
                                      total_iterations=args.num_iterations,
                                      eval_set=valid_set,
                                      loss_computation=loss_computation,
-                                      use_progress_bar=args.progress_bar)
+                                     enable_top5=True,
+                                     use_progress_bar=args.progress_bar)
 
         loop_train(train_set, train_computation, cbs)

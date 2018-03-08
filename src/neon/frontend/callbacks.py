@@ -279,7 +279,7 @@ def loop_train(dataset, computation, callbacks, train_feed_wrapper=None):
     callbacks(CallbackPhase.train_post)
 
 
-def loop_eval(dataset, computation, enable_top5, eval_feed_wrapper=None):
+def loop_eval(dataset, computation, enable_top5=False, eval_feed_wrapper=None):
     dataset.reset()
     all_results = None
 
