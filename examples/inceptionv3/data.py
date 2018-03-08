@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ******************************************************************************
-from neon.op.frontend.aeon_shim import AeonDataLoader
-from neon.op.util.persist import get_data_cache_or_nothing
+from neon.frontend.aeon_shim import AeonDataLoader
+from neon.util.persist import get_data_cache_or_nothing
 
 
 def make_aeon_loaders(train_manifest, valid_manifest,
