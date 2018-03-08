@@ -86,7 +86,7 @@ def main():
 
 
 if __name__ == "__main__":
-    from neon.frontends.neon import NeonArgparser
+    from neon.frontend import NeonArgparser
 
     parser = NeonArgparser()
     parser.parse_args()

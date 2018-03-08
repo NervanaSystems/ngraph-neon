@@ -16,7 +16,7 @@
 import numpy as np
 import neon as ng
 from functools import partial
-from neon.frontends.neon.axis import is_shadow_axis
+from neon.frontend.axis import is_shadow_axis
 
 
 class GaussianInit(object):

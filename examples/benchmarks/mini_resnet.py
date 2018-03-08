@@ -23,9 +23,9 @@ from __future__ import division
 from __future__ import print_function
 from .benchmark import Benchmark
 from .fake_data_generator import generate_data
-from neon.frontends.neon import GradientDescentMomentum
-from neon.frontends.neon import ax, NeonArgparser
-from neon.frontends.neon import ArrayIterator
+from neon.frontend import GradientDescentMomentum
+from neon.frontend import ax, NeonArgparser
+from neon.frontend import ArrayIterator
 import neon as ng
 from examples.resnet.resnet import BuildResnet
 

@@ -1,5 +1,5 @@
 
-from neon.frontends.neon import (Sequential, Deconvolution, Convolution, Rectlin, Affine,
+from neon.frontend import (Sequential, Deconvolution, Convolution, Rectlin, Affine,
                                    Tanh, GaussianInit)
 import neon as ng
 

@@ -6,11 +6,11 @@ Created on Fri Aug 25 01:04:05 2017
 """
 
 import neon as ng
-from neon.frontends.neon import LookupTable
-from neon.frontends.neon import UniformInit
-from neon.frontends.neon import Affine, Sequential, XavierInit
-from neon.frontends.neon import Dropout
-from neon.frontends.neon import SubGraph
+from neon.frontend import LookupTable
+from neon.frontend import UniformInit
+from neon.frontend import Affine, Sequential, XavierInit
+from neon.frontend import Dropout
+from neon.frontend import SubGraph
 
 
 # Please read data.py to understand how the data is being preprocess.

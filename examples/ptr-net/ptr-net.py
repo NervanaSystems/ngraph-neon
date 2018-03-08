@@ -22,11 +22,11 @@ from __future__ import division
 from __future__ import print_function
 from contextlib import closing
 import neon as ng
-from neon.frontends.neon import UniformInit, RMSProp, ax, Tanh, Logistic
-from neon.frontends.neon import NeonArgparser, make_bound_computation
-from neon.frontends.neon import LSTM
+from neon.frontend import UniformInit, RMSProp, ax, Tanh, Logistic
+from neon.frontend import NeonArgparser, make_bound_computation
+from neon.frontend import LSTM
 import neon.transformers as ngt
-from neon.frontends.neon.data.tsp import TSP
+from neon.frontend.data.tsp import TSP
 from tsp_seqarrayiter import TSPSequentialArrayIterator
 from utils import save_plot
 

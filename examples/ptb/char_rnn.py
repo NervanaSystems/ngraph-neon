@@ -31,15 +31,15 @@ Usage:
 
 from contextlib import closing
 import neon as ng
-from neon.frontends.neon import (Layer, Sequential, Preprocess, BiRNN, Recurrent, Affine,
+from neon.frontend import (Layer, Sequential, Preprocess, BiRNN, Recurrent, Affine,
                                    Softmax, Tanh, LookupTable)
-from neon.frontends.neon import UniformInit, RMSProp
-from neon.frontends.neon import ax, loop_train
-from neon.frontends.neon import NeonArgparser, make_bound_computation, make_default_callbacks
-from neon.frontends.neon import SequentialArrayIterator
+from neon.frontend import UniformInit, RMSProp
+from neon.frontend import ax, loop_train
+from neon.frontend import NeonArgparser, make_bound_computation, make_default_callbacks
+from neon.frontend import SequentialArrayIterator
 import neon.transformers as ngt
 
-from neon.frontends.neon import PTB
+from neon.frontend import PTB
 
 
 # parse the command line arguments

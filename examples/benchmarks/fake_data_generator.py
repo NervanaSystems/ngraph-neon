@@ -14,7 +14,7 @@
 # limitations under the License.
 # ******************************************************************************
 from __future__ import division
-from neon.frontends.neon import ax
+from neon.frontend import ax
 import neon as ng
 import numpy as np
 

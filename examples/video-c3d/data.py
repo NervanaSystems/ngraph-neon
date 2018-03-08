@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ----------------------------------------------------------------------------
-from neon.frontends.neon.aeon_shim import AeonDataLoader
+from neon.frontend.aeon_shim import AeonDataLoader
 from neon.util.persist import get_data_cache_or_nothing
 
 '''

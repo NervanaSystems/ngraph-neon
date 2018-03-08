@@ -23,10 +23,10 @@ usage: python toy_wgan.py -b gpu -t 100000
 """
 from contextlib import closing
 import neon.transformers as ngt
-from neon.frontends.neon import Adam, Affine, Rectlin, Sequential
-from neon.frontends.neon import ConstantInit, KaimingInit
-from neon.frontends.neon import make_bound_computation, NeonArgparser
-from neon.frontends.neon.logging import ProgressBar
+from neon.frontend import Adam, Affine, Rectlin, Sequential
+from neon.frontend import ConstantInit, KaimingInit
+from neon.frontend import make_bound_computation, NeonArgparser
+from neon.frontend.logging import ProgressBar
 import neon as ng
 import os
 import numpy as np

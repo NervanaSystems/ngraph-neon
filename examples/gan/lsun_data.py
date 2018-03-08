@@ -15,8 +15,8 @@
 # ******************************************************************************
 import os
 from neon.util.persist import get_data_cache_or_nothing
-from neon.frontends.neon.aeon_shim import AeonDataLoader
-from neon.frontends.neon.data.lsun import LSUN
+from neon.frontend.aeon_shim import AeonDataLoader
+from neon.frontend.data.lsun import LSUN
 
 
 def make_aeon_loaders(work_dir, batch_size, train_iterations, random_seed=0, subset_pct=100.0):

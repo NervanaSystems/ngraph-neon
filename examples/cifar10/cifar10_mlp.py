@@ -30,13 +30,13 @@ from __future__ import print_function
 from contextlib import closing
 import numpy as np
 import neon as ng
-from neon.frontends.neon import Layer, Affine, Preprocess, Sequential
-from neon.frontends.neon import UniformInit, Rectlin, Softmax, GradientDescentMomentum
-from neon.frontends.neon import ax, loop_train, make_bound_computation, make_default_callbacks
-from neon.frontends.neon import NeonArgparser
-from neon.frontends.neon import ArrayIterator
+from neon.frontend import Layer, Affine, Preprocess, Sequential
+from neon.frontend import UniformInit, Rectlin, Softmax, GradientDescentMomentum
+from neon.frontend import ax, loop_train, make_bound_computation, make_default_callbacks
+from neon.frontend import NeonArgparser
+from neon.frontend import ArrayIterator
 
-from neon.frontends.neon import CIFAR10
+from neon.frontend import CIFAR10
 import neon.transformers as ngt
 
 parser = NeonArgparser(description='Train simple mlp on cifar10 dataset')

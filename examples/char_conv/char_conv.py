@@ -16,14 +16,14 @@ from contextlib import closing
 import numpy as np
 import neon as ng
 import neon.transformers as ngt
-from neon.frontends.neon import ax
-from neon.frontends.neon import NeonArgparser, ArrayIterator
-from neon.frontends.neon import GaussianInit, ConstantInit
-from neon.frontends.neon import Sequential, Layer, Convolution, \
+from neon.frontend import ax
+from neon.frontend import NeonArgparser, ArrayIterator
+from neon.frontend import GaussianInit, ConstantInit
+from neon.frontend import Sequential, Layer, Convolution, \
     Pooling, Affine, LookupTable, Dropout
-from neon.frontends.neon import Rectlin, Softmax
-from neon.frontends.neon import GradientDescentMomentum
-from neon.frontends.neon import make_bound_computation, loop_train, \
+from neon.frontend import Rectlin, Softmax
+from neon.frontend import GradientDescentMomentum
+from neon.frontend import make_bound_computation, loop_train, \
     loop_eval, make_default_callbacks
 from dataset import CrepeDataset
 

@@ -16,7 +16,7 @@
 from __future__ import division
 import pytest
 import numpy as np
-from neon.frontends.neon import SequentialArrayIterator
+from neon.frontend import SequentialArrayIterator
 
 
 @pytest.fixture(scope='module',

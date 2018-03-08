@@ -16,7 +16,7 @@
 from __future__ import division
 
 from operator import itemgetter
-from neon.frontends.neon.graph import SubGraph
+from neon.frontend.graph import SubGraph
 import neon as ng
 
 

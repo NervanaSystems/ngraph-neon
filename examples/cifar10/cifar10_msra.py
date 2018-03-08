@@ -28,11 +28,11 @@ from __future__ import division, print_function
 from builtins import range
 import numpy as np
 import neon as ng
-from neon.frontends.neon import Layer, Sequential
-from neon.frontends.neon import Affine, Preprocess, Convolution, Pooling, BatchNorm, Activation
-from neon.frontends.neon import KaimingInit, Rectlin, Softmax, GradientDescentMomentum
-from neon.frontends.neon import ax, NeonArgparser
-from neon.frontends.neon import make_bound_computation, make_default_callbacks, loop_train  # noqa
+from neon.frontend import Layer, Sequential
+from neon.frontend import Affine, Preprocess, Convolution, Pooling, BatchNorm, Activation
+from neon.frontend import KaimingInit, Rectlin, Softmax, GradientDescentMomentum
+from neon.frontend import ax, NeonArgparser
+from neon.frontend import make_bound_computation, make_default_callbacks, loop_train  # noqa
 from tqdm import tqdm
 import neon.transformers as ngt
 
@@ -142,8 +142,8 @@ if __name__ == "__main__":
                                                  args.batch_size,
                                                  args.num_iterations)
     else:
-        from neon.frontends.neon import ArrayIterator  # noqa
-        from neon.frontends.neon import CIFAR10  # noqa
+        from neon.frontend import ArrayIterator  # noqa
+        from neon.frontend import CIFAR10  # noqa
         train_data, valid_data = CIFAR10(args.data_dir).load_data()
         train_set = ArrayIterator(train_data, args.batch_size,
                                   total_iterations=args.num_iterations)

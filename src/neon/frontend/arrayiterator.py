@@ -18,7 +18,7 @@ import numpy as np
 import neon as ng
 from future.utils import viewitems
 import six
-from neon.frontends.neon import ax
+from neon.frontend import ax
 import collections
 
 

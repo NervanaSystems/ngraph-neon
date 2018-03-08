@@ -5,10 +5,10 @@ from contextlib import closing
 import neon as ng
 import neon.transformers as ngt
 from neon.testing import executor
-from neon.frontends.common import utils
+from neon.frontend.common import utils
 from neon.op_graph.axes import IncompatibleAxesError
-from neon.frontends.neon import Convolution, Deconvolution, Sequential
-from neon.frontends.neon import ConstantInit, Rectlin, GaussianInit, make_bound_computation
+from neon.frontend import Convolution, Deconvolution, Sequential
+from neon.frontend import ConstantInit, Rectlin, GaussianInit, make_bound_computation
 
 
 def reference_conv1d(inputs, filters, activation, strides=1, padding=0):

@@ -20,9 +20,9 @@
     Network architecture follows from https://arxiv.org/pdf/1512.00567.pdf
     and https://github.com/tensorflow/models/blob/master/research/slim/nets/inception_v3.py
 """
-from neon.frontends.neon import UniformInit, BatchNorm
-from neon.frontends.neon import Convolution, Pooling, Sequential, Parallel
-from neon.frontends.neon import Rectlin, Softmax, Dropout
+from neon.frontend import UniformInit, BatchNorm
+from neon.frontend import Convolution, Pooling, Sequential, Parallel
+from neon.frontend import Rectlin, Softmax, Dropout
 
 
 def conv_params(filter_shape, strides=1, batch_norm=None, activation=Rectlin(),

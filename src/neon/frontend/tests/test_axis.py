@@ -2,7 +2,7 @@ import pytest
 
 import neon as ng
 from neon.op_graph.axes import IncompatibleAxesError
-from neon.frontends.neon.axis import is_shadow_axis, make_shadow_axis, reorder_spatial_axes
+from neon.frontend.axis import is_shadow_axis, make_shadow_axis, reorder_spatial_axes
 
 
 @pytest.fixture()

@@ -35,7 +35,7 @@ import numpy as np
 from recurrent_ref import RefRecurrent, RefBidirectional, RefSeq2Seq
 
 import neon as ng
-from neon.frontends.neon import Recurrent, LSTM, BiRNN, Tanh, ConstantInit
+from neon.frontend import Recurrent, LSTM, BiRNN, Tanh, ConstantInit
 from neon.testing.execution import ExecutorFactory
 from neon.testing.random import RandomTensorGenerator
 

@@ -20,7 +20,7 @@ import neon as ng
 from neon.op_graph.lookuptable import lookuptable_update
 import neon.transformers as ngt
 from neon.testing import RandomTensorGenerator, ExecutorFactory
-from neon.frontends.neon import ax
+from neon.frontend import ax
 import pytest
 
 pytestmark = pytest.mark.transformer_dependent

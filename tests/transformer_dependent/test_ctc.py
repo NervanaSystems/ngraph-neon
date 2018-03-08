@@ -19,7 +19,7 @@ import numpy as np
 import neon as ng
 import neon.transformers as ngt
 from neon.testing import RandomTensorGenerator, ExecutorFactory
-from neon.frontends.neon import ax
+from neon.frontend import ax
 from third_party.warp_ctc.ctc import CTC
 import pytest
 

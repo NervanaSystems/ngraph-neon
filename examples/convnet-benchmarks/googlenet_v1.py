@@ -28,11 +28,11 @@ import neon.transformers as ngt
 from tqdm import tqdm
 from contextlib import closing
 
-from neon.frontends.neon import NeonArgparser, ArrayIterator
-from neon.frontends.neon import XavierInit, UniformInit
-from neon.frontends.neon import Affine, Convolution, Pooling, Sequential
-from neon.frontends.neon import Rectlin, Softmax, GradientDescentMomentum
-from neon.frontends.neon import ax
+from neon.frontend import NeonArgparser, ArrayIterator
+from neon.frontend import XavierInit, UniformInit
+from neon.frontend import Affine, Convolution, Pooling, Sequential
+from neon.frontend import Rectlin, Softmax, GradientDescentMomentum
+from neon.frontend import ax
 
 np.seterr(all='raise')
 

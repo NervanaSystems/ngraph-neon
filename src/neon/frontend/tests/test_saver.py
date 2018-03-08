@@ -21,7 +21,7 @@ import os
 from contextlib import closing
 import numpy as np
 import neon as ng
-from neon.frontends.neon import Saver
+from neon.frontend import Saver
 import neon.transformers as ngt
 
 

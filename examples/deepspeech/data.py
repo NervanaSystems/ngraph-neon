@@ -1,6 +1,6 @@
 from __future__ import division
 import numpy as np
-from neon.frontends.neon.aeon_shim import AeonDataLoader
+from neon.frontend.aeon_shim import AeonDataLoader
 from neon.util.persist import get_data_cache_or_nothing
 
 

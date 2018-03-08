@@ -3,7 +3,7 @@ import logging
 from collections import deque
 
 import numpy as np
-from neon.frontends.neon.logging import ProgressBar, PBStreamHandler
+from neon.frontend.logging import ProgressBar, PBStreamHandler
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

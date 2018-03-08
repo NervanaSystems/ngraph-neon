@@ -21,7 +21,7 @@ from math import tanh as true_tanh
 import pytest
 import numpy as np
 import neon as ng
-from neon.frontends.neon.activation import (Identity, Rectlin, Rectlinclip,
+from neon.frontend.activation import (Identity, Rectlin, Rectlinclip,
                                               Softmax, Tanh, Logistic)
 from neon.testing import ExecutorFactory
 

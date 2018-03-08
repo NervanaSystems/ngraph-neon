@@ -33,8 +33,8 @@ STYLE_CHECK_DIRS := ngraph tests examples
 # pytest options
 TEST_OPTS := --timeout=600 --cov=ngraph --timeout_method=thread
 TEST_DIRS := tests/
-TEST_DIRS_COMMON := src/neon/frontends/common/tests
-TEST_DIRS_NEON := src/neon/frontends/neon/tests
+TEST_DIRS_COMMON := src/neon/frontend/common/tests
+TEST_DIRS_NEON := src/neon/frontend/tests
 TEST_DIRS_INTEGRATION := integration_tests/
 
 # Set parallel execution by setting the NUM_PROCS variable in the environment

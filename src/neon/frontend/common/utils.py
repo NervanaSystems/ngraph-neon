@@ -17,7 +17,7 @@
 from __future__ import division
 import neon as ng
 import numbers
-from neon.frontends.common import learning_rate_policies as lrp
+from neon.frontend.common import learning_rate_policies as lrp
 import numpy as np
 
 

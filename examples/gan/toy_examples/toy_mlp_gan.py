@@ -25,13 +25,13 @@ from contextlib import closing
 
 import neon as ng
 import neon.transformers as ngt
-from neon.frontends.neon import Affine, Sequential
-from neon.frontends.neon import Rectlin, Identity, Tanh, Logistic
-from neon.frontends.neon import GaussianInit, ConstantInit
-from neon.frontends.neon import GradientDescentMomentum
-from neon.frontends.neon import ArrayIterator
-from neon.frontends.neon import make_bound_computation
-from neon.frontends.neon import NeonArgparser
+from neon.frontend import Affine, Sequential
+from neon.frontend import Rectlin, Identity, Tanh, Logistic
+from neon.frontend import GaussianInit, ConstantInit
+from neon.frontend import GradientDescentMomentum
+from neon.frontend import ArrayIterator
+from neon.frontend import make_bound_computation
+from neon.frontend import NeonArgparser
 
 
 def affine_layer(h_dim, activation, name):

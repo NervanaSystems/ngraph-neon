@@ -18,8 +18,8 @@ import logging
 import numpy as np
 import neon as ng
 import numbers
-import neon.frontends.common.learning_rate_policies as lrp
-from neon.frontends.neon.graph import SubGraph
+from neon.frontend.common import learning_rate_policies as lrp
+from neon.frontend.graph import SubGraph
 
 logger = logging.getLogger(__name__)
 
@@ -257,7 +257,7 @@ class GradientDescentMomentum(LearningRateOptimizer):
     .. code-block:: python
 
         import neon as ng
-        from neon.frontends.neon.optimizers import GradientDescentMomentum
+        from neon.frontend.optimizers import GradientDescentMomentum
 
         # use SGD with learning rate 0.01 and momentum 0.9, while
         # clipping the gradient magnitude to between -5 and 5.
@@ -505,7 +505,7 @@ class Adagrad(LearningRateOptimizer):
     .. code-block:: python
 
         import neon as ng
-        from neon.frontends.neon.optimizers import Adagrad
+        from neon.frontend.optimizers import Adagrad
 
         # use Adagrad with a learning rate of 1e-3
         optimizer = Adagrad(learning_rate=1e-3, epsilon=1e-8)

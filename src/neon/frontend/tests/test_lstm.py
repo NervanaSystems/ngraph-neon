@@ -38,7 +38,7 @@ import pytest
 
 import neon as ng
 
-from neon.frontends.neon import LSTM, GaussianInit, Tanh, Logistic
+from neon.frontend import LSTM, GaussianInit, Tanh, Logistic
 from neon.testing.execution import ExecutorFactory
 from neon.testing.random import RandomTensorGenerator
 

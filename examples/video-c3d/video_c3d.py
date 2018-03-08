@@ -21,11 +21,11 @@ import os
 import numpy as np
 import neon as ng
 
-from neon.frontends.neon import GaussianInit, ConstantInit
-from neon.frontends.neon import Layer, Affine, Convolution, Pooling, Sequential
-from neon.frontends.neon import Softmax, Rectlin, Dropout, GradientDescentMomentum
-from neon.frontends.neon import ax, make_bound_computation
-from neon.frontends.neon import NeonArgparser
+from neon.frontend import GaussianInit, ConstantInit
+from neon.frontend import Layer, Affine, Convolution, Pooling, Sequential
+from neon.frontend import Softmax, Rectlin, Dropout, GradientDescentMomentum
+from neon.frontend import ax, make_bound_computation
+from neon.frontend import NeonArgparser
 
 import neon.transformers as ngt
 from tqdm import tqdm, trange

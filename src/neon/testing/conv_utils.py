@@ -17,7 +17,7 @@ import numpy as np
 import itertools as itt
 
 import neon as ng
-from neon.frontends.common.utils import conv_output_dim, deconv_output_dim
+from neon.frontend.common.utils import conv_output_dim, deconv_output_dim
 
 
 def slicable(dim, pad=0):

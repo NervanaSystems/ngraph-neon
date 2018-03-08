@@ -17,11 +17,11 @@
 from __future__ import division, print_function
 import numpy as np
 import neon as ng
-from neon.frontends.neon import Sequential
-from neon.frontends.neon import Affine, Preprocess, Convolution, Pooling, Activation
-from neon.frontends.neon import KaimingInit, Rectlin, Softmax
-from neon.frontends.neon.model import ResidualModule
-from neon.frontends.neon import ax
+from neon.frontend import Sequential
+from neon.frontend import Affine, Preprocess, Convolution, Pooling, Activation
+from neon.frontend import KaimingInit, Rectlin, Softmax
+from neon.frontend.model import ResidualModule
+from neon.frontend import ax
 
 
 # Helpers

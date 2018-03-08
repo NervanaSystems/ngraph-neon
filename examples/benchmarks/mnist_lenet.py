@@ -37,13 +37,13 @@ from __future__ import print_function
 from contextlib import closing
 import numpy as np
 import neon as ng
-from neon.frontends.neon import Layer, Affine, Preprocess, Convolution, Pooling, Sequential
-from neon.frontends.neon import XavierInit, Rectlin, Softmax, GradientDescentMomentum
-from neon.frontends.neon import ax, loop_train
-from neon.frontends.neon import NeonArgparser, make_bound_computation, make_default_callbacks
-from neon.frontends.neon import ArrayIterator
+from neon.frontend import Layer, Affine, Preprocess, Convolution, Pooling, Sequential
+from neon.frontend import XavierInit, Rectlin, Softmax, GradientDescentMomentum
+from neon.frontend import ax, loop_train
+from neon.frontend import NeonArgparser, make_bound_computation, make_default_callbacks
+from neon.frontend import ArrayIterator
 
-from neon.frontends.neon import MNIST
+from neon.frontend import MNIST
 import neon.transformers as ngt
 
 parser = NeonArgparser(description='Train LeNet topology on Mnist dataset')

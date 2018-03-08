@@ -15,7 +15,7 @@
 # ******************************************************************************
 
 from __future__ import print_function, division
-from neon.frontends.common.learning_rate_policies import lr_policies
+from neon.frontend.common.learning_rate_policies import lr_policies
 import neon as ng
 import numpy as np
 from neon.testing import ExecutorFactory

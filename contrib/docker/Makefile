@@ -19,7 +19,7 @@ NGRAPH_CNTK_IMG := $(shell docker images ngraph_cntk)
 TEST_OPTS := --timeout=300
 UNIT_TEST_DIRS := tests/
 TF_TEST_DIRS := ngraph/frontends/tensorflow/tests/
-NEON_TEST_DIRS := ngraph/frontends/neon/tests
+NEON_TEST_DIRS := ngraph/frontend/tests
 TEST_DIRS_FLEX := flex_tests/
 
 CALLER_UID := $(shell id -u)

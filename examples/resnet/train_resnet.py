@@ -20,14 +20,14 @@ import sys
 import numpy as np
 import neon as ng
 import neon.transformers as ngt
-from neon.frontends.neon import ax, NeonArgparser
+from neon.frontend import ax, NeonArgparser
 from tqdm import tqdm
 from data import make_aeon_loaders
-from neon.frontends.neon import GradientDescentMomentum
-from neon.frontends.neon import Layer
+from neon.frontend import GradientDescentMomentum
+from neon.frontend import Layer
 from resnet import BuildResnet
 from contextlib import closing
-from neon.frontends.neon import Saver
+from neon.frontend import Saver
 from utils import get_network_params, set_lr
 
 

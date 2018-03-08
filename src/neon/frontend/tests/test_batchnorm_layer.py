@@ -19,7 +19,7 @@ Test of the batchnorm layer
 import pytest
 import numpy as np
 import neon as ng
-from neon.frontends.neon import BatchNorm, Recurrent, LSTM, Tanh
+from neon.frontend import BatchNorm, Recurrent, LSTM, Tanh
 from neon.testing.random import RandomTensorGenerator
 from neon.testing.execution import ExecutorFactory
 

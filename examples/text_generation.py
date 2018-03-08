@@ -32,11 +32,11 @@ from builtins import range
 from contextlib import closing
 import numpy as np
 import neon as ng
-from neon.frontends.neon import Layer, Sequential, LSTM, Affine, Softmax, Preprocess, LookupTable
-from neon.frontends.neon import UniformInit, Tanh, Logistic
-from neon.frontends.neon import NeonArgparser, GradientDescentMomentum
+from neon.frontend import Layer, Sequential, LSTM, Affine, Softmax, Preprocess, LookupTable
+from neon.frontend import UniformInit, Tanh, Logistic
+from neon.frontend import NeonArgparser, GradientDescentMomentum
 import neon.transformers as ngt
-from neon.frontends.neon import Shakespeare, SequentialArrayIterator
+from neon.frontend import Shakespeare, SequentialArrayIterator
 
 
 def eval_loop(inputs, eval_set, eval_function):

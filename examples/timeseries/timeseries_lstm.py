@@ -52,12 +52,12 @@ In addition, generates future values of the sequence based on an initial seed
 from __future__ import division, print_function
 from contextlib import closing
 import neon as ng
-from neon.frontends.neon import Layer, Sequential, LSTM, Affine
-from neon.frontends.neon import UniformInit, Tanh, Logistic, Identity, Adam
-from neon.frontends.neon import NeonArgparser, loop_train
-from neon.frontends.neon import make_bound_computation, make_default_callbacks
+from neon.frontend import Layer, Sequential, LSTM, Affine
+from neon.frontend import UniformInit, Tanh, Logistic, Identity, Adam
+from neon.frontend import NeonArgparser, loop_train
+from neon.frontend import make_bound_computation, make_default_callbacks
 import neon.transformers as ngt
-from neon.frontends.neon import ArrayIterator
+from neon.frontend import ArrayIterator
 import timeseries
 import utils
 import imp

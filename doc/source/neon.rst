@@ -41,7 +41,7 @@ The ``mnist_mlp.py`` example provides an introduction into the neon frontend. Si
 
 .. code-block:: python
 
-	from neon.frontends.neon import NeonArgparser
+	from neon.frontend import NeonArgparser
 	parser = NeonArgparser(description='Train simple mlp on mnist dataset')
 	args = parser.parse_args()
 
@@ -50,7 +50,7 @@ To provision data to the model, we use the ``ArrayIterator`` object, which is a 
 .. code-block:: python
 
 	from mnist import MNIST
-	from neon.frontends.neon import ArrayIterator
+	from neon.frontend import ArrayIterator
 
 	# Create the dataloader
 	train_data, valid_data = MNIST(args.data_dir).load_data()
@@ -61,8 +61,8 @@ You can compose models as a list of layers which then gets passed to a container
 
 .. code-block:: python
 
-	from ngraph.frontends.neon import Affine, Preprocess, Sequential
-	from ngraph.frontends.neon import GaussianInit, Rectlin, Logistic, GradientDescentMomentum
+	from neon.frontend import Affine, Preprocess, Sequential
+	from neon.frontend import GaussianInit, Rectlin, Logistic, GradientDescentMomentum
 
 	seq1 = Sequential([Preprocess(functor=lambda x: x / 255.),
 	                   Affine(nout=100, weight_init=GaussianInit(), activation=Rectlin()),
@@ -70,11 +70,11 @@ You can compose models as a list of layers which then gets passed to a container
 
 Note that above we also use a ``Preprocess`` layer to scale the input image data to between 0 and 1.
 
-The ``neon`` frontend has a predefined set of axes commonly used with deep learning in the ``ngraph/frontends/neon/axis.py`` file. We import the *name_scope* from this file as ``ax``, and can define the lengths of the relevant axes give the shape of the input image and the target number of classes:
+The ``neon`` frontend has a predefined set of axes commonly used with deep learning in the ``ngraph/frontend/axis.py`` file. We import the *name_scope* from this file as ``ax``, and can define the lengths of the relevant axes give the shape of the input image and the target number of classes:
 
 .. code-block:: python
 
-	from ngraph.frontends.neon import ax
+	from neon.frontend import ax
 
 	ax.C.length, ax.H.length, ax.W.length = train_set.shapes['image']
 	ax.N.length = args.batch_size
@@ -111,7 +111,7 @@ Now that we have used the neon frontend to compose our graph, we pass it to a tr
 
 .. code-block:: python
 
-	from ngraph.frontends.neon import make_bound_computation, make_default_callbacks
+	from neon.frontend import make_bound_computation, make_default_callbacks
 
 	train_outputs = dict(batch_cost=mean_cost, updates=updates)
 	loss_outputs = dict(cross_ent_loss=loss, misclass_pct=errors)
@@ -127,7 +127,7 @@ Callbacks allow the model to report back its progress and any relevant metrics d
 
 .. code-block:: python
 
-	from ngraph.frontends.neon import make_default_callbacks
+	from neon.frontend import make_default_callbacks
 
 	cbs = make_default_callbacks(transformer=transformer,
 	                         output_file=args.output_file,
@@ -142,7 +142,7 @@ Finally, we use another helper function, ``loop_train``, to train the model. ``l
 
 .. code-block:: python
 
-	from ngraph.frontends.neon import loop_train
+	from neon.frontend import loop_train
 
 	loop_train(train_set, train_computation, cbs)
 

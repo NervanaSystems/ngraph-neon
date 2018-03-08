@@ -35,7 +35,7 @@ import numpy as np
 from recurrent_ref import RefRecurrent
 
 import neon as ng
-from neon.frontends.neon import RNNCell, unroll, Tanh
+from neon.frontend import RNNCell, unroll, Tanh
 from neon.testing.execution import ExecutorFactory
 from neon.testing.random import RandomTensorGenerator
 

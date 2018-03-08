@@ -21,12 +21,12 @@ import six
 from contextlib import contextmanager
 
 import neon as ng
-from neon.frontends.common import utils
-from neon.frontends.common.utils import make_poolparams
-from neon.frontends.neon.axis import shadow_axes_map, reorder_spatial_axes, assert_no_shadow_axes
-from neon.frontends.neon.graph import SubGraph
-from neon.frontends.neon.initializer import ConstantInit
-from neon.frontends.neon.utils import get_function_or_class_name
+from neon.frontend.common import utils
+from neon.frontend.common.utils import make_poolparams
+from neon.frontend.axis import shadow_axes_map, reorder_spatial_axes, assert_no_shadow_axes
+from neon.frontend.graph import SubGraph
+from neon.frontend.initializer import ConstantInit
+from neon.frontend.utils import get_function_or_class_name
 from neon.op_graph.axes import IncompatibleAxesError
 
 

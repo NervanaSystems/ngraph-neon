@@ -28,9 +28,9 @@ import os
 from contextlib import closing
 import neon as ng
 import neon.transformers as ngt
-from neon.frontends.neon import (Adam, RMSProp, make_bound_computation)
-from neon.frontends.neon import NeonArgparser
-from neon.frontends.neon.logging import ProgressBar
+from neon.frontend import (Adam, RMSProp, make_bound_computation)
+from neon.frontend import NeonArgparser
+from neon.frontend.logging import ProgressBar
 from neon.util.names import name_scope
 from lsun_data import make_aeon_loaders
 from utils import train_schedule, Noise, save_plots, get_image

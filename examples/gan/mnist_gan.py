@@ -25,13 +25,13 @@ from contextlib import closing
 import neon as ng
 import os
 import neon.transformers as ngt
-from neon.frontends.neon import (Sequential, Deconvolution, Convolution,
+from neon.frontend import (Sequential, Deconvolution, Convolution,
                                    Rectlin, Logistic, Tanh,
                                    Adam, ArrayIterator,
                                    KaimingInit, make_bound_computation)
-from neon.frontends.neon import NeonArgparser
-from neon.frontends.neon import MNIST
-from neon.frontends.neon.logging import ProgressBar
+from neon.frontend import NeonArgparser
+from neon.frontend import MNIST
+from neon.frontend.logging import ProgressBar
 from neon.util.names import name_scope
 from utils import save_plots, get_image, train_schedule, Noise
 

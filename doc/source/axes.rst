@@ -357,6 +357,6 @@ of the original axes. The order of the new axes can be arbitrary. For example: :
 .. Use ``ng.axes_with_order`` to reorder axes. The new axes must be the same set as the
 .. original axes. Examples: ::
 ..
-..     from ngraph.frontends.neon.axis import ax
+..     from ngraph.frontend.axis import ax
 ..     x = ng.placeholder([ax.C, ax.H, ax.W])
 ..     ng.axes_with_order(x, [ax.H, ax.W, ax.C])

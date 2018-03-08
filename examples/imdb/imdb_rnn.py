@@ -18,15 +18,15 @@ from __future__ import division
 from __future__ import print_function
 from contextlib import closing
 import neon as ng
-from neon.frontends.neon import (Layer, Sequential, BiRNN, Recurrent, Affine,
+from neon.frontend import (Layer, Sequential, BiRNN, Recurrent, Affine,
                                    Softmax, Tanh, LookupTable)
-from neon.frontends.neon import UniformInit, RMSProp
-from neon.frontends.neon import ax, loop_train, make_bound_computation, make_default_callbacks
-from neon.frontends.neon import NeonArgparser
-from neon.frontends.neon import ArrayIterator
+from neon.frontend import UniformInit, RMSProp
+from neon.frontend import ax, loop_train, make_bound_computation, make_default_callbacks
+from neon.frontend import NeonArgparser
+from neon.frontend import ArrayIterator
 import neon.transformers as ngt
 
-from neon.frontends.neon import IMDB
+from neon.frontend import IMDB
 
 
 # parse the command line arguments

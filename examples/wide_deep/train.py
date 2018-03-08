@@ -8,8 +8,8 @@
 import neon as ng
 from contextlib import closing
 import neon.transformers as ngt
-from neon.frontends.neon import NeonArgparser
-from neon.frontends.neon import Adagrad, Rectlin
+from neon.frontend import NeonArgparser
+from neon.frontend import Adagrad, Rectlin
 from model import WideDeepClassifier
 from tqdm import tqdm
 import numpy as np

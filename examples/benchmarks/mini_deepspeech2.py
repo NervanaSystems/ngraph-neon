@@ -18,7 +18,7 @@
 import neon as ng
 from benchmark import Benchmark
 from examples.deepspeech.deepspeech import Deepspeech
-from neon.frontends.neon import ax, GradientDescentMomentum, NeonArgparser
+from neon.frontend import ax, GradientDescentMomentum, NeonArgparser
 from fake_data_generator import generate_ds2_data
 
 

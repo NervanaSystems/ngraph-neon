@@ -19,11 +19,11 @@ import time
 from contextlib import closing
 import neon as ng
 import neon.transformers as ngt
-from neon.frontends.neon import (GaussianInit, GlorotInit, ConstantInit, Convolution, Rectlin,
+from neon.frontend import (GaussianInit, GlorotInit, ConstantInit, Convolution, Rectlin,
                                    Rectlinclip, BiRNN, GradientDescentMomentum, Affine, Softmax,
                                    Sequential, Layer)
-from neon.frontends.neon import ax
-from neon.frontends.neon.data import Librispeech
+from neon.frontend import ax
+from neon.frontend.data import Librispeech
 from data import make_aeon_dataloader
 from decoder import ArgMaxDecoder
 
@@ -144,8 +144,8 @@ def decode_outputs(probs, inds, decoder):
 
 if __name__ == "__main__":
     import logging
-    from neon.frontends.neon.logging import ProgressBar, PBStreamHandler
-    from neon.frontends.neon import NeonArgparser
+    from neon.frontend.logging import ProgressBar, PBStreamHandler
+    from neon.frontend import NeonArgparser
 
     parser = NeonArgparser()
     structure = parser.add_argument_group("Network Structure")

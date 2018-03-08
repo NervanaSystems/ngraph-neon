@@ -19,8 +19,8 @@ Test of the mlp/linear layer
 import pytest
 import numpy as np
 import neon as ng
-from neon.frontends.neon import Linear, UniformInit
-from neon.frontends.neon.axis import make_shadow_axis
+from neon.frontend import Linear, UniformInit
+from neon.frontend.axis import make_shadow_axis
 from neon.testing import ExecutorFactory
 
 pytestmark = pytest.mark.transformer_dependent

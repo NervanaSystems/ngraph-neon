@@ -19,7 +19,7 @@ from __future__ import division, print_function, absolute_import
 import collections
 from operator import itemgetter
 import neon as ng
-from neon.frontends.neon.saverfile import SaverFile
+from neon.frontend.saverfile import SaverFile
 
 
 def get_root_ops(computation):

@@ -13,10 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ******************************************************************************
-from neon.frontends.neon.data.mnist import MNIST
-from neon.frontends.neon.data.cifar10 import CIFAR10
-from neon.frontends.neon.data.cifar100 import CIFAR100
-from neon.frontends.neon.data.ptb import PTB
-from neon.frontends.neon.data.imdb import IMDB
-from neon.frontends.neon.data.librispeech import Librispeech
-from neon.frontends.neon.data.shakespeare import Shakespeare
+
+# commonly used modules.  Should these still be imported in neon frontend?
+from neon import make_axes
+from neon.frontend.axis import ax
+from neon.frontend.activation import Rectlin, Rectlinclip, Identity, Explin, Normalizer, Softmax, Tanh, \
+    Logistic
+from neon.frontend.argparser import NeonArgparser
+from neon.frontend.arrayiterator import *
+from neon.frontend.callbacks import *
+# from neon.frontend.callbacks2 import *
+from neon.frontend.layer import *
+from neon.frontend.model import *
+from neon.frontend.optimizer import *
+from neon.frontend.initializer import *
+from neon.frontend.data import *
+from neon.frontend.saver import *
+from neon.frontend.saverfile import *

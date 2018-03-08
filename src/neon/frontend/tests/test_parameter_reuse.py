@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import neon as ng
-from neon.frontends.neon import Linear, ConvBase, Recurrent, BatchNorm, Layer, LookupTable, LSTM
+from neon.frontend import Linear, ConvBase, Recurrent, BatchNorm, Layer, LookupTable, LSTM
 
 
 dummy_init = lambda axes: np.ones(axes.lengths)

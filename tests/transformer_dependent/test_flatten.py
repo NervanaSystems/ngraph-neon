@@ -42,7 +42,7 @@ def test_flatten_deriv_simplified():
 
 @pytest.mark.xfail(strict=True)
 def test_flatten_deriv():
-    from neon.frontends.neon import ax
+    from neon.frontend import ax
     np.random.seed(0)
 
     # set shape

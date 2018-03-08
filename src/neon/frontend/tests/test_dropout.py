@@ -21,7 +21,7 @@ import numpy as np
 
 from neon.testing import ExecutorFactory
 import neon as ng
-from neon.frontends.neon.layer import Layer, Dropout
+from neon.frontend.layer import Layer, Dropout
 
 pytestmark = pytest.mark.transformer_dependent
 

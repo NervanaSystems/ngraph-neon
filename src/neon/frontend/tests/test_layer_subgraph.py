@@ -1,8 +1,8 @@
 import pytest
 import neon as ng
-from neon.frontends.neon.layer import LABELS, Layer
-from neon.frontends.neon import SubGraph
-from neon.frontends.neon.graph import scope_ops, ComputationalGraph
+from neon.frontend.layer import LABELS, Layer
+from neon.frontend import SubGraph
+from neon.frontend.graph import scope_ops, ComputationalGraph
 
 
 class SimpleLayer(Layer):

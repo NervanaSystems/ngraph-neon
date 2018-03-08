@@ -33,9 +33,9 @@ from tqdm import tqdm
 from contextlib import closing
 import neon as ng
 import neon.transformers as ngt
-from neon.frontends.neon import NeonArgparser
-from neon.frontends.neon import Layer
-from neon.frontends.neon import ax, RMSProp, GradientDescentMomentum
+from neon.frontend import NeonArgparser
+from neon.frontend import Layer
+from neon.frontend import ax, RMSProp, GradientDescentMomentum
 from data import make_aeon_loaders
 import inception
 

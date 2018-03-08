@@ -20,8 +20,8 @@ Test of the optimizers
 import pytest
 import numpy as np
 import neon as ng
-from neon.frontends.neon import GradientDescentMomentum, RMSProp, Adam
-from neon.frontends.neon import LearningRateOptimizer, Adagrad
+from neon.frontend import GradientDescentMomentum, RMSProp, Adam
+from neon.frontend import LearningRateOptimizer, Adagrad
 from neon.testing.execution import ExecutorFactory
 
 pytestmark = pytest.mark.transformer_dependent
