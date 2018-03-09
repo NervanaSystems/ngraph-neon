@@ -33,6 +33,7 @@ from neon.frontend import GaussianInit, UniformInit
 from neon.frontend import Affine, Convolution, Pooling, Sequential
 from neon.frontend import Rectlin, Softmax, GradientDescentMomentum
 from neon.frontend import ax
+from neon.frontend import make_bound_computation, make_default_callbacks, loop_train  # noqa
 
 np.seterr(all='raise')
 
@@ -96,30 +97,16 @@ optimizer = GradientDescentMomentum(lr_schedule, 0.0, wdecay=0.0005,
 train_prob = seq1(inputs['image'])
 train_loss = ng.cross_entropy_multi(train_prob, ng.one_hot(inputs['label'], axis=ax.Y))
 batch_cost = ng.sequential([optimizer(train_loss), ng.mean(train_loss, out_axes=())])
-train_computation = ng.computation(batch_cost, "all")
+train_outputs = dict(batch_cost=batch_cost)
 
 with closing(ngt.make_transformer()) as transformer:
-    train_function = transformer.add_computation(train_computation)
+    train_computation = make_bound_computation(transformer, train_outputs, inputs)
 
-    if args.no_progress_bar:
-        ncols = 0
-    else:
-        ncols = 100
+    cbs = make_default_callbacks(transformer=transformer,
+                                 output_file=args.output_file,
+                                 frequency=args.iter_interval,
+                                 train_computation=train_computation,
+                                 total_iterations=args.num_iterations,
+                                 use_progress_bar=args.progress_bar)
 
-    tpbar = tqdm(unit="batches", ncols=ncols, total=args.num_iterations)
-    interval_cost = 0.0
-
-    for step, data in enumerate(train_set):
-        data['iteration'] = step
-        feed_dict = {inputs[k]: data[k] for k in inputs.keys()}
-        output = train_function(feed_dict=feed_dict)
-
-        tpbar.update(1)
-        tpbar.set_description("Training {:0.4f}".format(output[()]))
-        interval_cost += output[()]
-        if (step + 1) % args.iter_interval == 0 and step > 0:
-            tqdm.write("Interval {interval} Iteration {iteration} complete. "
-                       "Avg Train Cost {cost:0.4f}".format(
-                           interval=step // args.iter_interval,
-                           iteration=step,
-                           cost=interval_cost / args.iter_interval))
+    loop_train(train_set, cbs)
