@@ -157,14 +157,14 @@ def make_aeon_loaders(work_dir, batch_size, train_iterations, random_seed=0, dat
             # Dont do augemtations on test set
             if(valid_set):
                 return{'manifest_filename': manifest_file,
-                       'manifest_root': "/dataset/aeon/I1K/i1k-extracted/",
+                       'manifest_root': os.path.dirname(manifest_file),
                        'batch_size': batch_size,
                        'block_size': 5000,
                        'cache_directory': cache_root,
                        'etl': [image_config, label_config]}
             # Do augmentations on training set
             return{'manifest_filename': manifest_file,
-                   'manifest_root': "/dataset/aeon/I1K/i1k-extracted/",
+                   'manifest_root': os.path.dirname(manifest_file),
                    'batch_size': batch_size,
                    'block_size': 5000,
                    'cache_directory': cache_root,
@@ -225,14 +225,14 @@ def make_aeon_loaders(work_dir, batch_size, train_iterations, random_seed=0, dat
             # Dont do augemtations on test set
             if(valid_set):
                 return{'manifest_filename': manifest_file,
-                       'manifest_root': "/dataset/aeon/I1K/i1k-extracted/",
+                       'manifest_root': os.path.dirname(manifest_file),
                        'batch_size': batch_size,
                        'block_size': 5000,
                        'cache_directory': cache_root,
                        'etl': [image_config, label_config]}
             # Do augmentations on training set
             return{'manifest_filename': manifest_file,
-                   'manifest_root': "/dataset/aeon/I1K/i1k-extracted/",
+                   'manifest_root': os.path.dirname(manifest_file),
                    'batch_size': batch_size,
                    'block_size': 5000,
                    'cache_directory': cache_root,
