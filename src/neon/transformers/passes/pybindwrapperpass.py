@@ -309,8 +309,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         op_element_type = self.computation.lookup_cpp_op(op.args[0])
 
         # build axis_set
-        broadcast_axes = op.axes.lengths
-        broadcast_args_axes = op.args[0].axes.lengths
+        broadcast_axes = op.axes.names
+        broadcast_args_axes = op.args[0].axes.names
 
         for pos, axis in enumerate(broadcast_axes):
             if axis not in broadcast_args_axes:
@@ -318,7 +318,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
         self.computation.register_cpp_op(
             op, PyngBroadcast(op_element_type, Shape(list(op.axes.lengths)),
-            AxisSet(axis_set)))
+                              AxisSet(axis_set)))
 
     def flatten(self, container):
         if isinstance(container, (list, tuple)):
