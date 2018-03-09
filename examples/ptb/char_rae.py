@@ -156,7 +156,7 @@ with closing(ngt.make_transformer()) as transformer:
     decoder_function = transformer.add_computation(decoder_computation)
 
     # training
-    loop_train(train_set, train_computation, cbs)
+    loop_train(train_set, cbs)
 
     # inference
     valid_set.reset()

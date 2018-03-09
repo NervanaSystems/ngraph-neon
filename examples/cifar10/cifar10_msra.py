@@ -174,4 +174,4 @@ if __name__ == "__main__":
                                      enable_top5=True,
                                      use_progress_bar=args.progress_bar)
 
-        loop_train(train_set, train_computation, cbs)
+        loop_train(train_set, cbs)

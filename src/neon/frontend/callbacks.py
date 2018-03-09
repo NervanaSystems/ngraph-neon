@@ -268,7 +268,7 @@ class LossCallback(Callback):
                 interval_idx + 1, idx + 1, losses))
 
 
-def loop_train(dataset, computation, callbacks, train_feed_wrapper=None):
+def loop_train(dataset, callbacks, train_feed_wrapper=None):
     callbacks(CallbackPhase.train_pre_)
     for mb_idx, data in enumerate(dataset):
         if train_feed_wrapper is not None:

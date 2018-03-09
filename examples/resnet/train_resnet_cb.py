@@ -184,7 +184,7 @@ with closing(ngt.make_transformer()) as transformer:
         cbs.append(TrainSaverCallback(saver=weight_saver,
                                       filename=args.save_file,
                                       frequency=args.iter_interval))
-    loop_train(train_set, train_computation, cbs, train_feed_wrapper=train_feed_wrapper)
+    loop_train(train_set, cbs, train_feed_wrapper=train_feed_wrapper)
 
     print("\nTraining Completed")
     if(args.save_file is not None):

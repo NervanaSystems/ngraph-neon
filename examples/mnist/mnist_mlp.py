@@ -117,7 +117,7 @@ if not args.inference:
                                      enable_top5=True,
                                      use_progress_bar=args.progress_bar)
 
-        loop_train(train_set, train_computation, cbs)
+        loop_train(train_set, cbs)
         if save_file is not None:
             weight_saver.save(filename=save_file)
 else:
