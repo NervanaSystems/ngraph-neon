@@ -190,14 +190,17 @@ class ProgressCallback(Callback):
     """
     def __call__(self, transformer, callback_data, phase, data, idx):
         if phase == CallbackPhase.train_pre_:
-            self.tpbar = tqdm(desc="Overall",
+            self.tpbar = tqdm(desc="Train",
                               unit="minibatches",
                               ncols=80,
                               total=callback_data['config'].attrs['total_iterations'])
         elif phase == CallbackPhase.train_post:
+            self.tpbar.set_description(desc="Train")
             self.tpbar.close()
         elif phase == CallbackPhase.minibatch_post:
             self.tpbar.update(1)
+            self.tpbar.set_description(
+                desc="Train Cost {:0.4f}".format(callback_data['cost/train'][idx]))
 
 
 class TrainLoggerCallback(Callback):
