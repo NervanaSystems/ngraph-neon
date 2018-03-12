@@ -226,10 +226,7 @@ def make_convparams(nout, filter_shape, strides, padding, dilation):
     convparams = dict()
     convparams["K"] = nout
 
-    conv_axis_names = ""
-    for name in filter_shape:
-        conv_axis_names += name
-
+    conv_axis_names = {1: "W", 2: "HW", 3: "DHW"}[len(filter_shape)]
     conv_filter_names = {"W": "S", "HW": "RS", "DHW": "TRS"}[conv_axis_names]
 
     for ng_name, filter_name in zip(conv_filter_names, conv_axis_names):
@@ -262,7 +259,8 @@ def make_poolparams(op, pool_shape, strides, padding):
     pool_axis_names = ""
     for name in pool_shape:
         pool_axis_names += name
-
+    # this trick only works because CDHW is sorted by individual letters
+    pool_axis_names = ''.join(sorted(pool_axis_names))
     pool_filter_names = {"W": "S", "HW": "RS", "DHW": "TRS",
                          "CHW": "JRS", "CDHW": "JTRS"}[pool_axis_names]
 
