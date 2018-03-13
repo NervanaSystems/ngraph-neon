@@ -23,7 +23,9 @@ from neon.op_graph.op_graph import Op, Add, AssignableTensorOp, AssignOp, AxesCa
      NotEqual, OneHotOp, ParallelOp, Prod, ReciprocalOp, ReductionOp, ReorderAxes, \
      SequentialOp, SqrtOp, SquareOp, Subtract, Sum, TensorSliceOp, TensorSizeOp, TensorValueOp, \
      Unflatten
-from neon.op_graph.batchnorm import BatchnormOp, BatchnormBpropOp, BatchnormInferenceOp
+from neon.op_graph.batchnorm import BatchnormCommonOp, BatchnormBpropCommonOp, \
+    BatchnormInferenceOp, BatchnormOutputOp, BatchnormMeanOp, BatchnormVarOp, \
+    BatchnormBpropDataOp, BatchnormBpropGammaOp, BatchnormBpropBetaOp
 from neon.op_graph.relu import ReluOp, ReluBpropOp
 from neon.op_graph.pooling import PoolingOp, BpropPoolOp
 from neon.op_graph.convolution import ConvolutionOp, bprop_conv, update_conv

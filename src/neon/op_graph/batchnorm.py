@@ -17,46 +17,183 @@ from __future__ import division
 from neon.op_graph.op_graph import TensorOp
 
 
-def batchnorm(conv_params, inputs, filters, axes, docstring=None):
+def batchnormcommon(inputs, gamma, beta, epsilon, axes, docstring=None):
     """
 
     Args:
-        conv_params: Dimensions.
         inputs (TensorOp): The input tensor.
-        filters (TensorOp): Filter/kernel tensor.
+        gamma (TensorOp): Gamma for batchnorm.
+        beta (TensorOp): Beta for batchnorm
+        epsilon (TensorOp): Epsilon for batchnorm
         docstring (String, optional): Documentation for the op.
 
     Returns:
-        TensorOp: The result of the convolution.
+        TensorOp: An op that holds result of the batchnorm (Output, mean and variance)
     """
-    return BatchnormOp(conv_params, inputs, filters, axes=axes, docstring=docstring)
+    return BatchnormCommonOp(inputs, gamma, beta, epsilon, axes=axes, docstring=docstring)
 
 
-class BatchnormOp(TensorOp):
-    def __init__(self, conv_params, inputs, filters, axes, **kwargs):
-        super(BatchnormOp, self).__init__(args=(inputs, filters, axes), **kwargs)
+class BatchnormCommonOp(TensorOp):
+    def __init__(self, inputs, gamma, beta, epsilon, axes, **kwargs):
+        super(BatchnormCommonOp, self).__init__(
+            args=(inputs, gamma, beta, epsilon, axes), **kwargs)
 
 
-class BatchnormBpropOp(TensorOp):
-    def __init__(self, conv_params, inputs, filters, axes, **kwargs):
-        super(BatchnormBpropOp, self).__init__(args=(inputs, filters, axes), **kwargs)
-
-
-def batchnorminference(conv_params, inputs, filters, axes, docstring=None):
+def batchnormoutput(inputs, axes, docstring=None):
     """
 
     Args:
-        conv_params: Dimensions.
-        inputs (TensorOp): The input tensor.
-        filters (TensorOp): Filter/kernel tensor.
+        inputs (BatchnormCommonOp): The input tensor.
         docstring (String, optional): Documentation for the op.
 
     Returns:
-        TensorOp: The result of the convolution.
+        TensorOp: Output of the batchnorm.
     """
-    return BatchnormInferenceOp(conv_params, inputs, filters, axes=axes, docstring=docstring)
+    return BatchnormOutputOp(inputs, axes=axes, docstring=docstring)
+
+
+class BatchnormOutputOp(TensorOp):
+    def __init__(self, inputs, axes, **kwargs):
+        super(BatchnormOutputOp, self).__init__(args=(inputs, axes), **kwargs)
+
+
+def batchnormmean(inputs, axes, docstring=None):
+    """
+
+    Args:
+        inputs (BatchnormCommonOp): The input tensor.
+        docstring (String, optional): Documentation for the op.
+
+    Returns:
+        TensorOp: Mean from the batchnorm.
+    """
+    return BatchnormMeanOp(inputs, axes=axes, docstring=docstring)
+
+
+class BatchnormMeanOp(TensorOp):
+    def __init__(self, inputs, axes, **kwargs):
+        super(BatchnormMeanOp, self).__init__(args=(inputs, axes), **kwargs)
+
+
+def batchnormvar(inputs, axes, docstring=None):
+    """
+
+    Args:
+        inputs (BatchnormCommonOp): The input tensor.
+        docstring (String, optional): Documentation for the op.
+
+    Returns:
+        TensorOp: Variance from the batchnorm.
+    """
+    return BatchnormVarOp(inputs, axes=axes, docstring=docstring)
+
+
+class BatchnormVarOp(TensorOp):
+    def __init__(self, inputs, axes, **kwargs):
+        super(BatchnormVarOp, self).__init__(args=(inputs, axes), **kwargs)
+
+
+def batchnormbpropcommon(inputs, gamma, beta, mean, variance,
+                         delta, epsilon, axes, docstring=None):
+    """
+
+    Args:
+        inputs (TensorOp): The input tensor for batchnorm.
+        gamma (TensorOp): Gamma for batchnorm.
+        beta (TensorOp): Beta for batchnorm
+        mean (TensorOp): Mean from batchnorm
+        variance (TensorOp): Variance from batchnorm
+        delta (TensorOp): Delta for bprop
+        epsilon (TensorOp): Epsilon for batchnorm
+        docstring (String, optional): Documentation for the op.
+
+    Returns:
+        TensorOp: An op that holds result of the batchnorm bprop (delta to inputs, gamma and beta)
+    """
+    return BatchnormBpropCommonOp(
+        inputs, gamma, beta, mean, variance, delta, epsilon, axes=axes, docstring=docstring)
+
+
+class BatchnormBpropCommonOp(TensorOp):
+    def __init__(self, inputs, gamma, beta, mean, variance, delta, epsilon, axes, **kwargs):
+        super(BatchnormBpropCommonOp, self).__init__(
+            args=(inputs, gamma, beta, mean, variance, delta, epsilon, axes), **kwargs)
+
+
+def batchnormbpropdata(inputs, axes, docstring=None):
+    """
+
+    Args:
+        inputs (BatchnormBpropCommonOp): Deltas from batchnorm bprop.
+        docstring (String, optional): Documentation for the op.
+
+    Returns:
+        TensorOp: Delta from the batchnorm to batchnorm inputs.
+    """
+    return BatchnormBpropDataOp(inputs, axes=axes, docstring=docstring)
+
+
+class BatchnormBpropDataOp(TensorOp):
+    def __init__(self, inputs, axes, **kwargs):
+        super(BatchnormBpropDataOp, self).__init__(args=(inputs, axes), **kwargs)
+
+
+def batchnormbpropgamma(inputs, axes, docstring=None):
+    """
+
+    Args:
+        inputs (BatchnormBpropCommonOp): Deltas from batchnorm bprop.
+        docstring (String, optional): Documentation for the op.
+
+    Returns:
+        TensorOp: Delta from the batchnorm to batchnorm gamma.
+    """
+    return BatchnormBpropGammaOp(inputs, axes=axes, docstring=docstring)
+
+
+class BatchnormBpropGammaOp(TensorOp):
+    def __init__(self, inputs, axes, **kwargs):
+        super(BatchnormBpropGammaOp, self).__init__(args=(inputs, axes), **kwargs)
+
+
+def batchnormbpropbeta(inputs, axes, docstring=None):
+    """
+
+    Args:
+        inputs (BatchnormBpropCommonOp): Deltas from batchnorm bprop.
+        docstring (String, optional): Documentation for the op.
+
+    Returns:
+        TensorOp: Delta from the batchnorm to batchnorm beta.
+    """
+    return BatchnormBpropBetaOp(inputs, axes=axes, docstring=docstring)
+
+
+class BatchnormBpropBetaOp(TensorOp):
+    def __init__(self, inputs, axes, **kwargs):
+        super(BatchnormBpropBetaOp, self).__init__(args=(inputs, axes), **kwargs)
+
+
+def batchnorminference(inputs, gamma, beta, mean, variance, epsilon, axes, docstring=None):
+    """
+
+    Args:
+        inputs (TensorOp): The input tensor.
+        gamma (TensorOp): Gamma for batchnorm.
+        beta (TensorOp): Beta for batchnorm
+        mean (TensorOp): Beta for batchnorm
+        variance (TensorOp): Mean for batchnorm
+        epsilon (TensorOp): Variance for batchnorm
+        docstring (String, optional): Documentation for the op.
+
+    Returns:
+        TensorOp: The result of the batchnorm for inference.
+    """
+    return BatchnormInferenceOp(
+        inputs, gamma, beta, mean, variance, epsilon, axes=axes, docstring=docstring)
 
 
 class BatchnormInferenceOp(TensorOp):
-    def __init__(self, conv_params, inputs, filters, axes, **kwargs):
-        super(BatchnormInferenceOp, self).__init__(args=(inputs, filters, axes), **kwargs)
+    def __init__(self, inputs, gamma, beta, mean, variance, epsilon, axes, **kwargs):
+        super(BatchnormInferenceOp, self).__init__(
+            args=(inputs, gamma, beta, mean, variance, epsilon, axes), **kwargs)
