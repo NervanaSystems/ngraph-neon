@@ -29,7 +29,7 @@ from neon.op_graph.pooling import pooling
 from neon.op_graph.lookuptable import lookuptable
 from neon.op_graph.batchnorm import batchnormcommon, batchnorminference, \
     batchnormoutput, batchnormmean, batchnormvar, batchnormbpropcommon, \
-    batchnormbpropdata, batchnormbpropgamma, batchnormbpropbeta
+    batchnormbpropdata, batchnormbpropgamma, batchnormbpropbeta, batchnormtrain
 from neon.op_graph.relu import relu
 from neon.op_graph.ctc import ctc
 from neon.op_graph.debug import PrintOp

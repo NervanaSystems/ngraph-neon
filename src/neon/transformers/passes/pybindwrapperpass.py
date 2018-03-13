@@ -69,6 +69,9 @@ from pyngraph.op import Reduce as PyngReduce
 from pyngraph.op import Slice as PyngSlice
 from pyngraph.op import Sqrt as PyngSqrt
 from pyngraph.op import Sum as PyngSum
+from pyngraph.op import BatchNorm as PyngBatchNorm
+from pyngraph.op import BatchNormBackprop as PyngBatchNormBackprop
+from pyngraph.op import GetOutputElement as PyngGetOutputElement
 
 
 class PybindScopePass:
@@ -983,3 +986,87 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         self.computation.set_op_rank(op)
         ngraph_x = self.computation.lookup_cpp_op(x)
         self.computation.register_cpp_op(op, ngraph_x, set_name=False)
+
+    """
+    BatchNorm(double eps,
+              std::shared_ptr<Node> gamma,
+              std::shared_ptr<Node> beta,
+              std::shared_ptr<Node> input);
+    """
+    @visit.on_type(BatchnormCommonOp)
+    def visit(self, op, inputs, gamma, beta):
+        self.computation.set_op_rank(op)
+        ngraph_gamma = self.computation.lookup_cpp_op(gamma)
+        ngraph_beta = self.computation.lookup_cpp_op(beta)
+        ngraph_inputs = self.computation.lookup_cpp_op(inputs)
+        ngraph_bnc = PyngBatchNorm(op.epsilon, ngraph_gamma, ngraph_beta, ngraph_inputs)
+        self.computation.register_cpp_op(op, ngraph_bnc)
+
+    @visit.on_type(BatchnormOutputOp)
+    def visit(self, op, inputs):
+        self.computation.set_op_rank(op)
+        ngraph_inputs = self.computation.lookup_cpp_op(inputs)
+        ngraph_output = PyngGetOutputElement(ngraph_inputs, 0)
+        self.computation.register_cpp_op(op, ngraph_output)
+
+    @visit.on_type(BatchnormMeanOp)
+    def visit(self, op, inputs):
+        self.computation.set_op_rank(op)
+        ngraph_inputs = self.computation.lookup_cpp_op(inputs)
+        ngraph_mean = PyngGetOutputElement(ngraph_inputs, 1)
+        self.computation.register_cpp_op(op, ngraph_mean)
+
+    @visit.on_type(BatchnormVarOp)
+    def visit(self, op, inputs):
+        self.computation.set_op_rank(op)
+        ngraph_inputs = self.computation.lookup_cpp_op(inputs)
+        ngraph_var = PyngGetOutputElement(ngraph_inputs, 2)
+        self.computation.register_cpp_op(op, ngraph_var)
+
+    """
+    BatchNormBackprop(double eps,
+                      std::shared_ptr<Node> gamma,
+                      std::shared_ptr<Node> beta,
+                      std::shared_ptr<Node> input,
+                      std::shared_ptr<Node> mean,
+                      std::shared_ptr<Node> variance,
+                      std::shared_ptr<Node> delta);
+    """
+    @visit.on_type(BatchnormBpropCommonOp)
+    def visit(self, op, inputs, gamma, beta, mean, variance, delta):
+        self.computation.set_op_rank(op)
+        ngraph_gamma = self.computation.lookup_cpp_op(gamma)
+        ngraph_beta = self.computation.lookup_cpp_op(beta)
+        ngraph_inputs = self.computation.lookup_cpp_op(inputs)
+        ngraph_mean = self.computation.lookup_cpp_op(mean)
+        ngraph_var = self.computation.lookup_cpp_op(variance)
+        ngraph_delta = self.computation.lookup_cpp_op(delta)
+        ngraph_output = PyngBatchNormBackprop(op.epsilon,
+                                              ngraph_gamma,
+                                              ngraph_beta,
+                                              ngraph_inputs,
+                                              ngraph_mean,
+                                              ngraph_var,
+                                              ngraph_delta)
+        self.computation.register_cpp_op(op, ngraph_output)
+
+    @visit.on_type(BatchnormBpropDataOp)
+    def visit(self, op, inputs):
+        self.computation.set_op_rank(op)
+        ngraph_inputs = self.computation.lookup_cpp_op(inputs)
+        ngraph_data = PyngGetOutputElement(ngraph_inputs, 0)
+        self.computation.register_cpp_op(op, ngraph_data)
+
+    @visit.on_type(BatchnormBpropGammaOp)
+    def visit(self, op, inputs):
+        self.computation.set_op_rank(op)
+        ngraph_inputs = self.computation.lookup_cpp_op(inputs)
+        ngraph_data = PyngGetOutputElement(ngraph_inputs, 1)
+        self.computation.register_cpp_op(op, ngraph_data)
+
+    @visit.on_type(BatchnormBpropBetaOp)
+    def visit(self, op, inputs):
+        self.computation.set_op_rank(op)
+        ngraph_inputs = self.computation.lookup_cpp_op(inputs)
+        ngraph_data = PyngGetOutputElement(ngraph_inputs, 2)
+        self.computation.register_cpp_op(op, ngraph_data)

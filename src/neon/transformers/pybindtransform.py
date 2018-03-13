@@ -21,6 +21,7 @@ from neon.transformers.base import Transformer
 from neon.transformers import set_transformer_factory, make_transformer_factory
 from neon.op_graph.op_graph import Op, AssignableTensorOp, TensorValueOp, SequentialOp, \
     AssignOp
+from neon.op_graph.batchnorm import BatchnormCommonOp, BatchnormBpropCommonOp
 from orderedset import OrderedSet
 from neon.transformers.passes.pybindwrapperpass \
     import PybindWrapperGenerator, PybindScopePass
@@ -204,6 +205,11 @@ class PybindComputation(Computation):
 
     def register_cpp_op(self, op, cpp_op, set_name=True):
         if isinstance(op, SequentialOp):
+            if hasattr(op, 'axes'):
+                neon_shape = list(op.axes.lengths)
+                ngraph_shape = [cpp_op.shape[i] for i in range(len(cpp_op.shape))]
+                if neon_shape != ngraph_shape:
+                    raise RuntimeError("Shape mismatch", op.name, neon_shape, ngraph_shape)
             self.ngraph_cpp_ops[op] = cpp_op
             return
 
@@ -223,7 +229,12 @@ class PybindComputation(Computation):
 
         if set_name:
             cpp_op.name = tensor_op.name.replace('/', '_')
-
+        if not isinstance(op, (BatchnormCommonOp, BatchnormBpropCommonOp)):
+            if hasattr(op, 'axes'):
+                neon_shape = list(op.axes.lengths)
+                ngraph_shape = [cpp_op.shape[i] for i in range(len(cpp_op.shape))]
+                if neon_shape != ngraph_shape:
+                    raise RuntimeError("Shape mismatch", op.name, neon_shape, ngraph_shape)
         self.ngraph_cpp_ops[tensor_op] = cpp_op
 
     def set_op_rank(self, op):

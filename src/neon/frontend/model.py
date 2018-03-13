@@ -102,7 +102,16 @@ class Sequential(SubGraph):
     @SubGraph.scope_op_creation
     def __call__(self, in_obj, **kwargs):
         for l in self.layers:
+            """
+            if hasattr(l, 'name'):
+                print(l.name)
+                print('In', in_obj.axes)
+            """
             in_obj = l(in_obj, **kwargs)
+            """
+            if hasattr(l, 'name'):
+                print('Out', in_obj.axes)
+            """
         return in_obj
 
 

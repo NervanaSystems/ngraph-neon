@@ -1235,7 +1235,6 @@ class BatchNorm(Layer):
             red_axes = in_axes - in_axes.channel_axis()
 
         out_axes = in_axes - red_axes
-
         if not self.initialized:
             self.gvar = ng.persistent_tensor(axes=out_axes, initial_value=1.0).named("gvar")
             self.gmean = ng.persistent_tensor(axes=out_axes, initial_value=0.0).named("gmean")
@@ -1251,13 +1250,19 @@ class BatchNorm(Layer):
             return self.gamma * ((in_obj - self.gmean) *
                                  ng.reciprocal(ng.sqrt(self.gvar + self.eps))) + self.beta
         else:
-            xmean = ng.mean(in_obj, out_axes=out_axes)
-            xvar = ng.variance(in_obj, out_axes=out_axes)
+            # mkl-dnn only supports batchnorm optimization for 4D NCHW
+            if len(in_axes) == 4:
+                bnoutput, xmean, xvar = ng.batchnormtrain(
+                    in_obj, self.gamma, self.beta, epsilon=1e-5, out_axes=out_axes, axes=in_axes)
+            else:
+                xmean = ng.mean(in_obj, out_axes=out_axes)
+                xvar = ng.variance(in_obj, out_axes=out_axes)
+                bnoutput = self.gamma * ((in_obj - xmean) *
+                                         ng.reciprocal(ng.sqrt(xvar + self.eps))) + self.beta
             return ng.sequential([
                 ng.assign(self.gmean, self.gmean * self.rho + xmean * (1.0 - self.rho)),
                 ng.assign(self.gvar, self.gvar * self.rho + xvar * (1.0 - self.rho)),
-                self.gamma * ((in_obj - xmean) * ng.reciprocal(ng.sqrt(xvar + self.eps))) +
-                self.beta
+                bnoutput
             ])
 
     @SubGraph.scope_op_creation
