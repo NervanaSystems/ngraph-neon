@@ -44,7 +44,7 @@ class Rectlin(object):
             Tensor or optree: output activation
         """
         if self.slope == 0:
-            return ng.maximum(x, 0)
+            return ng.relu(x, axes=x.axes)
         else:
             return ng.maximum(x, 0) + self.slope * ng.minimum(0, x)
 

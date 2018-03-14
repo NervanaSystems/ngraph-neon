@@ -72,6 +72,10 @@ from pyngraph.op import Sum as PyngSum
 from pyngraph.op import BatchNorm as PyngBatchNorm
 from pyngraph.op import BatchNormBackprop as PyngBatchNormBackprop
 from pyngraph.op import GetOutputElement as PyngGetOutputElement
+from pyngraph.op import Max as PyngMax
+from pyngraph.op import Product as PyngProduct
+from pyngraph.op import Relu as PyngRelu
+from pyngraph.op import ReluBackprop as PyngReluBackprop
 
 
 class PybindScopePass:
@@ -534,25 +538,14 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     @visit.on_type(Prod)
     def visit(self, op, input):
         self.computation.set_op_rank(op)
-        # Define the reduction function handle
-        element_type = Type.f32
-        shape = Shape([])
-        f_a = Parameter(element_type, shape)
-        f_b = Parameter(element_type, shape)
-        ngraph_cpp_mul_op = PyngMultiply(f_a, f_b)
-        fn = Function(NodeVector([ngraph_cpp_mul_op]), [f_a, f_b], self.transformer.get_function_name())
 
-        # define the reduction op with the above defined Function handle
         if isinstance(self.np_reduction_axis(op), tuple):
             axis_set = self.np_reduction_axis(op)
         else:
             axis_set = tuple()
             axis_set += (self.np_reduction_axis(op),)
-        g_a = self.computation.lookup_cpp_op(input)
-        const_prod_default_value = [1.]
-        g_b = Constant(Type.f32, Shape([]), const_prod_default_value)
-
-        self.computation.register_cpp_op(op, PyngReduce(g_a, g_b, fn, AxisSet(set(axis_set))))
+        ngraph_input = self.computation.lookup_cpp_op(input)
+        self.computation.register_cpp_op(op, PyngProduct(ngraph_input, AxisSet(set(axis_set))))
 
     @visit.on_type(ReciprocalOp)
     def visit(self, op, input):
@@ -583,24 +576,14 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     @visit.on_type(Max)
     def visit(self, op, input):
         self.computation.set_op_rank(op)
-        # Define the reduction function handle
-        element_type = Type.f32
-        shape = Shape([])
-        f_a = Parameter(element_type, shape)
-        f_b = Parameter(element_type, shape)
-        ngraph_cpp_min_op = PyngMaximum(f_a, f_b)
-        fn = Function(NodeVector([ngraph_cpp_min_op]), [f_a, f_b], self.transformer.get_function_name())
 
-        # define the reduction op with the above defined Function handle
         if isinstance(self.np_reduction_axis(op), tuple):
             axis_set = self.np_reduction_axis(op)
         else:
             axis_set = tuple()
             axis_set += (self.np_reduction_axis(op),)
-        g_a = self.computation.lookup_cpp_op(input)
-        const_max_default_value = [float('-inf')]
-        g_b = Constant(Type.f32, Shape([]), const_max_default_value)
-        self.computation.register_cpp_op(op, PyngReduce(g_a, g_b, fn, AxisSet(set(axis_set))))
+        ngraph_input = self.computation.lookup_cpp_op(input)
+        self.computation.register_cpp_op(op, PyngMax(ngraph_input, AxisSet(set(axis_set))))
 
     @visit.on_type(SequentialOp)
     def visit(self, op):
@@ -1070,3 +1053,21 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         ngraph_inputs = self.computation.lookup_cpp_op(inputs)
         ngraph_data = PyngGetOutputElement(ngraph_inputs, 2)
         self.computation.register_cpp_op(op, ngraph_data)
+
+    @visit.on_type(ReluOp)
+    def visit(self, op, inputs):
+        self.computation.set_op_rank(op)
+        ngraph_inputs = self.computation.lookup_cpp_op(inputs)
+        ngraph_relu = PyngRelu(ngraph_inputs)
+        self.computation.register_cpp_op(op, ngraph_relu)
+
+    """
+    ReluBackprop(std::shared_ptr<ngraph::Node> arg, std::shared_ptr<ngraph::Node> delta);
+    """
+    @visit.on_type(ReluBpropOp)
+    def visit(self, op, inputs, delta):
+        self.computation.set_op_rank(op)
+        ngraph_inputs = self.computation.lookup_cpp_op(inputs)
+        ngraph_delta = self.computation.lookup_cpp_op(delta)
+        ngraph_relu_bprop = PyngReluBackprop(ngraph_inputs, ngraph_delta)
+        self.computation.register_cpp_op(op, ngraph_relu_bprop)

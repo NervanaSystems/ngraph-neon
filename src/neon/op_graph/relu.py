@@ -19,24 +19,25 @@ from neon.op_graph.op_graph import TensorOp
 
 def relu(inputs, axes, docstring=None):
     """
-
     Args:
-        conv_params: Dimensions.
         inputs (TensorOp): The input tensor.
-        filters (TensorOp): Filter/kernel tensor.
         docstring (String, optional): Documentation for the op.
 
     Returns:
-        TensorOp: The result of the convolution.
+        TensorOp: The result of Relu
     """
     return ReluOp(inputs, axes=axes, docstring=docstring)
 
 
 class ReluOp(TensorOp):
-    def __init__(self, inputs, axes, **kwargs):
-        super(ReluOp, self).__init__(args=(inputs, axes), **kwargs)
+    def __init__(self, inputs, **kwargs):
+        super(ReluOp, self).__init__(args=(inputs,), **kwargs)
+
+    def generate_adjoints(self, adjoints, delta, inputs):
+        relu_bprop = ReluBpropOp(inputs, delta, axes=inputs.axes)
+        inputs.generate_add_delta(adjoints, relu_bprop)
 
 
 class ReluBpropOp(TensorOp):
-    def __init__(self, inputs, axes, **kwargs):
-        super(ReluBpropOp, self).__init__(args=(inputs, axes), **kwargs)
+    def __init__(self, inputs, delta, **kwargs):
+        super(ReluBpropOp, self).__init__(args=(inputs, delta), **kwargs)
