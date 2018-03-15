@@ -25,10 +25,10 @@ from neon.op_graph.batchnorm import BatchnormCommonOp, BatchnormBpropCommonOp
 from orderedset import OrderedSet
 from neon.transformers.passes.pybindwrapperpass \
     import PybindWrapperGenerator, PybindScopePass
-import pyngraph.util as util
-from pyngraph import Type, Function, NodeVector, Shape
-from pyngraph.runtime import Manager
-from pyngraph.op import Parameter
+import ngraph.util as util
+from ngraph import Type, Function, NodeVector, Shape
+from ngraph.runtime import Manager
+from ngraph.op import Parameter
 
 
 class PybindComputation(Computation):

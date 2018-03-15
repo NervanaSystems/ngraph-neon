@@ -31,51 +31,51 @@ from neon.op_graph.pooling import PoolingOp, BpropPoolOp
 from neon.op_graph.convolution import ConvolutionOp, bprop_conv, update_conv
 import numpy as np
 
-from pyngraph import Type
-from pyngraph import Function as Function
-from pyngraph import Shape
-from pyngraph import AxisSet
-from pyngraph import AxisVector
-from pyngraph import Strides
-from pyngraph import CoordinateDiff
-from pyngraph import Coordinate
-from pyngraph import NodeVector
-from pyngraph.op import Parameter
-from pyngraph.op import AvgPool as PyngAvgPool
-from pyngraph.op import AvgPoolBackprop as PyngAvgPoolBackprop
-from pyngraph.op import Broadcast as PyngBroadcast
-from pyngraph.op import Constant
-from pyngraph.op import Convert as PyngConvert
-from pyngraph.op import Convolution as PyngConvolution
-from pyngraph.op import ConvolutionBackpropData as PyngConvolutionBackpropData
-from pyngraph.op import ConvolutionBackpropFilters as PyngConvolutionBackpropFilters
-from pyngraph.op import Dot as PyngDot
-from pyngraph.op import Equal as PyngEqual
-from pyngraph.op import Exp as PyngExp
-from pyngraph.op import Greater as PyngGreater
-from pyngraph.op import GreaterEq as PyngGreaterEq
-from pyngraph.op import Less as PyngLess
-from pyngraph.op import Log as PyngLog
-from pyngraph.op import Maximum as PyngMaximum
-from pyngraph.op import MaxPool as PyngMaxPool
-from pyngraph.op import MaxPoolBackprop as PyngMaxPoolBackprop
-from pyngraph.op import Minimum as PyngMinimum
-from pyngraph.op import Multiply as PyngMultiply
-from pyngraph.op import Negative as PyngNegative
-from pyngraph.op import NotEqual as PyngNotEqual
-from pyngraph.op import OneHot as PyngOneHot
-from pyngraph.op import Reshape as PyngReshape
-from pyngraph.op import Reduce as PyngReduce
-from pyngraph.op import Slice as PyngSlice
-from pyngraph.op import Sqrt as PyngSqrt
-from pyngraph.op import Sum as PyngSum
-from pyngraph.op import BatchNorm as PyngBatchNorm
-from pyngraph.op import BatchNormBackprop as PyngBatchNormBackprop
-from pyngraph.op import GetOutputElement as PyngGetOutputElement
-from pyngraph.op import Max as PyngMax
-from pyngraph.op import Product as PyngProduct
-from pyngraph.op import Relu as PyngRelu
-from pyngraph.op import ReluBackprop as PyngReluBackprop
+from ngraph import Type
+from ngraph import Function as Function
+from ngraph import Shape
+from ngraph import AxisSet
+from ngraph import AxisVector
+from ngraph import Strides
+from ngraph import CoordinateDiff
+from ngraph import Coordinate
+from ngraph import NodeVector
+from ngraph.op import Parameter
+from ngraph.op import AvgPool as PyngAvgPool
+from ngraph.op import AvgPoolBackprop as PyngAvgPoolBackprop
+from ngraph.op import Broadcast as PyngBroadcast
+from ngraph.op import Constant
+from ngraph.op import Convert as PyngConvert
+from ngraph.op import Convolution as PyngConvolution
+from ngraph.op import ConvolutionBackpropData as PyngConvolutionBackpropData
+from ngraph.op import ConvolutionBackpropFilters as PyngConvolutionBackpropFilters
+from ngraph.op import Dot as PyngDot
+from ngraph.op import Equal as PyngEqual
+from ngraph.op import Exp as PyngExp
+from ngraph.op import Greater as PyngGreater
+from ngraph.op import GreaterEq as PyngGreaterEq
+from ngraph.op import Less as PyngLess
+from ngraph.op import Log as PyngLog
+from ngraph.op import Maximum as PyngMaximum
+from ngraph.op import MaxPool as PyngMaxPool
+from ngraph.op import MaxPoolBackprop as PyngMaxPoolBackprop
+from ngraph.op import Minimum as PyngMinimum
+from ngraph.op import Multiply as PyngMultiply
+from ngraph.op import Negative as PyngNegative
+from ngraph.op import NotEqual as PyngNotEqual
+from ngraph.op import OneHot as PyngOneHot
+from ngraph.op import Reshape as PyngReshape
+from ngraph.op import Reduce as PyngReduce
+from ngraph.op import Slice as PyngSlice
+from ngraph.op import Sqrt as PyngSqrt
+from ngraph.op import Sum as PyngSum
+from ngraph.op import BatchNorm as PyngBatchNorm
+from ngraph.op import BatchNormBackprop as PyngBatchNormBackprop
+from ngraph.op import GetOutputElement as PyngGetOutputElement
+from ngraph.op import Max as PyngMax
+from ngraph.op import Product as PyngProduct
+from ngraph.op import Relu as PyngRelu
+from ngraph.op import ReluBackprop as PyngReluBackprop
 
 
 class PybindScopePass:
