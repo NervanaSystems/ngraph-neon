@@ -1,0 +1,10 @@
+pytest==3.2.5
+pytest-cov==2.5.1
+pytest-xdist==1.20.0
+pytest-timeout==1.2.0
+autopep8==1.2.4
+flake8==3.3.0
+flake8-junit-report==1.0.0
+isort==4.2.5
+pylint==1.6.4
+gym==0.9.1
