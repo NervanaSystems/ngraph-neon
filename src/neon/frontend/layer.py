@@ -1253,7 +1253,7 @@ class BatchNorm(Layer):
             # mkl-dnn only supports batchnorm optimization for 4D NCHW
             if len(in_axes) == 4:
                 bnoutput, xmean, xvar = ng.batchnormtrain(
-                    in_obj, self.gamma, self.beta, epsilon=1e-5, out_axes=out_axes, axes=in_axes)
+                    in_obj, self.gamma, self.beta, self.eps, out_axes=out_axes, axes=in_axes)
             else:
                 xmean = ng.mean(in_obj, out_axes=out_axes)
                 xvar = ng.variance(in_obj, out_axes=out_axes)
