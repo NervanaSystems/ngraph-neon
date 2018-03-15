@@ -62,6 +62,7 @@ DOC_PUB_RELEASE_PATH := $(DOC_PUB_PATH)/$(RELEASE)
 default: install
 
 install:
+	pip install wheel
 	pip install -e .
 
 install_all: test_prepare examples_prepare doc_prepare install
