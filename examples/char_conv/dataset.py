@@ -19,6 +19,7 @@ from neon.util.persist import valid_path_append
 
 
 class CrepeDataset(object):
+
     def __init__(self,
                  path='.',
                  sentence_length=1014,

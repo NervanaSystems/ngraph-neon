@@ -25,6 +25,7 @@ class TensorBoardPass(GraphPass):
     Arguments:
         logdir: directory to save the log
     """
+
     def __init__(self, logdir):
         super(TensorBoardPass, self).__init__()
         self.logdir = logdir

@@ -152,6 +152,7 @@ class DeviceBufferStorage(with_metaclass(abc.ABCMeta, NameableValue)):
 
         views: All direct tensor views of this buffer.
     """
+
     def __init__(self, transformer, bytes, dtype, **kwargs):
         super(DeviceBufferStorage, self).__init__(**kwargs)
         self.transformer = transformer
@@ -217,6 +218,7 @@ class DeviceTensor(with_metaclass(abc.ABCMeta, NameableValue)):
         tensor_description: The tensor_description describing this device tensor.
         **kwargs: Args for related classes.
     """
+
     def __init__(self, transformer, device_buffer, tensor_description, **kwargs):
         super(DeviceTensor, self).__init__(**kwargs)
         self.transformer = transformer
@@ -296,6 +298,7 @@ class Transformer(with_metaclass(Transformer_ABC_Meta, object)):
         fusion (bool): True when fusion was enabled.
         device_buffers (set): Set of handles for storage allocations.
     """
+
     def __init__(self, **kwargs):
         super(Transformer, self).__init__(**kwargs)
         self.graph_passes = []
@@ -476,6 +479,7 @@ class Transformer(with_metaclass(Transformer_ABC_Meta, object)):
 
 
 class ComputationGraphTransformer(Transformer):
+
     def __init__(self, **kwargs):
         super(ComputationGraphTransformer, self).__init__(**kwargs)
         self.computations = OrderedSet()

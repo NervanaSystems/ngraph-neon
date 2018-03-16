@@ -120,7 +120,7 @@ def tensor_to_protobuf(tensor):
 
 def unhandled_scalar_value(value):
     return ValueError("Unable to convert item type {} to protobuf for item {}".format(type(value),
-                      value))
+                                                                                      value))
 
 
 def is_scalar_type(value):

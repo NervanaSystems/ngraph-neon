@@ -70,6 +70,7 @@ class BpropPoolOp(TensorOp):
     Arguments:
         fprop: The original PoolingOp.
     """
+
     def __init__(self, delta, inputs, fprop, **kwargs):
         super(BpropPoolOp, self).__init__(args=(delta,), axes=inputs.axes, **kwargs)
         self.fprop = fprop

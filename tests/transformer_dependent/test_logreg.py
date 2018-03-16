@@ -24,6 +24,7 @@ pytestmark = pytest.mark.transformer_dependent
 
 
 class NumpyLogreg(object):
+
     def __init__(self, xs, ys, thetas):
         self.xs = xs.T.copy()
         self.ys = ys

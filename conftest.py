@@ -35,6 +35,7 @@ def pytest_xdist_node_collection_finished(node, ids):
 def pytest_generate_tests(metafunc):
     pass
 
+
 @pytest.fixture(scope="module", autouse=True)
 def transformer_factory(request):
     def set_and_get_factory(transformer_name):

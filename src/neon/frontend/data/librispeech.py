@@ -80,7 +80,7 @@ class Librispeech(object):
                 manifest_file = os.path.join(self.path, "manifest.tsv")
 
         if os.path.exists(manifest_file):
-                return manifest_file
+            return manifest_file
 
         # Download the file
         workdir, filepath = valid_path_append(self.path, '', self.source_file)

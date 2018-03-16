@@ -47,6 +47,7 @@ class Parallel(SubGraph):
 
     """
     # TODO: option to sum the outputs of branches rather than concatenate
+
     def __init__(self, branches, name=None, mode='concat', **kwargs):
         super(Parallel, self).__init__(name=name, **kwargs)
         self.branches = branches
@@ -57,7 +58,7 @@ class Parallel(SubGraph):
     @SubGraph.scope_op_creation
     def __call__(self, in_obj, merge_axis=None):
         outputs = [branch(in_obj) for branch in self.branches]
-        if (type(merge_axis) == str):
+        if (isinstance(merge_axis, str)):
             merge_axis = ng.make_axis(name=merge_axis)
 
         if self.mode == 'concat':
@@ -95,6 +96,7 @@ class Sequential(SubGraph):
         x = preprocess(input)
         output = conv(x)
     """
+
     def __init__(self, layers, name=None, **kwargs):
         super(Sequential, self).__init__(name=name, **kwargs)
         self.layers = layers
@@ -121,6 +123,7 @@ class Container(object):
 
     Two string->`Op` dictionaries representing a container of op_graphs
     """
+
     def __init__(self, inputs=dict(), outputs=dict()):
         self.inputs = inputs
         self.outputs = outputs
@@ -158,6 +161,7 @@ class BoundComputation(object):
         named_outputs (dict): Output entities wanted for the computation
         named_inputs (dict): Input entities needed for the computation
     """
+
     def __init__(self, transformer, named_outputs, named_inputs):
         self.input_keys = tuple(sorted(named_inputs.keys()))
 
@@ -226,6 +230,7 @@ class ResidualModule(object):
     2 branches being main_path and side_path
     https://github.com/NervanaSystems/private-ngraph/issues/2176
     """
+
     def __init__(self, main_path, side_path=None):
         self.main_path = main_path
         self.side_path = side_path

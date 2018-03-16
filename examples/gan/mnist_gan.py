@@ -26,9 +26,9 @@ import neon as ng
 import os
 import neon.transformers as ngt
 from neon.frontend import (Sequential, Deconvolution, Convolution,
-                                   Rectlin, Logistic, Tanh,
-                                   Adam, ArrayIterator,
-                                   KaimingInit, make_bound_computation)
+                           Rectlin, Logistic, Tanh,
+                           Adam, ArrayIterator,
+                           KaimingInit, make_bound_computation)
 from neon.frontend import NeonArgparser
 from neon.frontend import MNIST
 from neon.frontend.logging import ProgressBar

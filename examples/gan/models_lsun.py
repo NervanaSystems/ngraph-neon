@@ -1,6 +1,6 @@
 
 from neon.frontend import (Sequential, Deconvolution, Convolution, Rectlin, Affine,
-                                   Tanh, GaussianInit)
+                           Tanh, GaussianInit)
 import neon as ng
 
 filter_init = GaussianInit(var=0.02)

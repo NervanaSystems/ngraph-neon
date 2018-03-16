@@ -60,6 +60,7 @@ def conv_params(fsize, nfm, strides=1, relu=True, batch_norm=True):
 
 
 class f_module(object):
+
     def __init__(self, nfm, first=False, strides=1):
 
         self.trunk = None

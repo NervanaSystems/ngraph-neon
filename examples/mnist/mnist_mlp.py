@@ -129,4 +129,3 @@ else:
         weight_saver.restore()
         eval_losses = loop_eval(valid_set, eval_computation)
         print("Inference complete.  Avg losses: " + str(eval_losses))
-

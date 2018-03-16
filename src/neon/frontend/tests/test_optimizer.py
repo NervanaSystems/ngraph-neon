@@ -139,6 +139,7 @@ class AdagradReference(object):
     '''
     Simple numpy reference for Adagrad
     '''
+
     def __init__(self, learning_rate, epsilon):
         self.learning_rate = learning_rate
         self.epsilon = epsilon

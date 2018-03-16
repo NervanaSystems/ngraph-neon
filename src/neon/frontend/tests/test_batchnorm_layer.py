@@ -33,6 +33,7 @@ recurrent_atol = 1e-5
 
 
 class BatchNormReference(object):
+
     def __init__(self, x,
                  init_gamma=1.0, init_beta=0.0,
                  gmean=0.0, gvar=1.0, rho=0.9, eps=1e-3, axis=(1,)):
@@ -112,7 +113,7 @@ class RNNHelper(object):
     def get_ancestor_op(self, op):
         for anc_op in ng.Op.ordered_ops([op]):
             if (isinstance(anc_op, ng.DotOp) and
-               any(arg.tensor == self.reference_W_input for arg in anc_op.args)):
+                    any(arg.tensor == self.reference_W_input for arg in anc_op.args)):
                 return anc_op
 
 

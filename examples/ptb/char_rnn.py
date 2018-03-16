@@ -32,7 +32,7 @@ Usage:
 from contextlib import closing
 import neon as ng
 from neon.frontend import (Layer, Sequential, Preprocess, BiRNN, Recurrent, Affine,
-                                   Softmax, Tanh, LookupTable)
+                           Softmax, Tanh, LookupTable)
 from neon.frontend import UniformInit, RMSProp
 from neon.frontend import ax, loop_train
 from neon.frontend import NeonArgparser, make_bound_computation, make_default_callbacks

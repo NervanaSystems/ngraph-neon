@@ -139,10 +139,16 @@ inputs = {'X': ng.placeholder(in_axes), 'y': ng.placeholder(out_axes),
           'iteration': ng.placeholder(axes=())}
 
 # Network Definition
-seq1 = Sequential([LSTM(nout=recurrent_units, init=init_uni, backward=False,
-                   activation=Logistic(), gate_activation=Tanh(), return_sequence=predict_seq),
-                   Affine(weight_init=init_uni, bias_init=init_uni,
-                   activation=Identity(), axes=out_axis)])
+seq1 = Sequential([LSTM(nout=recurrent_units,
+                        init=init_uni,
+                        backward=False,
+                        activation=Logistic(),
+                        gate_activation=Tanh(),
+                        return_sequence=predict_seq),
+                   Affine(weight_init=init_uni,
+                          bias_init=init_uni,
+                          activation=Identity(),
+                          axes=out_axis)])
 
 # Optimizer
 # Following policy will set the initial learning rate to 0.05 (base_lr)

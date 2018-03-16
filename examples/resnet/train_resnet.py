@@ -39,6 +39,8 @@ def open_csv(file_name, mode):
            open(file_name, mode=mode, newline=''))
 
 # Calculate metrics over given dataset
+
+
 def loop_eval(dataset, input_ph, metric_name, computation, en_top5=False):
     # Reset test set
     dataset.reset()

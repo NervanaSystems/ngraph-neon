@@ -90,6 +90,7 @@ class Preprocess(Layer):
     """
     TODO: Document
     """
+
     def __init__(self, functor, **kwargs):
         if ("name" not in kwargs):
             kwargs["name"] = get_function_or_class_name(functor)
@@ -157,6 +158,7 @@ class Linear(Layer):
         keep_axes (Axes, optional): in_obj axes which should be preserved.
             Defaults to preserving batch and recurrent axes.
     """
+
     def __init__(self, init, nout=None, axes=None, keep_axes=None, **kwargs):
         super(Linear, self).__init__(**kwargs)
 
@@ -535,6 +537,7 @@ class DeconvBase(ConvBase):
             height: The height axis with default name "H".
             width: The width axis with default name "W".
     """
+
     def _filter_axes(self, channel_axis, spatial_axes):
         """
         Create the filter axes. They are ordered as (K, D, H, W, C).
@@ -623,6 +626,7 @@ class Activation(Layer):
     """
     TODO: Document. Why should we pass through this instead of just defining functions? Caching?
     """
+
     def __init__(self, transform, **kwargs):
         if ("name" not in kwargs) and (transform is not None):
             kwargs["name"] = get_function_or_class_name(transform)
@@ -809,6 +813,7 @@ class Pooling(PoolBase):
             height: The height axis with default name "H".
             width: The width axis with default name "W".
     """
+
     def __init__(self, pool_shape, strides=1, padding=0, pool_type='max', **kwargs):
 
         pool_dim = len(pool_shape)
@@ -860,6 +865,7 @@ class Bias(Layer):
 
     TODO: Should default be None or 0?
     """
+
     def __init__(self, init, shared=True, **kwargs):
         super(Bias, self).__init__(**kwargs)
         self.W = None
@@ -925,6 +931,7 @@ class Affine(Layer):
            affine = Affine(weight_init=GaussianInit(), activation=Softmax(), axes=output_axes)
            output = affine(input)
     """
+
     def __init__(self, weight_init, nout=None, bias_init=None, activation=None,
                  batch_norm=False, axes=None, **kwargs):
         super(Affine, self).__init__(**kwargs)
@@ -1031,6 +1038,7 @@ class Convolution(SubGraph):
                               padding="causal", activation=Rectlin(), bias_init=ConstantInit(0))
            output = conv(input)
     """
+
     def __init__(self, filter_shape, filter_init, strides=1, padding=0, dilation=1, bias_init=None,
                  activation=None, batch_norm=False, **kwargs):
         super(Convolution, self).__init__(**kwargs)
@@ -1126,6 +1134,7 @@ class Deconvolution(Convolution):
                                   padding=0, activation=Rectlin(), batch_norm=True)
            output = deconv(input)
     """
+
     def __init__(self, filter_shape, filter_init, strides=1, padding=0, dilation=1, bias_init=None,
                  activation=None, batch_norm=False, deconv_out_shape=None, **kwargs):
         super(Deconvolution, self).__init__(filter_shape, filter_init,
@@ -1212,6 +1221,7 @@ class BatchNorm(Layer):
     .. [Ioffe2015] http://arxiv.org/abs/1502.03167
     .. [Laurent2016] https://arxiv.org/abs/1510.01378
     """
+
     def __init__(self, rho=0.9, eps=1e-3, init_gamma=1.0, init_beta=0.0,
                  **kwargs):
         super(BatchNorm, self).__init__(**kwargs)
@@ -1296,6 +1306,7 @@ class Dropout(Layer):
             Affine(nout=2048, activation=Rectlin())
         ]
     """
+
     def __init__(self, keep=0.5, **kwargs):
         super(Dropout, self).__init__(**kwargs)
         self.keep = keep
@@ -1356,6 +1367,7 @@ class Recurrent(Layer):
             (output_size, output_size)
         b (Tensor): Biases on output units (output_size, 1)
     """
+
     def __init__(self, nout, init, init_inner=None, activation=None, batch_norm=False,
                  reset_cells=True, return_sequence=True, backward=False, **kwargs):
         super(Recurrent, self).__init__(**kwargs)
@@ -1515,6 +1527,7 @@ class BiRNN(Layer):
                            list.
         name (str, optional): name to refer to this layer as.
     """
+
     def __init__(self, nout, init, init_inner=None, activation=None, batch_norm=False,
                  reset_cells=False, return_sequence=True, sum_out=False,
                  concat_out=False, **kwargs):
@@ -1957,6 +1970,7 @@ class RNNCell(BaseRNNCell):
     name (str, optional): Assigns given name to the cell.
 
     """
+
     def __init__(self, nout, init, init_h2h=None, bias_init=None, activation=None,
                  batch_norm=False, reset_cells=True, **kwargs):
         super(RNNCell, self).__init__(**kwargs)

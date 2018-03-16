@@ -65,7 +65,7 @@ def test_flattenedaxis_serialization():
     assert py_axis.length == orig_axis.length
     # NameableValue name counter is different
     # assert orig_axis.name == py_axis.name
-    assert type(py_axis) == type(orig_axis)
+    assert isinstance(py_axis, type(orig_axis))
     assert orig_axis == py_axis
 
 

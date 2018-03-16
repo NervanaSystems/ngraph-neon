@@ -67,17 +67,17 @@ def pytest_generate_tests(metafunc):
 def test_ref_compare_rand(reflstmargs):
         # run comparison with reference code
         # for Gaussian random init
-        seq_len, input_size, hidden_size, batch_size, num_iter, reset_cells = reflstmargs
-        check_lstm(seq_len, input_size, hidden_size, batch_size,
-                   GaussianInit(0.0, 0.1), reset_cells=reset_cells,
-                   num_iter=num_iter)
+    seq_len, input_size, hidden_size, batch_size, num_iter, reset_cells = reflstmargs
+    check_lstm(seq_len, input_size, hidden_size, batch_size,
+               GaussianInit(0.0, 0.1), reset_cells=reset_cells,
+               num_iter=num_iter)
 
 
 def test_ref_stacked(reflstmargs):
-        seq_len, input_size, hidden_size, batch_size, num_iter, reset_cells = reflstmargs
-        check_stacked_lstm(seq_len, input_size, hidden_size, batch_size,
-                           GaussianInit(0.0, 0.1), reset_cells=reset_cells,
-                           num_iter=num_iter)
+    seq_len, input_size, hidden_size, batch_size, num_iter, reset_cells = reflstmargs
+    check_stacked_lstm(seq_len, input_size, hidden_size, batch_size,
+                       GaussianInit(0.0, 0.1), reset_cells=reset_cells,
+                       num_iter=num_iter)
 
 
 def copier(f):

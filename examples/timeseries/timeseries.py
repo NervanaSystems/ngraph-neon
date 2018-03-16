@@ -37,6 +37,7 @@ class TimeSeries(object):
                     Set to 1 to start predicting from next time point onwards
                     Only used when predict_seq is False
     """
+
     def __init__(self, batch_size, npoints=100, ncycles=10, train_ratio=0.8,
                  curvetype='Lissajous1', seq_len=30,
                  predict_seq=True, look_ahead=1):

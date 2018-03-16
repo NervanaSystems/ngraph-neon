@@ -12,6 +12,7 @@ from tensorflow.core.util import event_pb2
 
 
 class RecordWriter(object):
+
     def __init__(self, f, mode='wb'):
         """
         Create a tfrecord writer
@@ -203,7 +204,7 @@ def crc_update(crc, data):
       32-bit updated CRC-32C as long.
     """
 
-    if type(data) != array.array or data.itemsize != 1:
+    if not isinstance(data, array.array) or data.itemsize != 1:
         buf = array.array("B", data)
     else:
         buf = data

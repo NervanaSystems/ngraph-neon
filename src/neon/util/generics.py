@@ -46,6 +46,7 @@ class TypeMethods(object):
         dispatch_type: Function which returns the type to dispatch on.
         next_method_arg: If not None, next_method will be passed in this position.
     """
+
     def __init__(self,
                  dispatch_type_fun,
                  next_method_arg=None,

@@ -30,6 +30,7 @@ class SerializationPass(GraphPass):
         fname_prefix <string>: prefix string for the serialized graph to be written into in a
             tmpdir
     """
+
     def __init__(self, fname_prefix):
         super(SerializationPass, self).__init__()
         self.tmpfile = tempfile.NamedTemporaryFile(prefix=fname_prefix, delete=False)

@@ -22,7 +22,7 @@ import pytest
 import numpy as np
 import neon as ng
 from neon.frontend.activation import (Identity, Rectlin, Rectlinclip,
-                                              Softmax, Tanh, Logistic)
+                                      Softmax, Tanh, Logistic)
 from neon.testing import ExecutorFactory
 
 pytestmark = pytest.mark.transformer_dependent
@@ -192,8 +192,8 @@ def test_derivative(all_inputs, activation_pair):
 
     # results mismatch for mixed_2d-Softmax with flexgpu
     if ((all_inputs.shape[1] == 2)
-       and (all_inputs[0][0] >= 0)
-       and isinstance(activation_pair, SoftmaxPair)):
+        and (all_inputs[0][0] >= 0)
+            and isinstance(activation_pair, SoftmaxPair)):
         pytest.config.flex_skip_now("Result mismatch")
 
     ng.testing.assert_allclose(activation_pair.baseline_derivative(all_inputs),

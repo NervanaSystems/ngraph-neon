@@ -31,6 +31,7 @@ from neon.util.generics import generic_method
 
 
 class GraphPass(with_metaclass(abc.ABCMeta, DelegateOpAccessor)):
+
     def wrapped_do_pass(self, **kwargs):
         self.begin_pass(**kwargs)
         self.do_pass(**kwargs)
@@ -42,6 +43,7 @@ class GraphPass(with_metaclass(abc.ABCMeta, DelegateOpAccessor)):
 
 
 class ProcessOpGraphPass(GraphPass):
+
     def do_pass(self, **kwargs):
         self.run_pass(self.process_op, **kwargs)
 
@@ -267,7 +269,7 @@ class GraphRewritePass(ProcessOpGraphPass):
 
         else:
             do_lengths_match = (len(self.op_args(op)) == len(pattern.args))
-            is_same_type = (type(op) == type(pattern))
+            is_same_type = (isinstance(op, type(pattern)))
             is_skip_op = (isinstance(pattern, PatternSkipOp) and
                           pattern.is_optional_op_fn(op))
 

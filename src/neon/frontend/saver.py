@@ -49,6 +49,7 @@ def get_root_ops(computation):
 
 
 class Saver(object):
+
     def __init__(self):
         """
         A class that defines a set of methods to enable weight saving and restoring

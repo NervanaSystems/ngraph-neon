@@ -35,7 +35,7 @@ Usage:
 from contextlib import closing
 import neon as ng
 from neon.frontend import (Layer, Sequential, Preprocess, LSTM,
-                                   Affine, Softmax, Tanh, Logistic)
+                           Affine, Softmax, Tanh, Logistic)
 from neon.frontend import UniformInit, RMSProp
 from neon.frontend import ax, loop_train
 from neon.frontend import NeonArgparser, make_bound_computation, make_default_callbacks

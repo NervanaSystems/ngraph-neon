@@ -108,6 +108,7 @@ def transform_and_save(target_size, tar_handle, img_object, output_filename):
 
 
 class IngestI1K(object):
+
     def __init__(self, input_dir, out_dir, target_size=256):
         np.random.seed(0)
 

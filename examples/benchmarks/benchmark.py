@@ -25,12 +25,14 @@ from examples.benchmarks.fake_data_generator import preprocess_ds2_data
 
 
 class DefaultOrderedDict(OrderedDict):
+
     def __missing__(self, key):
         self[key] = type(self)()
         return self[key]
 
 
 class Mark(object):
+
     def init_mark(self):
         return {'time': 0}
 

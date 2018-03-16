@@ -44,6 +44,7 @@ class CostPair(object):
 
 
 class CrossEntropyBinaryPair(CostPair):
+
     def __init__(self):
         self.ng_computation = lambda Y, T: ng.cross_entropy_binary(Y, T)
 
@@ -52,6 +53,7 @@ class CrossEntropyBinaryPair(CostPair):
 
 
 class CrossEntropyMultiPair(CostPair):
+
     def __init__(self):
         self.ng_computation = lambda Y, T: ng.cross_entropy_multi(Y, T)
 
@@ -60,6 +62,7 @@ class CrossEntropyMultiPair(CostPair):
 
 
 class SumSquaredPair(CostPair):
+
     def __init__(self):
         self.ng_computation = lambda Y, T: ng.squared_L2(Y - T, out_axes=()) / 2
 
@@ -68,6 +71,7 @@ class SumSquaredPair(CostPair):
 
 
 class MeanSquaredPair(CostPair):
+
     def __init__(self):
         self.ng_computation = lambda Y, T: ng.mean(ng.square(Y - T), out_axes=()) / 2.
 

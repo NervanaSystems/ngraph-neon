@@ -19,7 +19,7 @@ from __future__ import print_function
 from contextlib import closing
 import neon as ng
 from neon.frontend import (Layer, Sequential, BiRNN, Recurrent, Affine,
-                                   Softmax, Tanh, LookupTable)
+                           Softmax, Tanh, LookupTable)
 from neon.frontend import UniformInit, RMSProp
 from neon.frontend import ax, loop_train, make_bound_computation, make_default_callbacks
 from neon.frontend import NeonArgparser

@@ -20,8 +20,8 @@ from contextlib import closing
 import neon as ng
 import neon.transformers as ngt
 from neon.frontend import (GaussianInit, GlorotInit, ConstantInit, Convolution, Rectlin,
-                                   Rectlinclip, BiRNN, GradientDescentMomentum, Affine, Softmax,
-                                   Sequential, Layer)
+                           Rectlinclip, BiRNN, GradientDescentMomentum, Affine, Softmax,
+                           Sequential, Layer)
 from neon.frontend import ax
 from neon.frontend.data import Librispeech
 from data import make_aeon_dataloader

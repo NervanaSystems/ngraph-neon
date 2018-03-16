@@ -104,4 +104,3 @@ if os.environ.get('NEON_LOG', None) in ('ERROR', 'WARNING', 'INFO', 'DEBUG', 'TR
 # Optionally we can act like a 'good library citizen' and not have any defaults, forcing the user
 # to set everything up:
 # logging.getLogger(__name__).addHandler(NullHandler())
-

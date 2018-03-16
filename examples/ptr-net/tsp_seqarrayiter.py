@@ -30,6 +30,7 @@ class TSPSequentialArrayIterator(object):
         total_iterations (int): number of minibatches to cycle through on this iterator.
                                 If not provided, it will cycle through all of the data once.
     """
+
     def __init__(self, data_arrays, time_steps, batch_size, nfeatures,
                  total_iterations=None):
         self.batch_size = batch_size

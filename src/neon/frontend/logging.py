@@ -13,6 +13,7 @@ class ProgressBar(tqdm):
         for sample in progress_bar(dataset):
             result = fun(sample)
     """
+
     def __call__(self, iterable):
         self.iterable = iterable
         return self
@@ -35,6 +36,7 @@ class PBStreamHandler(logging.Handler):
     Modified from:
     http://stackoverflow.com/questions/38543506/change-logging-print-function-to-tqdm-write-so-logging-doesnt-interfere-wit
     """
+
     def __init__(self, stream=sys.stdout, level=logging.NOTSET):
         self.stream = stream
         super(PBStreamHandler, self).__init__(level=level)

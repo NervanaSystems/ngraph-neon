@@ -26,6 +26,7 @@ def get_simple_graph():
 
 
 class StubTransformer(object):
+
     def __init__(self):
         self.state_initialization_ops = OrderedSet()
 
