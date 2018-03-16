@@ -15,7 +15,6 @@
 # ******************************************************************************
 import pytest
 import neon.transformers as ngt
-import neon.op_graph.serde.serde as serde
 
 
 def pytest_addoption(parser):
@@ -49,27 +48,6 @@ def transformer_factory(request):
 
     # Reset transformer factory to default
     ngt.set_transformer_factory(ngt.make_transformer_factory("ngcpu"))
-
-
-@pytest.fixture(autouse=True)
-def force_serialization_computations(monkeypatch):
-    """
-    This integration test fixture breaks a few tests as false positives (whenever there are
-    interactions between multiple computations in a single transformer), so it is designed to be an
-    aid for widely testing serialization and not a true integration test that must pass on every
-    merge.
-    """
-    if pytest.config.getoption("--serialization_integration_test"):
-        original_computation = ngt.Transformer.add_computation
-
-        def monkey_add_computation(self, comp):
-            if comp.name.startswith('init'):
-                return original_computation(self, comp)
-            ser_comp = serde.serialize_graph([comp], only_return_handle_ops=True)
-            deser_comp = serde.deserialize_graph(ser_comp)
-            assert len(deser_comp) == 1
-            return original_computation(self, deser_comp[0])
-        monkeypatch.setattr(ngt.Transformer, 'add_computation', monkey_add_computation)
 
 
 def pass_method(*args, **kwargs):

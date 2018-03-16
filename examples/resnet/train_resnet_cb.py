@@ -51,7 +51,6 @@ if __name__ == "__main__":
     parser = NeonArgparser(description="Resnet for Imagenet and Cifar10")
     parser.add_argument('--dataset', type=str, default="cifar10", help="Enter cifar10 or i1k")
     parser.add_argument('--size', type=int, default=56, help="Enter size of resnet")
-    parser.add_argument('--tb', action="store_true", help="1- Enables tensorboard")
     parser.add_argument('--disable_batch_norm', action='store_true')
     parser.add_argument('--save_file', type=str, default=None, help="File to save weights")
     parser.add_argument('--inference', type=str, default=None, help="File to load weights")
@@ -85,18 +84,6 @@ input_ph = train_set.make_placeholders(include_iteration=True)
 
 resnet = BuildResnet(args.dataset, args.size, en_bottleneck, num_resnet_mods,
                      batch_norm=not args.disable_batch_norm)
-
-# Tensorboard
-if(args.tb):
-    try:
-        from neon.op_graph.tensorboard.tensorboard import TensorBoard
-    except:
-        print("Tensorboard not installed")
-    seq1 = BuildResnet(args.dataset, args.size, en_bottleneck, num_resnet_mods)
-    train = seq1(input_ph['image'])
-    tb = TensorBoard("/tmp/")
-    tb.add_graph(train)
-    exit()
 
 # Learning Rate Placeholder
 lr_ph = ng.placeholder(axes=(), initial_value=base_lr)
