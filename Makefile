@@ -33,8 +33,6 @@ STYLE_CHECK_DIRS := src/neon tests examples
 # pytest options
 TEST_OPTS := --timeout=600 --cov=src/neon --timeout_method=thread
 TEST_DIRS := tests/
-TEST_DIRS_COMMON := src/neon/frontend/common/tests
-TEST_DIRS_NEON := src/neon/frontend/tests
 
 
 # this variable controls where we publish Sphinx docs to
@@ -84,7 +82,7 @@ test_cpu: test_prepare clean
 	echo Running unit tests for core and cpu transformer tests...
 	py.test -m "not hetr_only and not flex_only and not hetr_gpu_only" --boxed \
 	--junit-xml=testout_test_cpu_$(PY).xml \
-	$(TEST_OPTS) $(TEST_DIRS) $(TEST_DIRS_NEON) ${TEST_DIRS_COMMON}
+	$(TEST_OPTS) $(TEST_DIRS)
 	coverage xml -i -o coverage_test_cpu_$(PY).xml
 
 
