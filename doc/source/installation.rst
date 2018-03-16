@@ -64,7 +64,7 @@ Prerequisites
 
     .. code-block:: console
 
-       $ git clone git@github.com:NervanaSystems/ngraph-neon.git
+       $ git clone https://github.com/NervanaSystems/ngraph-neon.git
        $ cd ngraph-neon
 
 
@@ -108,13 +108,11 @@ Some Jupyter* notebook walkthroughs demonstrate ways to use Intel Nervana Graph:
 * ``examples/mnist/MNIST_Direct.ipynb``: Build a deep learning model directly on 
   Neon Graph
 
-The `neon framework`_ can also be used to define and train deep learning models:
+The neon framework can also be used to define and train deep learning models:
 
 * ``examples/mnist/mnist_mlp.py``: Multilayer perceptron network on MNIST dataset.
 * ``examples/cifar10/cifar10_conv.py``: Convolutional neural network on CIFAR-10.
 * ``examples/cifar10/cifar10_mlp.py``: Multilayer perceptron on CIFAR-10 dataset.
-* ``examples/ptb/char_rnn.py``: Character-level RNN model on Penn Treebank data.
-
 
 Developer Guidelines
 ====================

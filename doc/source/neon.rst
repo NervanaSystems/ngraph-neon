@@ -23,7 +23,6 @@ The neon™ frontend to Intel® Neon™ rovides common deep learning primitives,
 - ``examples/minst/mnist_mlp.py``: Multi-layer perceptron on the MNIST digits dataset.
 - ``examples/cifar10/cifar10_mlp.py``: Multi-layer perceptron on the CIFAR10 dataset.
 - ``examples/cifar10/cifar10_conv.py``: Convolutional neural networks applied to the CIFAR10 dataset.
-- ``examples/ptb/char_rnn.py``: Character-level RNN language model on the Penn Treebank dataset.
 
 We currently have support for the following sets of deep learning primitives:
 
