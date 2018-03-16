@@ -56,3 +56,13 @@ Once the python wheel is built
 ```
 $ pip install <path-to-python-wheel>/<wheel-name>.whl
 ```
+
+### Run Neon Unit Tests
+
+After installing Intel Neon and Intel nGraph, keep the virtualenv activated and
+simply run ``make test`` from within the clone of the repo as follows:
+
+```
+$ make test
+```
+
