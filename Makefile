@@ -39,7 +39,7 @@ TEST_DIRS := tests/
 DOC_DIR := doc
 DOC_PUB_RELEASE_PATH := $(DOC_PUB_PATH)/$(RELEASE)
 
-.PHONY: env default install install_all uninstall uninstall_all clean test style lint lint3k check doc viz_prepare
+.PHONY: env default install install_all uninstall uninstall_all clean test style lint lint3k check doc
 
 default: install
 
@@ -48,7 +48,6 @@ install:
 	pip install -e .
 
 install_all: test_prepare examples_prepare doc_prepare install
-	# viz_prepare is ignored since it requires installation of system package
 
 test_prepare:
 	pip install -r test_requirements.txt
@@ -65,7 +64,7 @@ uninstall:
 
 uninstall_all: uninstall
 	pip uninstall -y -r test_requirements.txt \
-	-r examples_requirements.txt -r doc_requirements.txt -r viz_requirements.txt
+	-r examples_requirements.txt -r doc_requirements.txt
 
 clean:
 	find . -name "*.py[co]" -type f -delete
@@ -145,13 +144,3 @@ release: check
 	vi ChangeLog
 	echo "TODO (manual steps): release on github and update docs with 'make publish_doc'"
 	echo
-
-UNAME=$(shell uname)
-viz_prepare:
-ifeq ("$(UNAME)", "Darwin")
-	brew install graphviz
-else ifeq ("$(UNAME)", "Linux")
-	apt-get install graphviz
-endif
-
-	pip install -r viz_requirements.txt > /dev/null 2>&1
