@@ -35,6 +35,7 @@ updates of the following packages:
    libhdf5-dev, h5py, Enables loading of hdf5 formats
    libyaml-dev, pyaml, Parses YAML format inputs
    pkg-config, pkg-config, Retrieves information about installed libraries
+   pandoc, pandoc, Only required for building documentation
 
 
 Prerequisites  
