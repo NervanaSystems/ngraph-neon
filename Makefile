@@ -57,7 +57,7 @@ endif
 DOC_DIR := doc
 DOC_PUB_RELEASE_PATH := $(DOC_PUB_PATH)/$(RELEASE)
 
-.PHONY: env default install install_all uninstall uninstall_all clean test testflex style lint lint3k check doc viz_prepare
+.PHONY: env default install install_all uninstall uninstall_all clean test style lint lint3k check doc viz_prepare
 
 default: install
 

@@ -21,15 +21,15 @@ Contribution Process
 1. File an issue:
 
    * Create an issue on github:
-     https://github.com/NervanaSystems/ngraph/issues
+     https://github.com/NervanaSystems/ngraph-neon/issues
 
 2. Clone and/or update your checked out copy of ngraph to ensure you have the
    most recent commits from the master branch:
 
 .. code-block:: bash
 
-    git clone https://github.com/NervanaSystems/ngraph.git
-    cd ngraph
+    git clone https://github.com/NervanaSystems/ngraph-neon.git
+    cd ngraph-neon
     git fetch origin
     git checkout master
     git pull
@@ -88,7 +88,7 @@ Contribution Process
 .. code-block:: bash
 
     # (external contribs): make a new pull request:
-    https://github.com/NervanaSystems/ngraph/pulls
+    https://github.com/NervanaSystems/ngraph-neon/pulls
 
     # merge latest master changes into your feature branch
     git fetch origin
