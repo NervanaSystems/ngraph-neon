@@ -1,7 +1,7 @@
 .. _api:
 
 .. ---------------------------------------------------------------------------
-.. Copyright 2017 Intel Corporation
+.. Copyright 2017-2018 Intel Corporation
 .. Licensed under the Apache License, Version 2.0 (the "License");
 .. you may not use this file except in compliance with the License.
 .. You may obtain a copy of the License at
@@ -15,16 +15,16 @@
 .. limitations under the License.
 .. ---------------------------------------------------------------------------
 
-Intel® Nervana™ graph
+Intel® Neon
 *********************
 
-This API documentation covers the public API for Intel® Nervana™ graph (ngraph), organized into three main modules:
+This API documentation covers the public API for Intel® Neon, organized into three main modules:
 
-- ``ngraph``: Contains the core ops for constructing the graph.
-- ``ngraph.transformers``: Defines methods for executing a defined graph on hardware.
-- ``ngraph.types``: Types in ngraph (for example, ``Axes``, ``Op``, etc.)
+- ``neon``: Contains the core ops for constructing the graph.
+- ``neon.transformers``: Defines methods for executing a defined graph on hardware.
+- ``neon.types``: Types in neon (for example, ``Axes``, ``Op``, etc.)
 
-Intel Nervana (ngraph) API 
+Intel Neon API 
 ==========================
 
 Several ops are used to create different types of tensors:
@@ -34,10 +34,10 @@ Several ops are used to create different types of tensors:
     :widths: 30, 70
     :delim: |
 
-    :meth:`ngraph.variable` | Create a trainable variable.
-	:meth:`ngraph.persistent_tensor` | Tensor that persists across computations.
-	:meth:`ngraph.placeholder` | Used for input values, typically from host.
-	:meth:`ngraph.constant` | Immutable constant that can be inlined.
+    :meth:`neon.variable` | Create a trainable variable.
+	:meth:`neon.persistent_tensor` | Tensor that persists across computations.
+	:meth:`neon.placeholder` | Used for input values, typically from host.
+	:meth:`neon.constant` | Immutable constant that can be inlined.
 
 Assigning the above tensors requires defining ``Axis``, which can be done using the following methods:
 
@@ -46,10 +46,10 @@ Assigning the above tensors requires defining ``Axis``, which can be done using 
     :widths: 30, 70
     :delim: |
 
-    :meth:`ngraph.axes_with_order` | Return a tensor with a different axes order.
-	:meth:`ngraph.cast_axes` | Cast the axes of a tensor to new axes.
-	:meth:`ngraph.make_axes` | Create an Axes object.
-	:meth:`ngraph.make_axis` | Create an Axis.
+    :meth:`neon.axes_with_order` | Return a tensor with a different axes order.
+	:meth:`neon.cast_axes` | Cast the axes of a tensor to new axes.
+	:meth:`neon.make_axes` | Create an Axes object.
+	:meth:`neon.make_axis` | Create an Axis.
 
 We also provide several helper function for retrieving information from tensors.
 
@@ -58,11 +58,11 @@ We also provide several helper function for retrieving information from tensors.
     :widths: 30, 70
     :delim: |
 
-	:meth:`ngraph.batch_size` | Returns the batch size
-	:meth:`ngraph.is_constant` | Returns true if tensor is constant
-	:meth:`ngraph.is_constant_scalar` | Returns true if tensor is a constant scalar
-	:meth:`ngraph.constant_value` | Returns the value of a constant tensor
-	:meth:`ngraph.tensor_size` | Returns the total size of the tensor
+	:meth:`neon.batch_size` | Returns the batch size
+	:meth:`neon.is_constant` | Returns true if tensor is constant
+	:meth:`neon.is_constant_scalar` | Returns true if tensor is a constant scalar
+	:meth:`neon.constant_value` | Returns the value of a constant tensor
+	:meth:`neon.tensor_size` | Returns the total size of the tensor
 
 To compose a computational graph, we support the following operations:
 
@@ -71,33 +71,33 @@ To compose a computational graph, we support the following operations:
     :widths: 30, 70
     :delim: |
 
-    :meth:`ngraph.absolute` | :math:`\operatorname{abs}(a)`
-    :meth:`ngraph.negative` | :math:`-a`
-	:meth:`ngraph.sign` | if :math:`x<0`, :math:`-1`; if :math:`x=0`, :math:`0`; if :math:`x>0`, :math:`1`
-	:meth:`ngraph.add` | :math:`a+b`
-	:meth:`ngraph.reciprocal` | :math:`1/a`
-	:meth:`ngraph.square` | :math:`a^2`
-	:meth:`ngraph.sqrt` | :math:`\sqrt{a}`
-	:meth:`ngraph.cos` | :math:`\cos(a)`
-	:meth:`ngraph.sin` | :math:`\sin(a)`
-	:meth:`ngraph.tanh` | :math:`\tanh(a)`
-	:meth:`ngraph.sigmoid` | :math:`1/(1+\exp(-a))`
-	:meth:`ngraph.exp` | :math:`\exp(a)`
-	:meth:`ngraph.log` | :math:`\log(a)`
-	:meth:`ngraph.safelog` | :math:`\log(a)`
-	:meth:`ngraph.one_hot` | Convert to one-hot
-	:meth:`ngraph.variance` | Compute variance
-	:meth:`ngraph.stack` | Stack tensors along an axis
-	:meth:`ngraph.convolution` | Convolution operation
-	:meth:`ngraph.pad` | Pad a tensor with zeros along each dimension
-	:meth:`ngraph.pooling` | Pooling operation
-	:meth:`ngraph.squared_L2` | dot x with itself
+    :meth:`neon.absolute` | :math:`\operatorname{abs}(a)`
+    :meth:`neon.negative` | :math:`-a`
+	:meth:`neon.sign` | if :math:`x<0`, :math:`-1`; if :math:`x=0`, :math:`0`; if :math:`x>0`, :math:`1`
+	:meth:`neon.add` | :math:`a+b`
+	:meth:`neon.reciprocal` | :math:`1/a`
+	:meth:`neon.square` | :math:`a^2`
+	:meth:`neon.sqrt` | :math:`\sqrt{a}`
+	:meth:`neon.cos` | :math:`\cos(a)`
+	:meth:`neon.sin` | :math:`\sin(a)`
+	:meth:`neon.tanh` | :math:`\tanh(a)`
+	:meth:`neon.sigmoid` | :math:`1/(1+\exp(-a))`
+	:meth:`neon.exp` | :math:`\exp(a)`
+	:meth:`neon.log` | :math:`\log(a)`
+	:meth:`neon.safelog` | :math:`\log(a)`
+	:meth:`neon.one_hot` | Convert to one-hot
+	:meth:`neon.variance` | Compute variance
+	:meth:`neon.stack` | Stack tensors along an axis
+	:meth:`neon.convolution` | Convolution operation
+	:meth:`neon.pad` | Pad a tensor with zeros along each dimension
+	:meth:`neon.pooling` | Pooling operation
+	:meth:`neon.squared_L2` | dot x with itself
 
 
 .. Note::
    Additional operations are supported that are not currently documented, and so are not included in the list above. We will continue to populate this API when the documentation is updated.
 
-ngraph.transformers
+neon.transformers
 ===================
 
 .. csv-table::
@@ -105,14 +105,14 @@ ngraph.transformers
     :widths: 30, 70
     :delim: |
 
-    :meth:`ngraph.transformers.allocate_transformer` | Allocate a transformer.
-    :meth:`ngraph.transformers.make_transformer` | Generates a transformer using the factory.
-    :meth:`ngraph.transformers.make_transformer_factory` | Creates a new factory with cpu default.
-    :meth:`ngraph.transformers.set_transformer_factory` | Sets the Transformer factory used by make_transformer.
-    :meth:`ngraph.transformers.transformer_choices` | Return the list of available transformers.
-    :meth:`ngraph.transformers.Transformer` | Produce an executable version of op-graphs.
+    :meth:`neon.transformers.allocate_transformer` | Allocate a transformer.
+    :meth:`neon.transformers.make_transformer` | Generates a transformer using the factory.
+    :meth:`neon.transformers.make_transformer_factory` | Creates a new factory with cpu default.
+    :meth:`neon.transformers.set_transformer_factory` | Sets the Transformer factory used by make_transformer.
+    :meth:`neon.transformers.transformer_choices` | Return the list of available transformers.
+    :meth:`neon.transformers.Transformer` | Produce an executable version of op-graphs.
 
-ngraph.types
+neon.types
 ============
 
 .. csv-table::
@@ -120,39 +120,39 @@ ngraph.types
     :widths: 30, 70
     :delim: |
 
-    :meth:`ngraph.types.AssignableTensorOp` | Assign a tensor. Used by `ng.placeholder`, and more.
-    :meth:`ngraph.types.Axis` | An Axis labels a dimension of a tensor.
-    :meth:`ngraph.types.Axes` | Axes represent multiple axis dimensions.
-    :meth:`ngraph.types.Computation` | Computations to attach to transformers.
-    :meth:`ngraph.types.NameableValue` | Objects that can derive name from the name scope.
-    :meth:`ngraph.types.NameScope` | Name scope for objects.
-    :meth:`ngraph.types.Op` | Basic class for ops.
-    :meth:`ngraph.types.TensorOp` | Base class for ops related to Tensors.
+    :meth:`neon.types.AssignableTensorOp` | Assign a tensor. Used by `ng.placeholder`, and more.
+    :meth:`neon.types.Axis` | An Axis labels a dimension of a tensor.
+    :meth:`neon.types.Axes` | Axes represent multiple axis dimensions.
+    :meth:`neon.types.Computation` | Computations to attach to transformers.
+    :meth:`neon.types.NameableValue` | Objects that can derive name from the name scope.
+    :meth:`neon.types.NameScope` | Name scope for objects.
+    :meth:`neon.types.Op` | Basic class for ops.
+    :meth:`neon.types.TensorOp` | Base class for ops related to Tensors.
 
-ngraph
+neon
 ------
 
 Graph construction.
 
-.. py:module: ngraph
+.. py:module: neon
 
-.. automodule:: ngraph
+.. automodule:: neon
    :members:
 
-ngraph.transformers
+neon.transformers
 -------------------
 
 Transformer manipulation.
 
-.. py:module: ngraph.transformers
+.. py:module: neon.transformers
 
-.. automodule:: ngraph.transformers
+.. automodule:: neon.transformers
    :members:
 
-ngraph.types
+neon.types
 ------------
 
-.. py:module: ngraph.types
+.. py:module: neon.types
 
-.. automodule:: ngraph.types
+.. automodule:: neon.types
    :members:

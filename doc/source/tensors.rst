@@ -1,7 +1,7 @@
 .. _tensors:
 
 .. ---------------------------------------------------------------------------
-.. Copyright 2017 Intel Corporation
+.. Copyright 2017-2018 Intel Corporation
 .. Licensed under the Apache License, Version 2.0 (the "License");
 .. you may not use this file except in compliance with the License.
 .. You may obtain a copy of the License at
@@ -42,7 +42,7 @@ For convenience, we provide several helper functions to define commonly used ten
 Basic tensor descriptions
 =========================
 
-In Intel® Nervana™ graph, we often have to reason about tensors before any computations or allocations are performed. For this reason, we use ``tensor descriptions`` to hold enough metadata about tensors for analysis/simplification. Basic tensor descriptions only have shape and element type information. Although the shape is an ordered list of lengths, the order does not imply a particular layout/striding for the dimensions. The basic tensor descriptions, with restrictions on dimensions and striding, are appropriate for the basic operations that all Intel Nervana graph transformers must implement. They might also be useful for front ends that describe tensors by shape.
+In Intel® Neeon, we often have to reason about tensors before any computations or allocations are performed. For this reason, we use ``tensor descriptions`` to hold enough metadata about tensors for analysis/simplification. Basic tensor descriptions only have shape and element type information. Although the shape is an ordered list of lengths, the order does not imply a particular layout/striding for the dimensions. The basic tensor descriptions, with restrictions on dimensions and striding, are appropriate for the basic operations that all Intel Nervana graph transformers must implement. They might also be useful for front ends that describe tensors by shape.
 
 If we know the layout of a tensor, we can compute the layout of subsequent slices and reshapings. But in Intel Nervana graph, we only know the layout for the subset of tensors whose layout has been explicitly provided by the frontend. But we still need information about which tensors are views of each other, dimension lengths, alignment constraints, slicing, etc. We use ``BasicTensorDescription`` to represent all the information the graph needs to know about tensors. This might vary during the transformation process. Little might be known about a tensor when it is first added to the graph, but by the time execution occurs, the tensor's layout needs to be known.
 

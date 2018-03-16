@@ -1,7 +1,7 @@
 .. _axes:
 
 .. ---------------------------------------------------------------------------
-.. Copyright 2017 Intel Corporation
+.. Copyright 2017-2018 Intel Corporation
 .. Licensed under the Apache License, Version 2.0 (the "License");
 .. you may not use this file except in compliance with the License.
 .. You may obtain a copy of the License at
@@ -21,7 +21,7 @@ Axes
 Introduction
 ============
 
-An ``Axis`` (``ngraph.op_graph.axes.Axis``) labels a dimension of a tensor.
+An ``Axis`` (``neon.op_graph.axes.Axis``) labels a dimension of a tensor.
 The op-graph uses the identity of ``Axis`` objects to pair and specify
 dimensions in symbolic expressions. This system has several advantages over
 using the length and position of the axis as in other frameworks:
@@ -63,7 +63,7 @@ For tensors with multiple dimensions, we create an ``Axes`` passing in a list of
 
   axes = ng.make_axes([H, W])
 
-We use ``Axes`` to define the shape of tensors in Intel® Nervana™ graph (ngraph). For example:
+We use ``Axes`` to define the shape of tensors in Intel® Neon. For example:
 
   ::
 
@@ -96,8 +96,8 @@ Properties
   - We can check element-wise tensor equality using ``ng.equal()``. ::
 
       import numpy as np
-      import ngraph as ng
-      import ngraph.transformers as ngt
+      import neon as ng
+      import neon.transformers as ngt
 
       H = ng.make_axis(length=2)
       W = ng.make_axis(length=3)
@@ -181,7 +181,7 @@ Properties
 Axes operations
 ===============
 
-``Axes`` (``ngraph.op_graph.axes.Axes``) has ``list`` and ``set`` behaviors at the same time. ``Axes`` are
+``Axes`` (``neon.op_graph.axes.Axes``) has ``list`` and ``set`` behaviors at the same time. ``Axes`` are
 internally stored and can be used as ``list``, while we also have use cases of
 ``Axes`` as ``set``. Here's a list of supported operations by ``Axes`` and their
 expected behavors.
@@ -357,6 +357,6 @@ of the original axes. The order of the new axes can be arbitrary. For example: :
 .. Use ``ng.axes_with_order`` to reorder axes. The new axes must be the same set as the
 .. original axes. Examples: ::
 ..
-..     from ngraph.frontend.axis import ax
+..     from neon.frontend.axis import ax
 ..     x = ng.placeholder([ax.C, ax.H, ax.W])
 ..     ng.axes_with_order(x, [ax.H, ax.W, ax.C])

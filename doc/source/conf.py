@@ -3,7 +3,7 @@
 import os
 import sys
 
-# from ngraph import __version__ as ngraph_version
+# from neon import __version__ as neon_version
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -63,15 +63,15 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Intel® Nervana™ graph'
-copyright = u'Intel Nervana and neon are trademarks of Intel Corporation or its subsidiaries in the U.S. and/or other countries. * Other names and brands may be claimed as the property of others.'
+project = u'Intel® Neon™'
+copyright = u'Intel® Neon™ is a trademark of Intel Corporation or its subsidiaries in the U.S. and/or other countries. * Other names and brands may be claimed as the property of others.'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The short X.Y.Z version.
-version = '0.4.0'
+version = '3.0.0'
 # The full version, including git-hash and alpha/beta/rc tags.
 release = version
 
@@ -118,7 +118,7 @@ pygments_style = 'tango'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'ngraph_theme'
+html_theme = 'neon_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -137,17 +137,17 @@ html_theme_path = ["."]
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = 'ngraph_theme/static/favicon.ico'
+html_logo = 'neon_theme/static/favicon.ico'
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-html_favicon = 'ngraph_theme/static/favicon.ico'
+html_favicon = 'neon_theme/static/favicon.ico'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['ngraph_theme/static']
+html_static_path = ['neon_theme/static']
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
@@ -196,7 +196,7 @@ html_show_sphinx = False
 # html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'ngraphdoc'
+htmlhelp_basename = 'neondoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -215,8 +215,8 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
-latex_documents = [('index', 'ngraph.tex', u'Nervana Graph Documentation',
-                    u'Nervana Systems Inc', 'manual'), ]
+latex_documents = [('index', 'neon.tex', u'Intel Neon Documentation',
+                    u'Intel Corporation', 'manual'), ]
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
@@ -244,8 +244,8 @@ latex_documents = [('index', 'ngraph.tex', u'Nervana Graph Documentation',
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'ngraph', u'Nervana Graph Documentation',
-     [u'Nervana Systems Inc'], 1)
+    ('index', 'neon', u'Intel Neon Documentation',
+     [u'Intel Corporation'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -257,7 +257,7 @@ man_pages = [
 # Grouping the document tree into Texinfo files. List of tuples
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
-texinfo_documents = [('index', 'ngraph', u'Intel Nervana Graph Documentation',
+texinfo_documents = [('index', 'neon', u'Intel Neon Documentation',
                       u'Intel Corporation', 'cloud',
                       'One line description of project.', 'Miscellaneous'), ]
 
@@ -283,7 +283,6 @@ intersphinx_mapping = {
 # These go in every file
 rst_epilog = """
 .. include :: <isonum.txt>
-.. |ngraph| replace:: ngraph
+.. |neon| replace:: neon
 .. |Geon| replace:: Nervana Graph
-.. |TF| replace:: TensorFlow\ |trade|
 """

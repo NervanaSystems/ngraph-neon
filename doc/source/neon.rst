@@ -1,7 +1,7 @@
 .. _neon:
 
 .. ---------------------------------------------------------------------------
-.. Copyright 2017 Intel Corporation
+.. Copyright 2017-2018 Intel Corporation
 .. Licensed under the Apache License, Version 2.0 (the "License");
 .. you may not use this file except in compliance with the License.
 .. You may obtain a copy of the License at
@@ -18,7 +18,7 @@
 neon™
 *****
 
-The neon™ frontend to Intel® Nervana™ graph (ngraph) provides common deep learning primitives, such as activation functions, optimizers, layers, and more. We include several examples in this release to illustrate how to use the neon frontend to construct your models:
+The neon™ frontend to Intel® Neon™ rovides common deep learning primitives, such as activation functions, optimizers, layers, and more. We include several examples in this release to illustrate how to use the neon frontend to construct your models:
 
 - ``examples/minst/mnist_mlp.py``: Multi-layer perceptron on the MNIST digits dataset.
 - ``examples/cifar10/cifar10_mlp.py``: Multi-layer perceptron on the CIFAR10 dataset.
