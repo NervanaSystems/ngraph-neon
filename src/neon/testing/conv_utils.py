@@ -173,6 +173,7 @@ def reference_deconv_bprop(conv_params, valE, valI, valF):
 
 
 class ConvParams(object):
+
     def __init__(self, C=1, N=1, K=1, D=1, H=1, W=1, T=1, R=1, S=1,
                  pad_d=0, pad_h=0, pad_w=0,
                  str_d=1, str_h=1, str_w=1,

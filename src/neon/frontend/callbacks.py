@@ -61,6 +61,7 @@ def make_default_callbacks(transformer, output_file, frequency, train_computatio
 
 
 class CallbackContainer(object):
+
     def __init__(self, transformer, output_file, total_iterations, callback_list=[]):
         self.transformer = transformer
         '''
@@ -114,6 +115,7 @@ class CallbackContainer(object):
 
 
 class Callback(object):
+
     def __call__(self, transformer, callback_data, phase, data, idx):
         pass
 
@@ -172,6 +174,7 @@ class RunTimerCallback(Callback):
     """
     Callback which tracks the total training time.
     """
+
     def __call__(self, transformer, callback_data, phase, data, idx):
         if phase == CallbackPhase.train_pre_:
             self.timing = callback_data.create_group("time/train")
@@ -188,6 +191,7 @@ class ProgressCallback(Callback):
     """
     Callback shows overall progress
     """
+
     def __call__(self, transformer, callback_data, phase, data, idx):
         if phase == CallbackPhase.train_pre_:
             self.tpbar = tqdm(desc="Train",
@@ -210,6 +214,7 @@ class TrainLoggerCallback(Callback):
     Arguments:
         frequency (int, optional): how often (in minibatches) to log training info.
     """
+
     def __init__(self, frequency):
         self.frequency = frequency
 

@@ -30,6 +30,7 @@ class Shakespeare(object):
                              Ratio of the text to set aside for training
 
     """
+
     def __init__(self, path='./data/', url=None, filename=None, train_split=.9):
         self.path = path
         self.vocab = None

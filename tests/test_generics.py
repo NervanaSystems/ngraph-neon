@@ -88,6 +88,7 @@ def test_generic_function():
 
 
 class Visitor(object):
+
     @generic_method()
     def selector(self, x, y):
         return 'base'
@@ -115,6 +116,7 @@ class Visitor(object):
 
 class SubVisitor(Visitor):
     # Chain to Visitor.selector
+
     @Visitor.selector.extension()
     def selector(self, x, y):
         pass

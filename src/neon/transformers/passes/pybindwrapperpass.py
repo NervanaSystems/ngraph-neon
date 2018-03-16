@@ -18,13 +18,13 @@ from __future__ import division
 from neon.transformers.passes.passes import PeepholeGraphPass
 from neon.util.generics import generic_method
 from neon.op_graph.op_graph import Op, Add, AssignableTensorOp, AssignOp, AxesCastOp, \
-     BroadcastOp, ContiguousOp, Divide, DotOp, Equal, ExpandDims, ExpOp, Flatten, Greater, \
-     GreaterEqual, Less, LogOp, MapRolesOp, Max, Maximum, Minimum, Multiply, NegativeOp, \
-     NotEqual, OneHotOp, ParallelOp, Prod, ReciprocalOp, ReductionOp, ReorderAxes, \
-     SequentialOp, SqrtOp, SquareOp, Subtract, Sum, TensorSliceOp, TensorSizeOp, TensorValueOp, \
-     Unflatten
+    BroadcastOp, ContiguousOp, Divide, DotOp, Equal, ExpandDims, ExpOp, Flatten, Greater, \
+    GreaterEqual, Less, LogOp, MapRolesOp, Max, Maximum, Minimum, Multiply, NegativeOp, \
+    NotEqual, OneHotOp, ParallelOp, Prod, ReciprocalOp, ReductionOp, ReorderAxes, \
+    SequentialOp, SqrtOp, SquareOp, Subtract, Sum, TensorSliceOp, TensorSizeOp, TensorValueOp, \
+    Unflatten
 from neon.op_graph.batchnorm import BatchnormCommonOp, BatchnormBpropCommonOp, \
-    BatchnormInferenceOp, BatchnormOutputOp, BatchnormMeanOp, BatchnormVarOp, \
+    BatchnormOutputOp, BatchnormMeanOp, BatchnormVarOp, \
     BatchnormBpropDataOp, BatchnormBpropGammaOp, BatchnormBpropBetaOp
 from neon.op_graph.relu import ReluOp, ReluBpropOp
 from neon.op_graph.pooling import PoolingOp, BpropPoolOp
@@ -32,14 +32,12 @@ from neon.op_graph.convolution import ConvolutionOp, bprop_conv, update_conv
 import numpy as np
 
 from ngraph import Type
-from ngraph import Function as Function
 from ngraph import Shape
 from ngraph import AxisSet
 from ngraph import AxisVector
 from ngraph import Strides
 from ngraph import CoordinateDiff
 from ngraph import Coordinate
-from ngraph import NodeVector
 from ngraph.op import Parameter
 from ngraph.op import AvgPool as PyngAvgPool
 from ngraph.op import AvgPoolBackprop as PyngAvgPoolBackprop
@@ -60,12 +58,10 @@ from ngraph.op import Maximum as PyngMaximum
 from ngraph.op import MaxPool as PyngMaxPool
 from ngraph.op import MaxPoolBackprop as PyngMaxPoolBackprop
 from ngraph.op import Minimum as PyngMinimum
-from ngraph.op import Multiply as PyngMultiply
 from ngraph.op import Negative as PyngNegative
 from ngraph.op import NotEqual as PyngNotEqual
 from ngraph.op import OneHot as PyngOneHot
 from ngraph.op import Reshape as PyngReshape
-from ngraph.op import Reduce as PyngReduce
 from ngraph.op import Slice as PyngSlice
 from ngraph.op import Sqrt as PyngSqrt
 from ngraph.op import Sum as PyngSum
@@ -257,7 +253,6 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             elif isinstance(op, Minimum):
                 return PyngMinimum(x, y)
 
-
         self.computation.set_op_rank(op)
         ngraph_cpp_op = pyng_binary_op(op, self.computation.lookup_cpp_op(x),
                                        self.computation.lookup_cpp_op(y))
@@ -392,13 +387,13 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             input1_axes_order = self.get_axes_order_from_axes_name(
                 input1.axes.names, input1_axes)
             input1_axes_shape = self.get_shape_from_axes_order(
-                                    input1_axes_order,
-                                    input1.axes.lengths)
+                input1_axes_order,
+                input1.axes.lengths)
             input2_axes_order = self.get_axes_order_from_axes_name(
                 input2.axes.names, input2_axes)
             input2_axes_shape = self.get_shape_from_axes_order(
-                                    input2_axes_order,
-                                    input2.axes.lengths)
+                input2_axes_order,
+                input2.axes.lengths)
         else:
             input1_axes_shape = list(input1.axes.lengths)
             input1_axes_order = list(range(0, len(input1.axes)))
@@ -445,7 +440,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         if reshape_output_needed:
             ngraph_op = PyngReshape(
                 ngraph_op,
-                AxisVector(list(range(0, 4 - 2*reduction_axes_count))),
+                AxisVector(list(range(0, 4 - 2 * reduction_axes_count))),
                 Shape(list(op.x_out_axes.lengths) + list(op.y_out_axes.lengths)))
         # reshape output
         self.computation.register_cpp_op(op, ngraph_op)
@@ -625,8 +620,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         axis_set = set()
         axis_set.add(op.dim)
         self.computation.register_cpp_op(op, PyngBroadcast(op_element_type,
-                                         Shape(list(op.axes.lengths)),
-                                         AxisSet(axis_set)))
+                                                           Shape(list(op.axes.lengths)),
+                                                           AxisSet(axis_set)))
 
     """
     /// brief Constructs a batched convolution operation.
@@ -807,24 +802,24 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             """
             ngraph_pool = PyngMaxPool(self.computation.lookup_cpp_op(inputs),
                                       Shape([op.pool_params['R'],
-                                       op.pool_params['S']]),
+                                             op.pool_params['S']]),
                                       Strides([op.pool_params['str_h'],
-                                       op.pool_params['str_w']]),
+                                               op.pool_params['str_w']]),
                                       Shape([op.pool_params['pad_h'],
-                                       op.pool_params['pad_w']]),
+                                             op.pool_params['pad_w']]),
                                       Shape([op.pool_params['pad_h'],
-                                       op.pool_params['pad_w']]))
+                                             op.pool_params['pad_w']]))
             self.computation.register_cpp_op(op, ngraph_pool, set_name=False)
         elif 'avg' == op.pool_params['op']:
             ngraph_pool = PyngAvgPool(self.computation.lookup_cpp_op(inputs),
                                       Shape([op.pool_params['R'],
-                                       op.pool_params['S']]),
+                                             op.pool_params['S']]),
                                       Strides([op.pool_params['str_h'],
-                                       op.pool_params['str_w']]),
+                                               op.pool_params['str_w']]),
                                       Shape([op.pool_params['pad_h'],
-                                       op.pool_params['pad_w']]),
+                                             op.pool_params['pad_w']]),
                                       Shape([op.pool_params['pad_h'],
-                                       op.pool_params['pad_w']]),
+                                             op.pool_params['pad_w']]),
                                       True)
             """
             print(list(op.axes.lengths))
@@ -861,13 +856,13 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             ngraph_pool = PyngMaxPoolBackprop(self.computation.lookup_cpp_op(inputs),
                                               self.computation.lookup_cpp_op(delta),
                                               Shape([op.fprop.pool_params['R'],
-                                               op.fprop.pool_params['S']]),
+                                                     op.fprop.pool_params['S']]),
                                               Strides([op.fprop.pool_params['str_h'],
-                                               op.fprop.pool_params['str_w']]),
+                                                       op.fprop.pool_params['str_w']]),
                                               Shape([op.fprop.pool_params['pad_h'],
-                                               op.fprop.pool_params['pad_w']]),
+                                                     op.fprop.pool_params['pad_w']]),
                                               Shape([op.fprop.pool_params['pad_h'],
-                                               op.fprop.pool_params['pad_w']]),
+                                                     op.fprop.pool_params['pad_w']]),
                                               ngraph_fprop)
 
             self.computation.register_cpp_op(op, ngraph_pool)
@@ -889,13 +884,13 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             ngraph_pool = PyngAvgPoolBackprop(Shape(list(inputs.axes.lengths)),
                                               self.computation.lookup_cpp_op(delta),
                                               Shape([op.fprop.pool_params['R'],
-                                               op.fprop.pool_params['S']]),
+                                                     op.fprop.pool_params['S']]),
                                               Strides([op.fprop.pool_params['str_h'],
-                                               op.fprop.pool_params['str_w']]),
+                                                       op.fprop.pool_params['str_w']]),
                                               Shape([op.fprop.pool_params['pad_h'],
-                                               op.fprop.pool_params['pad_w']]),
+                                                     op.fprop.pool_params['pad_w']]),
                                               Shape([op.fprop.pool_params['pad_h'],
-                                               op.fprop.pool_params['pad_w']]),
+                                                     op.fprop.pool_params['pad_w']]),
                                               True)
             self.computation.register_cpp_op(op, ngraph_pool, set_name=False)
         else:

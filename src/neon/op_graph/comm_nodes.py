@@ -311,6 +311,7 @@ class AllReduceOp(CommunicationOp):
         out_axes: The output axes.
         dtype: The data type.
     """
+
     def __init__(self, x, reduction_axes=None, out_axes=None, dtype=None, func=None, **kwargs):
         reduction_axes, out_axes = compute_reduction_axes(x, reduction_axes, out_axes)
         self.reduction_axes = reduction_axes
@@ -330,6 +331,7 @@ class GPUCudaAllReduceOp(MutateInsteadOfCopyWithNewArgsMixin, AllReduceOp):
         x: The input node.
         func: The reduction function, e.g. 'sum', 'mean'.
     """
+
     def __init__(self, input_node, func=None):
         super(GPUCudaAllReduceOp, self).__init__(x=input_node,
                                                  out_axes=input_node.axes,
@@ -413,6 +415,7 @@ class CPUMlslAllReduceStartOp(MutateInsteadOfCopyWithNewArgsMixin, AllReduceOp):
         x: The input node.
         func: The reduction function, e.g. 'sum', 'mean'.
     """
+
     def __init__(self, input_node, func=None):
         super(CPUMlslAllReduceStartOp, self).__init__(x=input_node,
                                                       out_axes=input_node.axes,
@@ -438,6 +441,7 @@ class CPUMlslAllReduceWaitOp(MutateInsteadOfCopyWithNewArgsMixin, AllReduceOp):
         x: The input node.
         func: The reduction function, e.g. 'sum', 'mean'.
     """
+
     def __init__(self, input_node, start_node, func=None):
         super(CPUMlslAllReduceWaitOp, self).__init__(x=input_node,
                                                      out_axes=input_node.axes,
@@ -460,6 +464,7 @@ class CPUMlslBroadcastSendOp(BroadcastSendOp):
     """
     Represents CPU-based MLSL implementation for BroadcastSend op over MLSL::Bcast
     """
+
     def __init__(self, from_node, to_node):
         super(CPUMlslBroadcastSendOp, self).__init__(from_node, to_node)
         self.arr = None
@@ -469,5 +474,6 @@ class CPUMlslBroadcastRecvOp(BroadcastRecvOp):
     """
     Represents CPU-based queue implementation for BroadcastRecv op over MLSL::Bcast.
     """
+
     def __init__(self, to_node, send_node):
         super(CPUMlslBroadcastRecvOp, self).__init__(to_node, send_node)

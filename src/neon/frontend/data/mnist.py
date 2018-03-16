@@ -26,6 +26,7 @@ class MNIST(object):
     Arguments:
         path (str): Local path to copy data files.
     """
+
     def __init__(self, path='.'):
         self.path = path
         self.url = 'https://s3.amazonaws.com/img-datasets'

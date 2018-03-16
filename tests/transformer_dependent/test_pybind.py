@@ -295,7 +295,7 @@ def test_tensor_dot_tensor():
     (ng.Equal, np.equal),
     (ng.NotEqual, np.not_equal),
     (ng.Less, np.less),
-    ])
+])
 def test_binary_op(ng_func, np_func):
     H = ng.make_axis().named('H')
     W = ng.make_axis().named('W')
@@ -338,7 +338,7 @@ def test_binary_op(ng_func, np_func):
     (ng.log, np.log),
     (ng.square, np.square),
     (ng.sqrt, np.sqrt)
-    ])
+])
 def test_unary_op_(ng_func, np_func):
     H = ng.make_axis().named('H')
     W = ng.make_axis().named('W')

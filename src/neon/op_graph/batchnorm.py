@@ -56,6 +56,7 @@ def batchnormcommon(inputs, gamma, beta, epsilon, axes, docstring=None):
 
 
 class BatchnormCommonOp(TensorOp):
+
     def __init__(self, inputs, gamma, beta, epsilon, **kwargs):
         super(BatchnormCommonOp, self).__init__(
             args=(inputs, gamma, beta), **kwargs)
@@ -90,6 +91,7 @@ def batchnormoutput(inputs, axes, docstring=None):
 
 
 class BatchnormOutputOp(TensorOp):
+
     def __init__(self, inputs, **kwargs):
         super(BatchnormOutputOp, self).__init__(args=(inputs,), **kwargs)
 
@@ -111,6 +113,7 @@ def batchnormmean(inputs, axes, docstring=None):
 
 
 class BatchnormMeanOp(TensorOp):
+
     def __init__(self, inputs, **kwargs):
         super(BatchnormMeanOp, self).__init__(args=(inputs,), **kwargs)
         inputs.lmean = self
@@ -130,6 +133,7 @@ def batchnormvar(inputs, axes, docstring=None):
 
 
 class BatchnormVarOp(TensorOp):
+
     def __init__(self, inputs, **kwargs):
         super(BatchnormVarOp, self).__init__(args=(inputs,), **kwargs)
 
@@ -156,6 +160,7 @@ def batchnormbpropcommon(inputs, gamma, beta, mean, variance,
 
 
 class BatchnormBpropCommonOp(TensorOp):
+
     def __init__(self, inputs, gamma, beta, mean, variance, delta, epsilon, **kwargs):
         super(BatchnormBpropCommonOp, self).__init__(
             args=(inputs, gamma, beta, mean, variance, delta), **kwargs)
@@ -176,6 +181,7 @@ def batchnormbpropdata(inputs, axes, docstring=None):
 
 
 class BatchnormBpropDataOp(TensorOp):
+
     def __init__(self, inputs, **kwargs):
         super(BatchnormBpropDataOp, self).__init__(args=(inputs,), **kwargs)
 
@@ -194,6 +200,7 @@ def batchnormbpropgamma(inputs, axes, docstring=None):
 
 
 class BatchnormBpropGammaOp(TensorOp):
+
     def __init__(self, inputs, **kwargs):
         super(BatchnormBpropGammaOp, self).__init__(args=(inputs,), **kwargs)
 
@@ -212,6 +219,7 @@ def batchnormbpropbeta(inputs, axes, docstring=None):
 
 
 class BatchnormBpropBetaOp(TensorOp):
+
     def __init__(self, inputs, **kwargs):
         super(BatchnormBpropBetaOp, self).__init__(args=(inputs,), **kwargs)
 
@@ -236,6 +244,7 @@ def batchnorminference(inputs, gamma, beta, mean, variance, epsilon, axes, docst
 
 
 class BatchnormInferenceOp(TensorOp):
+
     def __init__(self, inputs, gamma, beta, mean, variance, epsilon, **kwargs):
         super(BatchnormInferenceOp, self).__init__(
             args=(inputs, gamma, beta, mean, variance), **kwargs)

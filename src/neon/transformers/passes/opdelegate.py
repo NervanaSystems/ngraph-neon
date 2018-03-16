@@ -27,6 +27,7 @@ class OpAccessor(with_metaclass(abc.ABCMeta, object)):
     This is currently used so that the same pass can be used with op-graph and exec-graph if
     the pass uses the OpAccessor methods to access the components of the Op.
     """
+
     def __init__(self, **kwargs):
         self.replacement_list = []
         self.replacements = dict()
@@ -133,6 +134,7 @@ class OpGraphOpAccessor(OpAccessor):
     """
     Provides access to some op properties when they may have been modified during passes.
     """
+
     def op_arg(self, op, n):
         """
         Returns the nth argument of an op-graph Op op as an op-graph Op.
@@ -220,6 +222,7 @@ class DelegateOpAccessor(OpAccessor):
     """
     Delegates access to Op properties to op_accessor, which defaults to the op-graph accessor.
     """
+
     def __init__(self, op_accessor=op_graph_op_accessor):
         self.op_accessor = op_accessor
 
@@ -310,6 +313,7 @@ class DelegateOpAccessor(OpAccessor):
 
 
 class OpDelegate(with_metaclass(abc.ABCMeta, object)):
+
     def op_arg(self, op, n):
         """
         Returns the nth argument of an op-graph Op op as an op-graph Op.

@@ -880,6 +880,7 @@ class Axes(object):
 
 
 class DuplicateAxisNames(ValueError):
+
     def __init__(self, message, duplicate_axis_names):
         super(DuplicateAxisNames, self).__init__(message)
 
@@ -904,6 +905,7 @@ class AxesMap(frozendict):
     need a mutable datastructure anyway.  Feel free to make it mutable and add in
     invariant enforcement.
     """
+
     def __init__(self, *args, **kwargs):
         def replace_axis_with_name(x):
             if isinstance(x, Axis):

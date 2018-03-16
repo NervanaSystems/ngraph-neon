@@ -1,7 +1,7 @@
 .. _transformer_usage:
 
 .. ---------------------------------------------------------------------------
-.. Copyright 2017 Intel Corporation
+.. Copyright 2017-2018 Intel Corporation
 .. Licensed under the Apache License, Version 2.0 (the "License");
 .. you may not use this file except in compliance with the License.
 .. You may obtain a copy of the License at
@@ -24,32 +24,33 @@ The transformer method ``computation`` is used to specify a subgraph to be compu
 
 Transformers are currently provided for the following backends:
 
-- CPUs (via NumPy and MKL-DNN)
-- NVIDIA* GPUs (via PyCUDA)
+- CPUs
+- GPUs
+- Intel® NNP
 
 Transformer creation
 ====================
 
-You should create transformers using the factory interface in ``ngraph.transformers.base``, as shown:
+You should create transformers using the factory interface in ``neon.transformers.base``, as shown:
 
 .. code-block:: python
 
-    from ngraph.transformers import make_transformer
+    from neon.transformers import make_transformer
     transformer = make_transformer()
 
 This creates a transformer using the default transformer factory (CPU). You can manually set the transformer factory to control the target backend. The transformer API provides functionality to enumerate the available transformers to assist with this, as shown below:
 
 .. code-block:: python
 
-    import ngraph.transformers as ngt
+    import neon.transformers as ngt
     available_transformers = ngt.transformer_choices()
-    if 'gpu' in available_transformers:
-        factory = ngt.make_transformer_factory('gpu')
+    if 'nggpu' in available_transformers:
+        factory = ngt.make_transformer_factory('nggpu')
         ngt.set_transformer_factory(factory)
 
     transformer = ngt.make_transformer()
 
-The example above first checks if the GPU transformer is available (this depends on whether CUDA and PyCUDA are installed). If the GPU transformer is available, this example sets the transformer factory to generate GPU transformers. The call to ``make_transformer`` then returns a GPU transformer if one is available. Otherwise, the ``make_transformer`` call returns a CPU transformer.
+The example above first checks if the GPU transformer is available (this depends on whether CUDA and CuDNN installed). If the GPU transformer is available, this example sets the transformer factory to generate GPU transformers. The call to ``make_transformer`` then returns a GPU transformer if one is available. Otherwise, the ``make_transformer`` call returns a CPU transformer.
 
 Computations
 ============
@@ -63,7 +64,7 @@ Computations are created with the ``Transformer.computation`` method. When creat
 
 .. code-block:: python
 
-    import ngraph as ng
+    import neon as ng
 
     a = ng.constant(4)
     b = ng.placeholder(())

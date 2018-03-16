@@ -128,6 +128,7 @@ class LutDerivOp(TensorOp):
     Arguments:
         fprop: The original op.
     """
+
     def __init__(self, fprop, **kwargs):
         super(LutDerivOp, self).__init__(**kwargs)
         self.fprop = fprop
@@ -159,6 +160,7 @@ class LutDerivOp(TensorOp):
 
 
 class update_lut(LutDerivOp):
+
     def __init__(self, delta, lut, idx, fprop, **kwargs):
         """
         Arguments:
@@ -176,6 +178,7 @@ class update_lut(LutDerivOp):
 
 
 class bprop_lut(LutDerivOp):
+
     def __init__(self, delta, lut, idx, fprop, **kwargs):
         """
         Arguments:

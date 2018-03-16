@@ -1,7 +1,7 @@
 .. _adding_new_ops:
 
 .. ---------------------------------------------------------------------------
-.. Copyright 2017 Intel Corporation
+.. Copyright 2017-2018 Intel Corporation
 .. Licensed under the Apache License, Version 2.0 (the "License");
 .. you may not use this file except in compliance with the License.
 .. You may obtain a copy of the License at
@@ -20,12 +20,12 @@ Adding New Ops
 
 Overview
 ========
-To add a new op in Intel® Nervana™ graph (ngraph), you'll need to do the following:
+To add a new op in Intel® Neon, you'll need to do the following:
 
 - Register the new op in ``op_graph``.
 - Add adjoint function for computing gradients of the op (optional).
 - Register op in transformer passes.
-- Add implementation in transformers (such as CPU and GPU).
+- Add implementation in transformers.
 - Add corresponding tests.
 
 Example
@@ -34,7 +34,7 @@ In the following example, we'll walk though the steps for adding the ``Prod``
 op. ``Prod`` computes the product of a tensor over given reduction axes. For
 instance::
 
-   import ngraph as ng
+   import neon as ng
    axes = ng.make_axes([ng.make_axis(2), ng.make_axis(2)])
    x = ng.constant([[1., 2.], [3., 4.]], axes=axes)
    x_prod = ng.prod(x, reduction_axes=x.axes[1])
@@ -43,12 +43,12 @@ instance::
    # [  2.  12.]
 
 1. First, we need to register the new op in ``op_graph``. In general, an op is
-   a sub-class of ``ngraph.op_graph.op_graph.Op``. To add a new op, we could
+   a sub-class of ``neon.op_graph.op_graph.Op``. To add a new op, we could
    inherit from the class ``Op`` or one of its descendant classes and implement
    required methods. We need to implement ``__init__()``, and if we
    want to define the derivative of the op, we need to implement
    ``generate_adjoints()``. For other advanced functionalities, please refer to
-   the the source of ``ngraph.op_graph.op_graph.Op``.
+   the the source of ``neon.op_graph.op_graph.Op``.
 
    Let's look at ``DotOp`` for an example. ``DotOp`` inherits
    ``TensorOp`` which is a descendant of ``Op``. In the ``__init__()`` function,
@@ -103,7 +103,7 @@ instance::
    The helper function then applies it to the ``generate_adjoints()``
    in the generated ``Prod`` class.
 
-   In ``ngraph/op_graph/op_graph.py``, we add ::
+   In ``src/neon/op_graph/op_graph.py``, we add ::
 
         def prod_adjoints(self, adjoints, delta, x):
             # axes
@@ -158,7 +158,7 @@ instance::
 
    For ``Prod``, one of the optimizations we can do is that, if the tensor is
    filled with a constant value, we can replace ``Prod`` with the ``Power`` op.
-   Therefore, in ``ngraph/transformers/passes/passes.py``, we add ::
+   Therefore, in ``src/neon/transformers/passes/passes.py``, we add ::
 
         class SimplePrune(PeepholeGraphPass):
             ...
@@ -173,51 +173,8 @@ instance::
                     val = power(x.const, op.reduction_axes.size)
                     self.replace_op(op, constant(val))
 
-4. Next, we need to add implementations of the op in transformers. Note that
-   in the previous steps, we still haven't specified how the op will be executed
-   (forward computation). In the current version of Intel Nervana graph, the ops that are implemented in
-   ``CPUTransformer`` and ``GPUTransformer`` are done by code generation for
-   optimized performance.
-
-   In ``ngraph/transformers/cputransform.py``, add the following for CPU
-   code generation ::
-
-        class CPUCodeGenerator(PyGen):
-            ...
-
-            @generate_op.on_type(Prod)
-            def generate_op(self, op, out, x):
-                self.append("np.prod({}, axis=0, out={})", x, out)
-
-   In ``ngraph/transformers/gputransform.py``, add the following in the
-   ``ElementWiseKernel`` class for the element-wise CUDA C kernel. Here, ops are
-   first buffered in a list, and then the kernel is compiled at the end. ::
-
-        class ElementWiseKernel(GPUKernel):
-            ...
-
-            @add_op.on_type(Prod)
-            def add_op(self, op, out, x):
-                self.add_reduction_op("prod", op, out, x)
-
-   Finally in ``/ngraph/transformers/gpu/float_ew2.py`` add the following for
-   the reduction op generation template. These are string templates for the
-   generated CUDA C code. ::
-
-        _redop_templates = {
-            "prod": r"%(out)s = %(out)s * %(x)s;",
-            ...
-        }
-
-        _redop32_templates = {
-            "prod": r"%(out)s = %(out)s * __shfl_xor(%(out)s, i);",
-            ...
-        }
-
-        _redop_inits = {
-            "prod": "1.0f",
-            ...
-        }
+4. Next, we need to add implementations of the op in transformers. Details 
+   will be added later.
 
 5. The last step is to add the corresponding tests to verify the forward and
    backward computation. For ``ng.prod``, refer to the

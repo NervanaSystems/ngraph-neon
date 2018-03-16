@@ -25,7 +25,6 @@ https://github.com/soumith/convnet-benchmarks
 import numpy as np
 import neon as ng
 import neon.transformers as ngt
-from tqdm import tqdm
 from contextlib import closing
 
 from neon.frontend import NeonArgparser, ArrayIterator

@@ -299,7 +299,7 @@ class PybindComputation(Computation):
 
         # Add additional results (updated variable)
         for variable in self.variables_cpp_op:
-            # print("Update " + variable.name + " " + self.variables_cpp_op[variable][1].name) 
+            # print("Update " + variable.name + " " + self.variables_cpp_op[variable][1].name)
             self.neon_update_list.append(variable)
             ngraph_op = self.lookup_cpp_op(self.variables_cpp_op[variable][1])
             # print("Outvar " + str(ngraph_op))
@@ -392,6 +392,7 @@ class PybindComputation(Computation):
 
 
 class FunctionTransformer(Transformer):
+
     def __init__(self, **kwargs):
         super(FunctionTransformer, self).__init__(**kwargs)
         self.computations = OrderedSet()
@@ -537,5 +538,6 @@ class PybindARGONTransformer(PybindTransformer):
         self.ngraph_backend = "ARGON"
         super(PybindARGONTransformer, self).__init__(**kwargs)
 
+
 set_transformer_factory(
-make_transformer_factory(PybindCPUTransformer.transformer_name))
+    make_transformer_factory(PybindCPUTransformer.transformer_name))

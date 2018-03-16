@@ -72,6 +72,7 @@ def conv_params(fil_size, num_fils, strides=1, batch_norm=True, activation=Rectl
 # Deep Residual Learning for Image Recognition
 # http://arxiv.org/abs/1512.03385
 class BuildResnet(Sequential):
+
     def __init__(self, net_type, resnet_size, bottleneck, num_resnet_mods, batch_norm=True):
         # For CIFAR10 dataset
         if (net_type in ('cifar10', 'cifar100')):

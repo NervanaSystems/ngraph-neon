@@ -1,7 +1,7 @@
 .. _building_graphs:
 
 .. ---------------------------------------------------------------------------
-.. Copyright 2017 Intel Corporation
+.. Copyright 2017-2018 Intel Corporation
 .. Licensed under the Apache License, Version 2.0 (the "License");
 .. you may not use this file except in compliance with the License.
 .. You may obtain a copy of the License at
@@ -18,9 +18,9 @@
 Building graphs
 ***************
 
-Frontends (or users who require the flexibility of constructing Intel® Nervana™ graph ``Ops`` directly) can utilize a set of graph construction functions to construct Intel Nervana graphs. We walk through the common patterns and arguments of these ``Ops`` here. We also discuss the underlying class structure of ``Op``, which is not typically a concern for users or frontends but that illustrates a hierarchical structure that can be helpful.
+Frontends (or users who require the flexibility of constructing Intel® Neon ``Ops`` directly) can utilize a set of graph construction functions to construct Intel Nervana graphs. We walk through the common patterns and arguments of these ``Ops`` here. We also discuss the underlying class structure of ``Op``, which is not typically a concern for users or frontends but that illustrates a hierarchical structure that can be helpful.
 
-Intel Nervana graph structure
+Intel Neon graph structure
 =============================
 
 Data dependencies
@@ -36,9 +36,9 @@ For example:
     >>> y = ng.constant(1)
     >>> mysum = ng.add(x, y)
     >>> type(mysum)
-    ngraph.op_graph.op_graph.AddOp
+    neon.op_graph.op_graph.AddOp
 
-    >>> issubclass(mysum, ngraph.op_graph.op_graph.Op)
+    >>> issubclass(mysum, neon.op_graph.op_graph.Op)
     True
 
     >>> mysum.args
@@ -91,7 +91,7 @@ Now ``z`` performs the assignment and then returns the value of ``x + 1``.
 General properties of ops
 =========================
 
-All operational graph ops are instances of the class :py:class:`ngraph.op_graph.op_graph.Op`, which extends :py:class:`ngraph.op_graph.names.ScopedNameableValue`. This provides ``Ops`` with automatically generated unique names.
+All operational graph ops are instances of the class :py:class:`neon.op_graph.op_graph.Op`, which extends :py:class:`neon.op_graph.names.ScopedNameableValue`. This provides ``Ops`` with automatically generated unique names.
 
 In addition to the graph properties explained above (``args``) all ops have the following additional attributes:
 
@@ -127,7 +127,7 @@ During computation (which we cover in more detail in :doc:`transformer_usage`), 
 
 .. code-block:: python
 
-    import ngraph as ng
+    import neon as ng
     ax_C = ng.make_axis(length=4, name='C')
     ax_W = ng.make_axis(length=2, name='W')
     ax_H = ng.make_axis(length=2, name='H')
@@ -165,7 +165,7 @@ function.
 
 .. code-block:: python
 
-    import ngraph as ng
+    import neon as ng
 
     ax_C = ng.make_axis(length=4, name='C')
     ax_Y = ng.make_axis(length=4, name='Y')

@@ -23,6 +23,7 @@ class ControlBlock(object):
         members (list): The ops to execute.
         next_block: The next block to execute, or None if this is the last block.
     """
+
     def __init__(self, **kwargs):
         super(ControlBlock, self).__init__(**kwargs)
         self.members = list()

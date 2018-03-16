@@ -29,6 +29,7 @@ class PTB(object):
                                 version of the sequence. Default to be True, for
                                 language models.
     """
+
     def __init__(self, path='.', use_words=False, shift_target=True):
         self.path = path
         self.url = 'https://raw.githubusercontent.com/wojzaremba/lstm/master/data'

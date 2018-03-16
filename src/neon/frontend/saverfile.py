@@ -19,6 +19,7 @@ import numpy as np
 
 
 class SaverFile(object):
+
     def __init__(self, name):
         """
         A class that write and read dictionary of numpy.ndarray's with Op name as key to file

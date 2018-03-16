@@ -35,6 +35,7 @@ class TSP(object):
     Arguments:
         path (string): Data directory to find the data.
     """
+
     def __init__(self, train_filename, test_filename, path='.'):
         self.path = path
         self.filemap = dict(train=dict(filename=train_filename),

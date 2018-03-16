@@ -78,6 +78,7 @@ class TestDimShuffleFpropBprop:
 
 
 class TestDimShuffleFail:
+
     def test_fail_on_missing(self, x, B):
         with pytest.raises(ValueError):
             ng.axes_with_order(x, [B, B])

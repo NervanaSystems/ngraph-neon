@@ -17,8 +17,7 @@ from __future__ import print_function
 
 from neon.transformers.base import make_transformer, set_transformer_factory, \
     transformer_choices,  \
-    allocate_transformer, make_transformer_factory, Transformer, \
-    UnsupportedTransformerException
+    allocate_transformer, make_transformer_factory, Transformer
 
 __all__ = [
     'allocate_transformer',

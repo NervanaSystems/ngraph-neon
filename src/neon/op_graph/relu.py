@@ -30,6 +30,7 @@ def relu(inputs, axes, docstring=None):
 
 
 class ReluOp(TensorOp):
+
     def __init__(self, inputs, **kwargs):
         super(ReluOp, self).__init__(args=(inputs,), **kwargs)
 
@@ -39,5 +40,6 @@ class ReluOp(TensorOp):
 
 
 class ReluBpropOp(TensorOp):
+
     def __init__(self, inputs, delta, **kwargs):
         super(ReluBpropOp, self).__init__(args=(inputs, delta), **kwargs)

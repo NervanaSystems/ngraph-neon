@@ -39,6 +39,8 @@ def open_csv(file_name, mode):
            open(file_name, mode=mode, newline=''))
 
 # Calculate metrics over given dataset
+
+
 def loop_eval(dataset, input_ph, metric_name, computation, en_top5=False):
     # Reset test set
     dataset.reset()
@@ -98,11 +100,8 @@ if __name__ == "__main__":
     parser = NeonArgparser(description="Resnet for Imagenet and Cifar10")
     parser.add_argument('--dataset', type=str, default="cifar10", help="Enter cifar10 or i1k")
     parser.add_argument('--size', type=int, default=56, help="Enter size of resnet")
-    parser.add_argument('--tb', action="store_true", help="1- Enables tensorboard")
     parser.add_argument('--logfile', type=str, default=None, help="Name of the csv which \
                         logs different metrics of model")
-    parser.add_argument('--hetr_device', type=str, default='cpu', help="hetr device type")
-    parser.add_argument('--num_devices', '-m', type=int, default=1, help="num hetr devices")
     parser.add_argument('--disable_batch_norm', action='store_true')
     parser.add_argument('--save_file', type=str, default=None, help="File to save weights")
     parser.add_argument('--inference', type=str, default=None, help="File to load weights")
@@ -139,17 +138,6 @@ with ng.metadata(device=device, device_id=device_id, parallel=ax.N):
     # Build the network
     resnet = BuildResnet(args.dataset, args.size, en_bottleneck, num_resnet_mods,
                          batch_norm=not args.disable_batch_norm)
-    # Tensorboard
-    if(args.tb):
-        try:
-            from neon.op_graph.tensorboard.tensorboard import TensorBoard
-        except:
-            print("Tensorboard not installed")
-        seq1 = BuildResnet(args.dataset, args.size, en_bottleneck, num_resnet_mods)
-        train = seq1(input_ph['image'])
-        tb = TensorBoard("/tmp/")
-        tb.add_graph(train)
-        exit()
 
     # Learning Rate Placeholder
     lr_ph = ng.placeholder(axes=(), initial_value=base_lr)
