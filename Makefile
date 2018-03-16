@@ -145,13 +145,3 @@ release: check
 	vi ChangeLog
 	echo "TODO (manual steps): release on github and update docs with 'make publish_doc'"
 	echo
-
-UNAME=$(shell uname)
-viz_prepare:
-ifeq ("$(UNAME)", "Darwin")
-	brew install graphviz
-else ifeq ("$(UNAME)", "Linux")
-	apt-get install graphviz
-endif
-
-	pip install -r viz_requirements.txt > /dev/null 2>&1
