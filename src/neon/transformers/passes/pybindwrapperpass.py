@@ -24,7 +24,7 @@ from neon.op_graph.op_graph import Op, Add, AssignableTensorOp, AssignOp, AxesCa
     SequentialOp, SqrtOp, SquareOp, Subtract, Sum, TensorSliceOp, TensorSizeOp, TensorValueOp, \
     Unflatten
 from neon.op_graph.batchnorm import BatchnormCommonOp, BatchnormBpropCommonOp, \
-    BatchnormInferenceOp, BatchnormOutputOp, BatchnormMeanOp, BatchnormVarOp, \
+    BatchnormOutputOp, BatchnormMeanOp, BatchnormVarOp, \
     BatchnormBpropDataOp, BatchnormBpropGammaOp, BatchnormBpropBetaOp
 from neon.op_graph.relu import ReluOp, ReluBpropOp
 from neon.op_graph.pooling import PoolingOp, BpropPoolOp
@@ -32,14 +32,12 @@ from neon.op_graph.convolution import ConvolutionOp, bprop_conv, update_conv
 import numpy as np
 
 from ngraph import Type
-from ngraph import Function as Function
 from ngraph import Shape
 from ngraph import AxisSet
 from ngraph import AxisVector
 from ngraph import Strides
 from ngraph import CoordinateDiff
 from ngraph import Coordinate
-from ngraph import NodeVector
 from ngraph.op import Parameter
 from ngraph.op import AvgPool as PyngAvgPool
 from ngraph.op import AvgPoolBackprop as PyngAvgPoolBackprop
@@ -60,12 +58,10 @@ from ngraph.op import Maximum as PyngMaximum
 from ngraph.op import MaxPool as PyngMaxPool
 from ngraph.op import MaxPoolBackprop as PyngMaxPoolBackprop
 from ngraph.op import Minimum as PyngMinimum
-from ngraph.op import Multiply as PyngMultiply
 from ngraph.op import Negative as PyngNegative
 from ngraph.op import NotEqual as PyngNotEqual
 from ngraph.op import OneHot as PyngOneHot
 from ngraph.op import Reshape as PyngReshape
-from ngraph.op import Reduce as PyngReduce
 from ngraph.op import Slice as PyngSlice
 from ngraph.op import Sqrt as PyngSqrt
 from ngraph.op import Sum as PyngSum

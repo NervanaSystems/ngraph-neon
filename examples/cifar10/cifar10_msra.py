@@ -34,7 +34,6 @@ from neon.frontend import Affine, Preprocess, Convolution, Pooling, BatchNorm, A
 from neon.frontend import KaimingInit, Rectlin, Softmax, GradientDescentMomentum
 from neon.frontend import ax, NeonArgparser
 from neon.frontend import make_bound_computation, make_default_callbacks, loop_train  # noqa
-from tqdm import tqdm
 import neon.transformers as ngt
 
 ######################

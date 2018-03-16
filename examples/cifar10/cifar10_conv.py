@@ -80,24 +80,17 @@ seq1 = Sequential([Preprocess(functor=cifar_mean_subtract),
                    Affine(axes=ax.Y, weight_init=init_uni, activation=Softmax())])
 
 optimizer = GradientDescentMomentum(0.01, 0.9)
-train_prob = seq1(inputs['image'], backend=args.backend)
+train_prob = seq1(inputs['image'])
 train_loss = ng.cross_entropy_multi(train_prob, ng.one_hot(inputs['label'], axis=ax.Y))
 batch_cost = ng.sequential([optimizer(train_loss), ng.mean(train_loss, out_axes=())])
 train_outputs = dict(batch_cost=batch_cost)
 
 with Layer.inference_mode_on():
-    inference_prob = seq1(inputs['image'], backend=args.backend)
+    inference_prob = seq1(inputs['image'])
 # errors = ng.not_equal(ng.argmax(inference_prob, out_axes=[ax.N]), inputs['label'])
 eval_loss = ng.cross_entropy_multi(inference_prob, ng.one_hot(inputs['label'], axis=ax.Y))
 eval_outputs = dict(results=inference_prob, cross_ent_loss=eval_loss)
 
-"""
-for op in ng.Op.ordered_ops([batch_cost]):
-    print(type(op))
-for op in ng.Op.ordered_ops([eval_loss]):
-    print(type(op))
-quit()
-"""
 
 # Now bind the computations we are interested in
 with closing(ngt.make_transformer()) as transformer:

@@ -94,9 +94,9 @@ class Benchmark(object):
             t_args['device'] = self.device
         with closing(ngt.make_transformer_factory(self.transformer, **t_args)()) as transformer:
             if visualize:
-                nviz = ngraph.transformers.passes.nviz.VizPass(show_axes=True,
-                                                               show_all_metadata=True,
-                                                               subgraph_attr=subgraph_attr)
+                nviz = neon.transformers.passes.nviz.VizPass(show_axes=True,
+                                                             show_all_metadata=True,
+                                                             subgraph_attr=subgraph_attr)
                 transformer.register_graph_pass(nviz)
             model_out_computation = transformer.add_computation(self.computation)
             for i in range(n_skip):

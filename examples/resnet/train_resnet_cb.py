@@ -16,12 +16,10 @@
 # ******************************************************************************
 
 from __future__ import division, print_function
-import sys
 import numpy as np
 import neon as ng
 import neon.transformers as ngt
 from neon.frontend import ax, NeonArgparser
-from tqdm import tqdm
 from data import make_aeon_loaders
 from neon.frontend import GradientDescentMomentum
 from neon.frontend import Layer

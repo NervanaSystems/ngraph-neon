@@ -23,7 +23,7 @@ from contextlib import contextmanager
 import neon as ng
 from neon.frontend.common import utils
 from neon.frontend.common.utils import make_poolparams
-from neon.frontend.axis import shadow_axes_map, reorder_spatial_axes, assert_no_shadow_axes
+from neon.frontend.axis import shadow_axes_map, assert_no_shadow_axes
 from neon.frontend.graph import SubGraph
 from neon.frontend.initializer import ConstantInit
 from neon.frontend.utils import get_function_or_class_name
@@ -407,12 +407,13 @@ class ConvBase(Layer):
             name = ax.name
             if name in self.conv_axis_names:
                 output_axes += ng.make_axis(name=ax.name,
-                                            length=utils.conv_output_dim(ax.length,
-                                                                         self.filter_spatial_shape[name],
-                                                                         pad_int[name],
-                                                                         self.strides[name],
-                                                                         False,
-                                                                         self.dilation[name]))
+                                            length=utils.conv_output_dim(
+                                                ax.length,
+                                                self.filter_spatial_shape[name],
+                                                pad_int[name],
+                                                self.strides[name],
+                                                False,
+                                                self.dilation[name]))
             elif name == "C":
                 output_axes += ng.make_axis(name=name, length=self.nout)
             else:
@@ -777,7 +778,6 @@ class PoolBase(Layer):
             spatial_axes (tuple): names of expected depth, height and width axis types - defaults
                                   to "D", "H", and "W"
         """
-        backend = kwargs.get('backend', 'cpu')
 
         pool_axes = in_obj.axes.get_by_names(*self.pool_axis_names)
 
@@ -1195,7 +1195,6 @@ class Deconvolution(Convolution):
             spatial_axes (tuple): names of expected depth, height and width axis types - defaults
                                   to "D", "H", and "W"
         """
-        backend = kwargs.get('backend', 'cpu')
         output = super(Deconvolution, self).__call__(in_obj, channel_axes, spatial_axes, **kwargs)
         return self._slice_output(output, spatial_axes, **kwargs)
 

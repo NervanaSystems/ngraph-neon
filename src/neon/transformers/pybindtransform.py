@@ -538,5 +538,6 @@ class PybindARGONTransformer(PybindTransformer):
         self.ngraph_backend = "ARGON"
         super(PybindARGONTransformer, self).__init__(**kwargs)
 
+
 set_transformer_factory(
     make_transformer_factory(PybindCPUTransformer.transformer_name))
