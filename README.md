@@ -1,99 +1,67 @@
-# ngraph-neon
+# Intel® nGraph™ 
 
-## Installation - New Way
+### An Intermediate Representation, Compiler, and Executor for Deep Learning
 
-Checkout ngraph++ and python wrapper code and build bdist wheel.
+*Updated: February 13, 2018* 
 
-```
-git clone --branch python_binding --recursive https://github.com/NervanaSystems/ngraph.git
-cd ngraph/python
-```
-To build python2 bdist wheel type
-```
-./build2.sh
-```
-To build python3 bdist wheel type
-```
-./build3.sh
-```
-
-The bdist wheel will be placed in ngraph/python/build/dist
-Activate your virtual environment and install the bdist wheel
-
-```
-pip install -U <full path to the bdist wheel>
-```
-
-For example, On MacOS you would run a command like,
-
-```
-pip install -U build/dist/pyngraph-0.0.1-cp27-cp27m-macosx_10_13_intel.whl
-```
-
-To run unit tests, first install additional required packages.
-
-```
-pip install -r test_requirements.txt
-```
-
-Then run a test.
-```
-pytest test/test_ops.py
-```
-
-## Running tests with tox
-
-[Tox](https://tox.readthedocs.io/) is a Python [virtualenv](https://virtualenv.pypa.io/) management and test command line tool. In our project it automates:
-
-* running unit tests using [pytest](https://docs.pytest.org/)
-* checking that code style is compliant with [PEP8](https://www.python.org/dev/peps/pep-0008/) using [Flake8](http://flake8.pycqa.org/)
-* static type checking using [MyPy](http://mypy.readthedocs.io)
-* testing across Python 2 and 3
-
-Installing and running test with Tox:
-
-    pip install tox
-    export NGRAPH_CPP_BUILD_PATH=$HOME/ngraph_dist
-    tox
-
-You can run tests using only Python 3 or 2 using the `-e` (environment) switch:
-
-    tox -e py36
-    tox -e py27
-
-You can check styles in a particular code directory by specifying the path:
-
-    tox ngraph_api/
-
-In case of problems, try to recreate the virtual environments by deleting the `.tox` directory:
-
-```
-rm -rf .tox
-tox
-```
-
-## Installation - Old Way (Still works)
-
-Follow these steps to install the ngraph's python wrapper and its prerequisites.
+Welcome to the Intel nGraph repo. While we're transitioning our main project 
+from Python and [preparing to open-source our C++ code base] to the community, 
+you can browse here to learn a bit about the roots of the [legacy] project.  
 
 
-### ngraph-cpp
+## Why did we build nGraph?
 
-Download the required version of ngraph-cpp and install it.
-```
-git clone https://github.com/NervanaSystems/ngraph.git
-cd ngraph-cpp
-git checkout a02aab014c92809b4a0b1bacf1b686d6318a16d4 -b "local branch name"
-Build and Install it : https://github.com/NervanaSystems/ngraph#steps
-```
+When Deep Learning (DL) frameworks first emerged as the vehicle for training and 
+inference models, they were designed around kernels optimized for a particular 
+platform. As a result, many backend details were being exposed in the model 
+definitions, making the adaptability and portability of DL models to other or 
+more advanced backends inherently complex and expensive.
 
-### ngraph-neon
+The traditional approach means that an algorithm developer cannot easily adapt 
+his or her model to different backends. Making a model run on a different 
+framework is also problematic because the developer must separate the essence of 
+the model from the performance adjustments made for the backend, translate to 
+similar ops in the new framework, and finally make the necessary changes for 
+the preferred backend configuration on the new framework.
 
-After installing ngraph-cpp, follow the steps below to install ngraph-neon.
-The NGRAPH_CPP_BUILD_PATH is set to default installation location of ngraph-cpp.
-```
-git clone --recursive https://github.com/NervanaSystems/ngraph-neon.git
-cd ngraph-neon
-export NGRAPH_CPP_BUILD_PATH=$HOME/ngraph_dist/
-pip install -U .
-```
+We designed the Intel nGraph project to substantially reduce these kinds of 
+engineering complexities. While optimized kernels for deep-learning primitives 
+are provided through the project and via libraries like Intel® Math Kernel Library 
+for Deep Neural Networks (Intel® MKL-DNN), there are several compiler-inspired 
+ways in which performance can be further optimized. 
+
+
+## How does it work in practice?
+
+Install the nGraph library and write or compile a framework with the library, 
+in order to run training and inference models. Using the command line on any 
+supported system (currently Linux) specify the backend you want to use. Our 
+Intermediate Representation (IR) layer handles all the hardware abstraction 
+details and frees developers to focus on their data science, algorithms and 
+models, rather than on machine code.
+
+At a more granular level of detail: 
+
+* The **nGraph core** creates a strongly-typed and platform-neutral stateless 
+  graph representation of computations. Each node, or *op*, in the graph 
+  corresponds to one step in a computation, where each step produces zero or 
+  more tensor outputs from zero or more tensor inputs.
+
+* We've developed a **framework bridge** for each supported framework; it acts 
+  as an intermediary between the *ngraph core* and the framework. A **transformer** 
+  then plays a similar role between the ngraph core and the various execution 
+  platforms.
+
+* **Transformers** handle the hardware abstraction; they compile the graph with 
+  a combination of generic and platform-specific graph transformations. The 
+  result is a function that can be executed from the framework bridge. 
+  Transformers also allocate and deallocate, as well as read and write tensors 
+  under direction of the bridge.
+  
+You can read more about design decisions and what is tentatively in the pipeline 
+for backends and development in our [ARXIV abstract and conference paper]:
+
+
+[preparing to open-source our C++ code base]:http://ngraph.nervanasys.com/docs/cpp/ 
+[legacy]:legacy_README.md
+[ARXIV abstract and conference paper]:https://arxiv.org/pdf/1801.08058.pdf
