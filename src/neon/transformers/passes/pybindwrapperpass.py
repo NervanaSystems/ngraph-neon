@@ -31,47 +31,47 @@ from neon.op_graph.pooling import PoolingOp, BpropPoolOp
 from neon.op_graph.convolution import ConvolutionOp, bprop_conv, update_conv
 import numpy as np
 
-from ngraph import Type
-from ngraph import Shape
-from ngraph import AxisSet
-from ngraph import AxisVector
-from ngraph import Strides
-from ngraph import CoordinateDiff
-from ngraph import Coordinate
-from ngraph.op import Parameter
-from ngraph.op import AvgPool as PyngAvgPool
-from ngraph.op import AvgPoolBackprop as PyngAvgPoolBackprop
-from ngraph.op import Broadcast as PyngBroadcast
-from ngraph.op import Constant
-from ngraph.op import Convert as PyngConvert
-from ngraph.op import Convolution as PyngConvolution
-from ngraph.op import ConvolutionBackpropData as PyngConvolutionBackpropData
-from ngraph.op import ConvolutionBackpropFilters as PyngConvolutionBackpropFilters
-from ngraph.op import Dot as PyngDot
-from ngraph.op import Equal as PyngEqual
-from ngraph.op import Exp as PyngExp
-from ngraph.op import Greater as PyngGreater
-from ngraph.op import GreaterEq as PyngGreaterEq
-from ngraph.op import Less as PyngLess
-from ngraph.op import Log as PyngLog
-from ngraph.op import Maximum as PyngMaximum
-from ngraph.op import MaxPool as PyngMaxPool
-from ngraph.op import MaxPoolBackprop as PyngMaxPoolBackprop
-from ngraph.op import Minimum as PyngMinimum
-from ngraph.op import Negative as PyngNegative
-from ngraph.op import NotEqual as PyngNotEqual
-from ngraph.op import OneHot as PyngOneHot
-from ngraph.op import Reshape as PyngReshape
-from ngraph.op import Slice as PyngSlice
-from ngraph.op import Sqrt as PyngSqrt
-from ngraph.op import Sum as PyngSum
-from ngraph.op import BatchNorm as PyngBatchNorm
-from ngraph.op import BatchNormBackprop as PyngBatchNormBackprop
-from ngraph.op import GetOutputElement as PyngGetOutputElement
-from ngraph.op import Max as PyngMax
-from ngraph.op import Product as PyngProduct
-from ngraph.op import Relu as PyngRelu
-from ngraph.op import ReluBackprop as PyngReluBackprop
+from ngraph.impl import Type
+from ngraph.impl import Shape
+from ngraph.impl import AxisSet
+from ngraph.impl import AxisVector
+from ngraph.impl import Strides
+from ngraph.impl import CoordinateDiff
+from ngraph.impl import Coordinate
+from ngraph.impl.op import Parameter
+from ngraph.impl.op import AvgPool as PyngAvgPool
+from ngraph.impl.op import AvgPoolBackprop as PyngAvgPoolBackprop
+from ngraph.impl.op import Broadcast as PyngBroadcast
+from ngraph.impl.op import Constant
+from ngraph.impl.op import Convert as PyngConvert
+from ngraph.impl.op import Convolution as PyngConvolution
+from ngraph.impl.op import ConvolutionBackpropData as PyngConvolutionBackpropData
+from ngraph.impl.op import ConvolutionBackpropFilters as PyngConvolutionBackpropFilters
+from ngraph.impl.op import Dot as PyngDot
+from ngraph.impl.op import Equal as PyngEqual
+from ngraph.impl.op import Exp as PyngExp
+from ngraph.impl.op import Greater as PyngGreater
+from ngraph.impl.op import GreaterEq as PyngGreaterEq
+from ngraph.impl.op import Less as PyngLess
+from ngraph.impl.op import Log as PyngLog
+from ngraph.impl.op import Maximum as PyngMaximum
+from ngraph.impl.op import MaxPool as PyngMaxPool
+from ngraph.impl.op import MaxPoolBackprop as PyngMaxPoolBackprop
+from ngraph.impl.op import Minimum as PyngMinimum
+from ngraph.impl.op import Negative as PyngNegative
+from ngraph.impl.op import NotEqual as PyngNotEqual
+from ngraph.impl.op import OneHot as PyngOneHot
+from ngraph.impl.op import Reshape as PyngReshape
+from ngraph.impl.op import Slice as PyngSlice
+from ngraph.impl.op import Sqrt as PyngSqrt
+from ngraph.impl.op import Sum as PyngSum
+from ngraph.impl.op import BatchNorm as PyngBatchNorm
+from ngraph.impl.op import BatchNormBackprop as PyngBatchNormBackprop
+from ngraph.impl.op import GetOutputElement as PyngGetOutputElement
+from ngraph.impl.op import Max as PyngMax
+from ngraph.impl.op import Product as PyngProduct
+from ngraph.impl.op import Relu as PyngRelu
+from ngraph.impl.op import ReluBackprop as PyngReluBackprop
 
 
 class PybindScopePass:
