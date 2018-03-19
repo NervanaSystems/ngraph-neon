@@ -119,7 +119,8 @@ with Layer.inference_mode_on():
     eval_outputs = dict(results=inference_prob, cross_ent_loss=eval_loss)
 
 # setup wrapper for additional feed for learning rate (train only)
-input_ph['lr_ph'] = lr_ph
+train_input_ph = input_ph.copy()
+train_input_ph['lr_ph'] = lr_ph
 wrapper_kwargs = {'base_lr': base_lr,
                   'learning_schedule': learning_schedule,
                   'gamma': gamma}
@@ -150,7 +151,7 @@ if(args.inference is not None):
 # Training the network by calling transformer
 with closing(ngt.make_transformer()) as transformer:
     # Trainer
-    train_computation = make_bound_computation(transformer, train_outputs, input_ph)
+    train_computation = make_bound_computation(transformer, train_outputs, train_input_ph)
     # Inference
     loss_computation = make_bound_computation(transformer, eval_outputs, input_ph)
     # Set Saver for saving weights
