@@ -2,7 +2,7 @@
 
 ## A Deep Learning framework powered by Intel® nGraph
 
-Welcome to Intel® Neon™, an open source Deep Learning framwork powered by Intel® nGraph 
+Welcome to Intel® Neon™, an open source Deep Learning framework powered by Intel® nGraph 
 
 
 ## Installation
@@ -47,7 +47,7 @@ $ make install
 ### Install nGraph (Required)
 
 After completing the prerequisites and installation of the base Neon
-Graph package, Intel® nGraph and the python wraooer needs to be installed.
+Graph package, Intel® nGraph and the python wrapper needs to be installed.
 Clone the source code from https://github.com/NervanaSystems/ngraph
 Activate the virtualenv if you haven't already. And follow the instructions at
 https://github.com/NervanaSystems/ngraph/blob/master/python/README.md
