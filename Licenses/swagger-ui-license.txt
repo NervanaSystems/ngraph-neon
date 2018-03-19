@@ -1,10 +1,10 @@
 The following license applies to the following files that utilize the swagger-api.
 The license is copied below.  The Apache license is copied at Apache-2.0-license.txt.
 
-doc/sphinx/ngraph_theme/static/css/swagger.css
-doc/sphinx/ngraph_theme/static/js/swagger-oauth.js
-doc/sphinx/ngraph_theme/static/js/swagger-ui.js
-doc/sphinx/ngraph_theme/static/js/swagger-ui.min.js
+doc/source/neon_theme/static/css/swagger.css
+doc/source/neon_theme/static/js/swagger-oauth.js
+doc/source/neon_theme/static/js/swagger-ui.js
+doc/source/neon_theme/static/js/swagger-ui.min.js
 
 https://github.com/swagger-api/swagger-ui/blob/master/LICENSE
 

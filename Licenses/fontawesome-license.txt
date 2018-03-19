@@ -1,10 +1,10 @@
 This Font Software is licensed under the Font Awesome Free License.
 This license is copied copied below.
 
-doc/sphinx/ngraph_theme/static/fonts/fontawesome-webfont.eot
-doc/sphinx/ngraph_theme/static/fonts/fontawesome-webfont.svg
-doc/sphinx/ngraph_theme/static/fonts/fontawesome-webfont.ttf
-doc/sphinx/ngraph_theme/static/fonts/fontawesome-webfont.woff
+doc/source/neon_theme/static/fonts/fontawesome-webfont.ttf
+doc/source/neon_theme/static/fonts/fontawesome-webfont.eot
+doc/source/neon_theme/static/fonts/fontawesome-webfont.svg
+doc/source/neon_theme/static/fonts/fontawesome-webfont.woff
 
 Attribution is no longer required as of Font Awesome 3.0 but is much appreciated: "Font Awesome by Dave Gandy - http://fontawesome.io".
 
