@@ -2,7 +2,7 @@
 
 ## A Deep Learning framework powered by Intel® nGraph
 
-Welcome to Intel® Neon™, an open source Deep Learning framework powered by Intel® nGraph 
+Welcome to Intel® Neon, an open source Deep Learning framework powered by Intel® nGraph 
 
 
 ## Installation
