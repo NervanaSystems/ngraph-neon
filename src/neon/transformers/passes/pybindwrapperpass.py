@@ -22,7 +22,7 @@ from neon.op_graph.op_graph import Op, Add, AssignableTensorOp, AssignOp, AxesCa
     GreaterEqual, Less, LogOp, MapRolesOp, Max, Maximum, Minimum, Multiply, NegativeOp, \
     NotEqual, OneHotOp, ParallelOp, Prod, ReciprocalOp, ReductionOp, ReorderAxes, \
     SequentialOp, SqrtOp, SquareOp, Subtract, Sum, TensorSliceOp, TensorSizeOp, TensorValueOp, \
-    Unflatten
+    Unflatten, Fill
 from neon.op_graph.batchnorm import BatchnormCommonOp, BatchnormBpropCommonOp, \
     BatchnormOutputOp, BatchnormMeanOp, BatchnormVarOp, \
     BatchnormBpropDataOp, BatchnormBpropGammaOp, BatchnormBpropBetaOp
@@ -610,6 +610,26 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                 (self.computation.scopemark[op.tensor], rhs)
             self.computation.register_cpp_op(
                 op, self.computation.lookup_cpp_op(rhs), set_name=False)
+        else:
+            raise RuntimeError("Variable updated more than once!")
+
+    @visit.on_type(Fill)
+    def visit(self, op, tensor):
+        self.computation.set_op_rank(op)
+        variable = tensor.tensor
+        list_size = 1
+        for x in list(tensor.axes.lengths):
+            list_size *= x
+        constant_list = [op.scalar] * list_size
+        ngraph_constant_op = Constant(Type.f32,
+                                      Shape(list(tensor.axes.lengths)),
+                                      constant_list)
+        if variable not in self.computation.variables_cpp_op:
+            # treat 'op' as the rhs of assignment for forwarding and lookup purposes
+            self.computation.variables_cpp_op[variable] = \
+                (self.computation.scopemark[op.tensor], op)
+            self.computation.register_cpp_op(
+                op, ngraph_constant_op, set_name=False)
         else:
             raise RuntimeError("Variable updated more than once!")
 

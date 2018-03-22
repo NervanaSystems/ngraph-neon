@@ -1545,6 +1545,8 @@ class SequentialOp(ValueOp):
                 for op in ops[:-1]:
                     if not isinstance(op, AssignOp):
                         raise RuntimeError("Illegal child formation")
+            elif isinstance(ops[0], Fill):
+                pass
             elif isinstance(ops[0], (ParallelOp, SequentialOp)):
                 if num_children > 2:
                     raise RuntimeError("Illegal child formation")
