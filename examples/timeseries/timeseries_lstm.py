@@ -51,19 +51,19 @@ In addition, generates future values of the sequence based on an initial seed
 
 from __future__ import division, print_function
 from contextlib import closing
-import ngraph as ng
-from ngraph.frontends.neon import Layer, Sequential, LSTM, Affine
-from ngraph.frontends.neon import UniformInit, Tanh, Logistic, Identity, Adam
-from ngraph.frontends.neon import NgraphArgparser, loop_train
-from ngraph.frontends.neon import make_bound_computation, make_default_callbacks
-import ngraph.transformers as ngt
-from ngraph.frontends.neon import ArrayIterator
+import neon as ng
+from neon.frontend import Layer, Sequential, LSTM, Affine
+from neon.frontend import UniformInit, Tanh, Logistic, Identity, Adam
+from neon.frontend import NeonArgparser, loop_train
+from neon.frontend import make_bound_computation, make_default_callbacks
+from neon.frontend import ArrayIterator
+import neon.transformers as ngt
 import timeseries
 import utils
 import imp
 
 # parse the command line arguments
-parser = NgraphArgparser(__doc__)
+parser = NeonArgparser(__doc__)
 parser.add_argument('--predict_seq', default=False, dest='predict_seq', action='store_true',
                     help='If given, seq_len future timepoints are predicted')
 parser.add_argument('--look_ahead', type=int,
@@ -72,9 +72,6 @@ parser.add_argument('--look_ahead', type=int,
 parser.add_argument('--seq_len', type=int,
                     help="Number of time points in each input sequence",
                     default=32)
-parser.add_argument('--epochs', type=int,
-                    help="Number of epochs",
-                    default=200)
 parser.set_defaults()
 args = parser.parse_args()
 
