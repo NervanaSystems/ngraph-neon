@@ -22,6 +22,19 @@ import neon as ng
 from neon.testing import ExecutorFactory, executor
 
 
+def test_fill_state():
+    with ExecutorFactory() as ex:
+        N = ng.make_axis(3, name='N')
+        x_np = np.ones((N.length)) * 4
+        x = ng.variable([N], initial_value=x_np).named('x')
+        val = ng.sequential([
+            ng.fill(x, -1),
+            x
+        ])
+        f = ex.executor(val)
+        x_val = f()
+    assert np.allclose(-1, x_val)
+
 def test_add_with_scalar():
 
     H = ng.make_axis(length=1, name='height')
