@@ -18,11 +18,11 @@ from __future__ import division
 from neon.transformers.passes.passes import PeepholeGraphPass
 from neon.util.generics import generic_method
 from neon.op_graph.op_graph import Op, Add, AssignableTensorOp, AssignOp, AxesCastOp, \
-    BroadcastOp, ContiguousOp, Divide, DotOp, Equal, ExpandDims, ExpOp, Flatten, Greater, \
-    GreaterEqual, Less, LogOp, MapRolesOp, Max, Maximum, Minimum, Multiply, NegativeOp, \
-    NotEqual, OneHotOp, ParallelOp, Prod, ReciprocalOp, ReductionOp, ReorderAxes, \
-    SequentialOp, SqrtOp, SquareOp, Subtract, Sum, TensorSliceOp, TensorSizeOp, TensorValueOp, \
-    Unflatten, Fill
+    BroadcastOp, ContiguousOp, Divide, DotOp, Equal, ExpandDims, ExpOp, Flatten, Fill, \
+    Greater, GreaterEqual, Less, LogOp, MapRolesOp, Max, Maximum, Minimum, Multiply, \
+    NegativeOp, NotEqual, OneHotOp, ParallelOp, Power, Prod, ReciprocalOp, ReductionOp, \
+    ReorderAxes, SequentialOp, SqrtOp, SquareOp, Subtract, Sum, TanhOp, TensorSliceOp, \
+    TensorSizeOp, TensorValueOp, Unflatten
 from neon.op_graph.batchnorm import BatchnormCommonOp, BatchnormBpropCommonOp, \
     BatchnormOutputOp, BatchnormMeanOp, BatchnormVarOp, \
     BatchnormBpropDataOp, BatchnormBpropGammaOp, BatchnormBpropBetaOp
@@ -31,16 +31,17 @@ from neon.op_graph.pooling import PoolingOp, BpropPoolOp
 from neon.op_graph.convolution import ConvolutionOp, bprop_conv, update_conv
 import numpy as np
 
-from ngraph.impl import Type
-from ngraph.impl import Shape
 from ngraph.impl import AxisSet
 from ngraph.impl import AxisVector
-from ngraph.impl import Strides
 from ngraph.impl import CoordinateDiff
 from ngraph.impl import Coordinate
-from ngraph.impl.op import Parameter
+from ngraph.impl import Shape
+from ngraph.impl import Strides
+from ngraph.impl import Type
 from ngraph.impl.op import AvgPool as PyngAvgPool
 from ngraph.impl.op import AvgPoolBackprop as PyngAvgPoolBackprop
+from ngraph.impl.op import BatchNorm as PyngBatchNorm
+from ngraph.impl.op import BatchNormBackprop as PyngBatchNormBackprop
 from ngraph.impl.op import Broadcast as PyngBroadcast
 from ngraph.impl.op import Constant
 from ngraph.impl.op import Convert as PyngConvert
@@ -50,10 +51,12 @@ from ngraph.impl.op import ConvolutionBackpropFilters as PyngConvolutionBackprop
 from ngraph.impl.op import Dot as PyngDot
 from ngraph.impl.op import Equal as PyngEqual
 from ngraph.impl.op import Exp as PyngExp
+from ngraph.impl.op import GetOutputElement as PyngGetOutputElement
 from ngraph.impl.op import Greater as PyngGreater
 from ngraph.impl.op import GreaterEq as PyngGreaterEq
 from ngraph.impl.op import Less as PyngLess
 from ngraph.impl.op import Log as PyngLog
+from ngraph.impl.op import Max as PyngMax
 from ngraph.impl.op import Maximum as PyngMaximum
 from ngraph.impl.op import MaxPool as PyngMaxPool
 from ngraph.impl.op import MaxPoolBackprop as PyngMaxPoolBackprop
@@ -61,17 +64,16 @@ from ngraph.impl.op import Minimum as PyngMinimum
 from ngraph.impl.op import Negative as PyngNegative
 from ngraph.impl.op import NotEqual as PyngNotEqual
 from ngraph.impl.op import OneHot as PyngOneHot
+from ngraph.impl.op import Parameter
+from ngraph.impl.op import Product as PyngProduct
+from ngraph.impl.op import Power as PyngPower
+from ngraph.impl.op import Relu as PyngRelu
+from ngraph.impl.op import ReluBackprop as PyngReluBackprop
 from ngraph.impl.op import Reshape as PyngReshape
 from ngraph.impl.op import Slice as PyngSlice
 from ngraph.impl.op import Sqrt as PyngSqrt
 from ngraph.impl.op import Sum as PyngSum
-from ngraph.impl.op import BatchNorm as PyngBatchNorm
-from ngraph.impl.op import BatchNormBackprop as PyngBatchNormBackprop
-from ngraph.impl.op import GetOutputElement as PyngGetOutputElement
-from ngraph.impl.op import Max as PyngMax
-from ngraph.impl.op import Product as PyngProduct
-from ngraph.impl.op import Relu as PyngRelu
-from ngraph.impl.op import ReluBackprop as PyngReluBackprop
+from ngraph.impl.op import Tanh as PyngTanh
 
 
 class PybindScopePass:
@@ -252,6 +254,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                 return PyngMaximum(x, y)
             elif isinstance(op, Minimum):
                 return PyngMinimum(x, y)
+            elif isinstance(op, Power):
+                return PyngPower(x, y)
 
         self.computation.set_op_rank(op)
         ngraph_cpp_op = pyng_binary_op(op, self.computation.lookup_cpp_op(x),
@@ -274,6 +278,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                 return PyngSqrt(x)
             elif isinstance(op, NegativeOp):
                 return PyngNegative(x)
+            elif isinstance(op, TanhOp):
+                return PyngTanh(x)
 
         self.computation.set_op_rank(op)
         ngraph_cpp_op = pyng_unary_op(op, self.computation.lookup_cpp_op(x))
@@ -495,6 +501,10 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     def visit(self, op, x, y):
         self.binary_op(op, x, y)
 
+    @visit.on_type(Power)
+    def visit(self, op, x, y):
+        self.binary_op(op, x, y)
+
     @visit.on_type(ReorderAxes)
     def visit(self, op, input):
         self.computation.set_op_rank(op)
@@ -527,6 +537,10 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         self.computation.register_cpp_op(op, ngraph_cpp_onehot_op)
 
     @visit.on_type(NegativeOp)
+    def visit(self, op, x):
+        self.unary_op(op, x)
+
+    @visit.on_type(TanhOp)
     def visit(self, op, x):
         self.unary_op(op, x)
 
