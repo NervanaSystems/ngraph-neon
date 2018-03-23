@@ -247,7 +247,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                 return PyngGreaterEq(x, y)
             elif isinstance(op, Less):
                 return PyngLess(x, y)
-            elif isinstance(op, LessEq):
+            elif isinstance(op, LessEqual):
                 return PyngLessEq(x, y)
             elif isinstance(op, Equal):
                 return PyngEqual(x, y)
@@ -474,7 +474,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     def visit(self, op, x, y):
         self.binary_op(op, x, y, is_logical=True)
 
-    @visit.on_type(LessEq)
+    @visit.on_type(LessEqual)
     def visit(self, op, x, y):
         self.binary_op(op, x, y, is_logical=True)
 
