@@ -308,6 +308,7 @@ def test_tensor_dot_tensor():
     (ng.Equal, np.equal),
     (ng.NotEqual, np.not_equal),
     (ng.Less, np.less),
+    (ng.power, np.power)
 ])
 def test_binary_op(ng_func, np_func):
     H = ng.make_axis().named('H')
@@ -315,7 +316,7 @@ def test_binary_op(ng_func, np_func):
 
     tests = [
         {
-            'tensor1': [[1, 2, 3, 4], [5, 6, 7, 8]],
+            'tensor1': [[1, 2, 3, 4], [8, 7, 6, 5]],
             'tensor1_axes': (H, W),
             'tensor2': [[10, 2, 3, 40], [15, 6, 9, 8]],
             'tensor2_axes': (H, W),
@@ -349,6 +350,7 @@ def test_binary_op(ng_func, np_func):
     (ng.exp, np.exp),
     (ng.NegativeOp, np.negative),
     (ng.log, np.log),
+    (ng.tanh, np.tanh),
     (ng.square, np.square),
     (ng.sqrt, np.sqrt)
 ])
