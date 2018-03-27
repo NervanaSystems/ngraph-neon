@@ -225,7 +225,7 @@ class PybindComputation(Computation):
             tensor_op = op.tensor
 
         if tensor_op in self.ngraph_cpp_ops:
-            raise RuntimeError("Cannot create register ngraph op twice: " + tensor_op.name)
+            raise RuntimeError("Cannot register neon op twice: " + tensor_op.name)
 
         if set_name:
             cpp_op.name = tensor_op.name.replace('/', '_')

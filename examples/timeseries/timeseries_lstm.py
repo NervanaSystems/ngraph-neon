@@ -190,7 +190,7 @@ with closing(ngt.make_transformer()) as transformer:
                                  use_progress_bar=args.progress_bar)
 
     # Train the network
-    loop_train(train_set, train_computation, cbs)
+    loop_train(train_set, cbs)
 
     # Get predictions for the test set
     predictions = utils.eval_loop(test_set, eval_function, inputs)

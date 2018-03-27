@@ -18,11 +18,11 @@ from __future__ import division
 from neon.transformers.passes.passes import PeepholeGraphPass
 from neon.util.generics import generic_method
 from neon.op_graph.op_graph import Op, Add, AssignableTensorOp, AssignOp, AxesCastOp, \
-    BroadcastOp, ContiguousOp, Divide, DotOp, Equal, ExpandDims, ExpOp, Flatten, Fill, \
+    BroadcastOp, ContiguousOp, Divide, DotOp, Equal, ExpandDims, ExpOp, Flatten, \
     Greater, GreaterEqual, Less, LogOp, MapRolesOp, Max, Maximum, Minimum, Multiply, \
     NegativeOp, NotEqual, OneHotOp, ParallelOp, Power, Prod, ReciprocalOp, ReductionOp, \
-    ReorderAxes, SequentialOp, SqrtOp, SquareOp, Subtract, Sum, TanhOp, TensorSliceOp, \
-    TensorSizeOp, TensorValueOp, Unflatten
+    ReorderAxes, ReplaceSliceOp, SequentialOp, SqrtOp, SquareOp, Subtract, Sum, TanhOp, \
+    TensorSliceOp, TensorSizeOp, TensorValueOp, Unflatten
 from neon.op_graph.batchnorm import BatchnormCommonOp, BatchnormBpropCommonOp, \
     BatchnormOutputOp, BatchnormMeanOp, BatchnormVarOp, \
     BatchnormBpropDataOp, BatchnormBpropGammaOp, BatchnormBpropBetaOp
@@ -69,6 +69,7 @@ from ngraph.impl.op import Product as PyngProduct
 from ngraph.impl.op import Power as PyngPower
 from ngraph.impl.op import Relu as PyngRelu
 from ngraph.impl.op import ReluBackprop as PyngReluBackprop
+from ngraph.impl.op import ReplaceSlice as PyngReplaceSlice
 from ngraph.impl.op import Reshape as PyngReshape
 from ngraph.impl.op import Slice as PyngSlice
 from ngraph.impl.op import Sqrt as PyngSqrt
@@ -127,27 +128,18 @@ class PybindScopePass:
                 if op in visited:
                     continue
                 visited.add(op)
-                if isinstance(op, TensorValueOp):
-                    update_scopemark(op, scope)
-                elif isinstance(op, SequentialOp):
+
+                if type(op) == SequentialOp:
                     childscope = new_seq_scope(scope)
-                    children = op.ops
-                    update_scopemark(op, scope)
-                    for child in children:
-                        nodes_to_visit.append((child, childscope))
-                elif isinstance(op, ParallelOp):
+                elif type(op) == ParallelOp:
                     childscope = new_par_scope(scope)
-                    children = op.control_deps
-                    update_scopemark(op, scope)
-                    for child in children:
-                        nodes_to_visit.append((child, childscope))
                 else:
-                    tensor_op = op.tensor
                     childscope = scope
-                    children = tensor_op.args
-                    update_scopemark(op, scope)
-                    for child in children:
-                        nodes_to_visit.append((child, childscope))
+
+                children = op.all_deps
+                update_scopemark(op, scope)
+                for child in children:
+                    nodes_to_visit.append((child, childscope))
 
         for op in results:
             visit_pre_order('root', op)
@@ -619,6 +611,10 @@ class PybindWrapperGenerator(PeepholeGraphPass):
     def visit(self, op, lhs, rhs):
         self.computation.set_op_rank(op)
         variable = lhs.tensor
+
+        if type(variable) == TensorSliceOp:
+           raise RuntimeError("Cannot assign to TensorSliceOp")
+
         if variable not in self.computation.variables_cpp_op:
             self.computation.variables_cpp_op[variable] = \
                 (self.computation.scopemark[op.tensor], rhs)
@@ -627,25 +623,41 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         else:
             raise RuntimeError("Variable updated more than once!")
 
-    @visit.on_type(Fill)
-    def visit(self, op, tensor):
+    """
+    op::ReplaceSlice::ReplaceSlice(const shared_ptr<Node>& arg0,
+                                   const shared_ptr<Node>& arg1,
+                                   const Coordinate& lower_bounds,
+                                   const Coordinate& upper_bounds
+                                   const Strides& strides)
+    """
+    @visit.on_type(ReplaceSliceOp)
+    def visit(self, op):
         self.computation.set_op_rank(op)
-        variable = tensor.tensor
-        list_size = 1
-        for x in list(tensor.axes.lengths):
-            list_size *= x
-        constant_list = [op.scalar] * list_size
-        ngraph_constant_op = Constant(Type.f32,
-                                      Shape(list(tensor.axes.lengths)),
-                                      constant_list)
-        if variable not in self.computation.variables_cpp_op:
-            # treat 'op' as the rhs of assignment for forwarding and lookup purposes
-            self.computation.variables_cpp_op[variable] = \
-                (self.computation.scopemark[op.tensor], op)
-            self.computation.register_cpp_op(
-                op, ngraph_constant_op, set_name=False)
-        else:
-            raise RuntimeError("Variable updated more than once!")
+        value = self.computation.lookup_cpp_op(op.value)
+        x = self.computation.lookup_cpp_op(op.x)
+        slices = op.slices
+        axes = op.value.axes
+        lowers = []
+        uppers = []
+        strides = []
+        for axis, s in zip(axes, slices):
+            if s.start is None:
+                lowers.append(0)
+            else:
+                lowers.append(s.start)
+            if s.step is None:
+                strides.append(1)
+            else:
+                strides.append(s.step)
+            if s.stop is None:
+                uppers.append(axis.length)
+            else:
+                uppers.append(s.stop)
+        self.computation.register_cpp_op(op, PyngReplaceSlice(x,
+                                                              value,
+                                                              Coordinate(lowers),
+                                                              Coordinate(uppers),
+                                                              Strides(strides)))
 
     @visit.on_type(ExpandDims)
     def visit(self, op, x):
