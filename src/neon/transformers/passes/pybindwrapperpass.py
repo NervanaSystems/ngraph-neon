@@ -19,10 +19,10 @@ from neon.transformers.passes.passes import PeepholeGraphPass
 from neon.util.generics import generic_method
 from neon.op_graph.op_graph import Op, Add, AssignableTensorOp, AssignOp, AxesCastOp, \
     BroadcastOp, ContiguousOp, Divide, DotOp, Equal, ExpandDims, ExpOp, Flatten, \
-    Greater, GreaterEqual, Less, LogOp, MapRolesOp, Max, Maximum, Minimum, Multiply, \
-    NegativeOp, NotEqual, OneHotOp, ParallelOp, Power, Prod, ReciprocalOp, ReductionOp, \
-    ReorderAxes, ReplaceSliceOp, SequentialOp, SqrtOp, SquareOp, Subtract, Sum, TanhOp, \
-    TensorSliceOp, TensorSizeOp, TensorValueOp, Unflatten
+    Greater, GreaterEqual, Less, LessEqual, LogOp, MapRolesOp, Max, Maximum, Minimum, \
+    Multiply, NegativeOp, NotEqual, OneHotOp, ParallelOp, Power, Prod, ReciprocalOp, \
+    ReductionOp, ReplaceSliceOp, ReorderAxes, SequentialOp, SqrtOp, SquareOp, Subtract, \
+    Sum, TanhOp, TensorSliceOp, TensorSizeOp, TensorValueOp, Unflatten
 from neon.op_graph.batchnorm import BatchnormCommonOp, BatchnormBpropCommonOp, \
     BatchnormOutputOp, BatchnormMeanOp, BatchnormVarOp, \
     BatchnormBpropDataOp, BatchnormBpropGammaOp, BatchnormBpropBetaOp
@@ -55,6 +55,7 @@ from ngraph.impl.op import GetOutputElement as PyngGetOutputElement
 from ngraph.impl.op import Greater as PyngGreater
 from ngraph.impl.op import GreaterEq as PyngGreaterEq
 from ngraph.impl.op import Less as PyngLess
+from ngraph.impl.op import LessEq as PyngLessEq
 from ngraph.impl.op import Log as PyngLog
 from ngraph.impl.op import Max as PyngMax
 from ngraph.impl.op import Maximum as PyngMaximum
@@ -238,6 +239,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                 return PyngGreaterEq(x, y)
             elif isinstance(op, Less):
                 return PyngLess(x, y)
+            elif isinstance(op, LessEqual):
+                return PyngLessEq(x, y)
             elif isinstance(op, Equal):
                 return PyngEqual(x, y)
             elif isinstance(op, NotEqual):
@@ -460,6 +463,10 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         self.binary_op(op, x, y, is_logical=True)
 
     @visit.on_type(Less)
+    def visit(self, op, x, y):
+        self.binary_op(op, x, y, is_logical=True)
+
+    @visit.on_type(LessEqual)
     def visit(self, op, x, y):
         self.binary_op(op, x, y, is_logical=True)
 

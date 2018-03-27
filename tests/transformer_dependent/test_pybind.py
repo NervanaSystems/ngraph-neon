@@ -304,6 +304,7 @@ def test_tensor_dot_tensor():
     (ng.Equal, np.equal),
     (ng.NotEqual, np.not_equal),
     (ng.Less, np.less),
+    (ng.LessEqual, np.less_equal),
     (ng.power, np.power)
 ])
 def test_binary_op(ng_func, np_func):
