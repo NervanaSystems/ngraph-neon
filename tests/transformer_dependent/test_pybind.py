@@ -26,12 +26,8 @@ def test_fill_state():
     with ExecutorFactory() as ex:
         N = ng.make_axis(3, name='N')
         x_np = np.ones((N.length)) * 4
-        x = ng.variable([N], initial_value=x_np).named('x')
-        val = ng.sequential([
-            ng.fill(x, -1),
-            x
-        ])
-        f = ex.executor(val)
+        x = ng.fill([N], -1)
+        f = ex.executor(x)
         x_val = f()
     assert np.allclose(-1, x_val)
 
