@@ -21,8 +21,8 @@ from neon.op_graph.op_graph import Op, Add, AssignableTensorOp, AssignOp, AxesCa
     BroadcastOp, ContiguousOp, Divide, DotOp, Equal, ExpandDims, ExpOp, Flatten, \
     Greater, GreaterEqual, Less, LessEqual, LogOp, MapRolesOp, Max, Maximum, Minimum, \
     Multiply, NegativeOp, NotEqual, OneHotOp, ParallelOp, Power, Prod, ReciprocalOp, \
-    ReductionOp, ReplaceSliceOp, ReorderAxes, SequentialOp, SqrtOp, SquareOp, Subtract, \
-    Sum, TanhOp, TensorSliceOp, TensorSizeOp, TensorValueOp, Unflatten
+    ReductionOp, ReplaceSliceOp, ReorderAxes, RoleCastOp, SequentialOp, SqrtOp, SquareOp, \
+    Subtract, Sum, TanhOp, TensorSliceOp, TensorSizeOp, TensorValueOp, Unflatten
 from neon.op_graph.batchnorm import BatchnormCommonOp, BatchnormBpropCommonOp, \
     BatchnormOutputOp, BatchnormMeanOp, BatchnormVarOp, \
     BatchnormBpropDataOp, BatchnormBpropGammaOp, BatchnormBpropBetaOp
@@ -1119,3 +1119,10 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         ngraph_delta = self.computation.lookup_cpp_op(delta)
         ngraph_relu_bprop = PyngReluBackprop(ngraph_inputs, ngraph_delta)
         self.computation.register_cpp_op(op, ngraph_relu_bprop)
+
+    @visit.on_type(RoleCastOp)
+    def visit(self, op, x):
+        print("RoleCastOp")
+        self.computation.set_op_rank(op)
+        ngraph_x = self.computation.lookup_cpp_op(x)
+        self.computation.register_cpp_op(op, ngraph_x)

@@ -2143,6 +2143,8 @@ class TensorSliceOp(IndexOp):
             # x not in adjoints dict, so need to allocate a new buffer with
             # _unslice
             x.first_unslice_op = _unslice(delta, self.slices, x.axes)
+            # adjoints[x] = x.first_unslice_op
+            adjoints[x] = x.first_unslice_op
 
         else:
             if not hasattr(x, 'first_unslice_op'):
@@ -2159,10 +2161,11 @@ class TensorSliceOp(IndexOp):
                 # A TensorValueOp that happens before the modification should never
                 # give the value after the update. so the updates need to work off a
                 # TensorValueOp after the previous update.
+
                 updated_delta = delta + tensor_slice(adjoints[x],
                                                      self.slices, axes=delta.axes)
 
-                adjoints[x] = replace_slice(adjoints[x], self.slices, updated_delta, axes=x.axes) 
+                adjoints[x] = replace_slice(adjoints[x], self.slices, updated_delta, axes=x.axes)
 
 
 def slice_along_axis(x, axis, idx):
