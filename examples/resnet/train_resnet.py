@@ -132,35 +132,32 @@ np.random.seed(args.rng_seed)
 # Make placeholders
 input_ph = train_set.make_placeholders(include_iteration=True)
 
-device = args.hetr_device
-device_id = [str(d) for d in range(args.num_devices)]
-with ng.metadata(device=device, device_id=device_id, parallel=ax.N):
-    # Build the network
-    resnet = BuildResnet(args.dataset, args.size, en_bottleneck, num_resnet_mods,
-                         batch_norm=not args.disable_batch_norm)
+# Build the network
+resnet = BuildResnet(args.dataset, args.size, en_bottleneck, num_resnet_mods,
+                     batch_norm=not args.disable_batch_norm)
 
-    # Learning Rate Placeholder
-    lr_ph = ng.placeholder(axes=(), initial_value=base_lr)
+# Learning Rate Placeholder
+lr_ph = ng.placeholder(axes=(), initial_value=base_lr)
 
-    # Optimizer
-    # Provided learning policy takes learning rate as input to graph using a placeholder.
-    # This allows you to control learning rate based on various factors of network
-    learning_rate_policy = {'name': 'provided',
-                            'lr_placeholder': lr_ph}
+# Optimizer
+# Provided learning policy takes learning rate as input to graph using a placeholder.
+# This allows you to control learning rate based on various factors of network
+learning_rate_policy = {'name': 'provided',
+                        'lr_placeholder': lr_ph}
 
-    optimizer = GradientDescentMomentum(learning_rate=learning_rate_policy,
-                                        momentum_coef=momentum_coef,
-                                        wdecay=wdecay,
-                                        nesterov=False,
-                                        iteration=input_ph['iteration'])
-    label_indices = input_ph['label']
-    # Make a prediction
-    prediction = resnet(input_ph['image'])
-    # Calculate loss
-    train_loss = ng.cross_entropy_multi(prediction, ng.one_hot(label_indices, axis=ax.Y))
-    # Average loss over the batch
-    batch_cost = ng.sequential([optimizer(train_loss), ng.mean(train_loss, out_axes=())])
-    train_computation = ng.computation(batch_cost, "all")
+optimizer = GradientDescentMomentum(learning_rate=learning_rate_policy,
+                                    momentum_coef=momentum_coef,
+                                    wdecay=wdecay,
+                                    nesterov=False,
+                                    iteration=input_ph['iteration'])
+label_indices = input_ph['label']
+# Make a prediction
+prediction = resnet(input_ph['image'])
+# Calculate loss
+train_loss = ng.cross_entropy_multi(prediction, ng.one_hot(label_indices, axis=ax.Y))
+# Average loss over the batch
+batch_cost = ng.sequential([optimizer(train_loss), ng.mean(train_loss, out_axes=())])
+train_computation = ng.computation(batch_cost, "all")
 
 # Instantiate the Saver object to save weights
 weight_saver = Saver()
@@ -188,8 +185,7 @@ if(args.inference is not None):
         exit()
 
 # Training the network by calling transformer
-t_args = {'device': args.hetr_device} if args.backend == 'hetr' else {}
-with closing(ngt.make_transformer_factory(args.backend, **t_args)()) as transformer:
+with closing(ngt.make_transformer_factory(args.backend)()) as transformer:
     # Trainer
     train_function = transformer.add_computation(train_computation)
     # Inference
