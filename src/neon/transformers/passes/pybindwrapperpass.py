@@ -18,11 +18,11 @@ from __future__ import division
 from neon.transformers.passes.passes import PeepholeGraphPass
 from neon.util.generics import generic_method
 from neon.op_graph.op_graph import Op, Add, AssignableTensorOp, AssignOp, AxesCastOp, \
-    BroadcastOp, ContiguousOp, Divide, DotOp, Equal, ExpandDims, ExpOp, Flatten, \
+    BroadcastOp, ConcatOp, ContiguousOp, Divide, DotOp, Equal, ExpandDims, ExpOp, Flatten, \
     Greater, GreaterEqual, Less, LessEqual, LogOp, MapRolesOp, Max, Maximum, Minimum, \
     Multiply, NegativeOp, NotEqual, OneHotOp, ParallelOp, Power, Prod, ReciprocalOp, \
     ReductionOp, ReplaceSliceOp, ReorderAxes, RoleCastOp, SequentialOp, SqrtOp, SquareOp, \
-    Subtract, Sum, TanhOp, TensorSliceOp, TensorSizeOp, TensorValueOp, Unflatten
+    StackOp, Subtract, Sum, TanhOp, TensorSliceOp, TensorSizeOp, TensorValueOp, Unflatten
 from neon.op_graph.batchnorm import BatchnormCommonOp, BatchnormBpropCommonOp, \
     BatchnormOutputOp, BatchnormMeanOp, BatchnormVarOp, \
     BatchnormBpropDataOp, BatchnormBpropGammaOp, BatchnormBpropBetaOp
@@ -336,6 +336,12 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         else:
             yield container
 
+    @visit.on_type(ConcatOp)
+    def visit(self, op):
+        self.computation.set_op_rank(op)
+        self.computation.register_cpp_op(
+            op, self.computation.lookup_cpp_op(op.ops[-1]), set_name=False)
+
     @visit.on_type(TensorValueOp)
     def visit(self, op):
         self.computation.set_op_rank(op)
@@ -563,6 +569,12 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         ngraph_cpp_reciprocal_op = constant_op \
             / self.computation.lookup_cpp_op(input)
         self.computation.register_cpp_op(op, ngraph_cpp_reciprocal_op)
+
+    @visit.on_type(StackOp)
+    def visit(self, op):
+        self.computation.set_op_rank(op)
+        self.computation.register_cpp_op(
+            op, self.computation.lookup_cpp_op(op.ops[-1]), set_name=False)
 
     @visit.on_type(TensorSizeOp)
     def visit(self, op, input):
