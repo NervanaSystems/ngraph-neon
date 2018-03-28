@@ -532,10 +532,10 @@ class PybindARGONTransformer(PybindTransformer):
     Transformer for ngraph c++ with argon backend.
 
     """
-    transformer_name = "ngargon"
+    transformer_name = "ngnnp"
 
     def __init__(self, **kwargs):
-        self.ngraph_backend = "ARGON"
+        self.ngraph_backend = "NNP"
         super(PybindARGONTransformer, self).__init__(**kwargs)
 
 
