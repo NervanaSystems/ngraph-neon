@@ -2717,15 +2717,13 @@ class ReplaceSliceOp(TensorOp):
         axes: resulting axes
     """
     def __init__(self, x, slices, value, axes, dtype, **kwargs):
-        super(ReplaceSliceOp, self).__init__(axes=axes, dtype=dtype, *kwargs)
-        self.x = x
+        super(ReplaceSliceOp, self).__init__(args=(x, value), axes=axes, dtype=dtype, *kwargs)
         self.slices = slices
-        self.value = value
 
-    def generate_adjoints(self, adjoints, delta):
-        zero_tensor = fill(self.value.axes, 0)
-        self.x.generate_add_delta(adjoints, replace_slice(delta, self.slices, zero_tensor, axes=self.x.axes))
-        self.value.generate_add_delta(adjoints, tensor_slice(delta, self.slices, axes=self.value.axes))
+    def generate_adjoints(self, adjoints, delta, x, value):
+        zero_tensor = fill(value.axes, 0)
+        x.generate_add_delta(adjoints, replace_slice(delta, self.slices, zero_tensor, axes=x.axes))
+        value.generate_add_delta(adjoints, tensor_slice(delta, self.slices, axes=value.axes))
 
 
 def replace_slice(x, slices, value, axes):
@@ -2738,6 +2736,12 @@ def replace_slice(x, slices, value, axes):
         value (TensorOp): A tensor that will be written to the slice
         axes: resulting axes
     """
+    if len(x.axes) != len(value.axes):
+        assert len(value.axes) == len(x.axes) - 1
+        for axis in x.axes:
+            if axis not in value.axes:
+                idx = x.axes.index(axis)
+        value = expand_dims(value, make_axis(name=axis.name + "_SLICE", length=1), idx)
     return ReplaceSliceOp(x, slices, value, axes=axes, dtype=x.dtype)
 
 

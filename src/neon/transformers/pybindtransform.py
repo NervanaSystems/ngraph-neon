@@ -228,7 +228,10 @@ class PybindComputation(Computation):
             raise RuntimeError("Cannot register neon op twice: " + tensor_op.name)
 
         if set_name:
-            cpp_op.name = tensor_op.name.replace('/', '_')
+            try:
+                cpp_op.name = tensor_op.name.replace('/', '_')
+            except RuntimeError:
+                pass
         if not isinstance(op, (BatchnormCommonOp, BatchnormBpropCommonOp)):
             if hasattr(op, 'axes'):
                 neon_shape = list(op.axes.lengths)

@@ -638,30 +638,35 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                                    const Strides& strides)
     """
     @visit.on_type(ReplaceSliceOp)
-    def visit(self, op):
+    def visit(self, op, x, value):
         self.computation.set_op_rank(op)
-        value = self.computation.lookup_cpp_op(op.value)
-        x = self.computation.lookup_cpp_op(op.x)
+        ngraph_value = self.computation.lookup_cpp_op(value)
+        ngraph_x = self.computation.lookup_cpp_op(x)
         slices = op.slices
-        axes = op.value.axes
+        axes = value.axes
         lowers = []
         uppers = []
         strides = []
         for axis, s in zip(axes, slices):
-            if s.start is None:
-                lowers.append(0)
-            else:
-                lowers.append(s.start)
-            if s.step is None:
+            if isinstance(s, int):
+                lowers.append(s)
+                uppers.append(s + 1)
                 strides.append(1)
             else:
-                strides.append(s.step)
-            if s.stop is None:
-                uppers.append(axis.length)
-            else:
-                uppers.append(s.stop)
-        self.computation.register_cpp_op(op, PyngReplaceSlice(x,
-                                                              value,
+                if s.start is None:
+                    lowers.append(0)
+                else:
+                    lowers.append(s.start)
+                if s.step is None:
+                    strides.append(1)
+                else:
+                    strides.append(s.step)
+                if s.stop is None:
+                    uppers.append(axis.length)
+                else:
+                    uppers.append(s.stop)
+        self.computation.register_cpp_op(op, PyngReplaceSlice(ngraph_x,
+                                                              ngraph_value,
                                                               Coordinate(lowers),
                                                               Coordinate(uppers),
                                                               Strides(strides)))
@@ -1122,7 +1127,6 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(RoleCastOp)
     def visit(self, op, x):
-        print("RoleCastOp")
         self.computation.set_op_rank(op)
         ngraph_x = self.computation.lookup_cpp_op(x)
         self.computation.register_cpp_op(op, ngraph_x)
