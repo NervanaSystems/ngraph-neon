@@ -4,9 +4,6 @@
 
 Welcome to Intel® Neon, an open source Deep Learning framework powered by Intel® nGraph 
 
-
-## Installation
-
 ### Prerequisites  
 
 Installing within a virtual environment is the easiest option for most users. 
@@ -29,32 +26,31 @@ Python 2.7
   $ . .venv/bin/activate
 ```
 
+### Install nGraph (Required)
+
+```
+See ngraph install docs for [instructions] to build and install ngraph
+```
+
+### Install nGraph python binding (Required)
+
+```
+After installating ngraph, follow these [steps] to install the pybind wrapper
+```
+
+### Install Neon
+
 Download the source code
 ```
   $ git clone https://github.com/NervanaSystems/ngraph-neon.git
   $ cd ngraph-neon
 ```
-
-### Install Neon
   
 To build and install Intel Neon, keep the virtualenv activated and 
 simply run ``make install`` from within the clone of the repo as follows:
 
 ```
 $ make install
-```
-
-### Install nGraph (Required)
-
-After completing the prerequisites and installation of the base Neon
-Graph package, Intel® nGraph and the python wrapper needs to be installed.
-Clone the source code from https://github.com/NervanaSystems/ngraph
-Activate the virtualenv if you haven't already. And follow the instructions at
-https://github.com/NervanaSystems/ngraph/blob/master/python/README.md
-Once the python wheel is built
-
-```
-$ pip install <path-to-python-wheel>/<wheel-name>.whl
 ```
 
 ### Run Neon Unit Tests
@@ -65,4 +61,5 @@ simply run ``make test`` from within the clone of the repo as follows:
 ```
 $ make test
 ```
-
+[instructions]: http://ngraph.nervanasys.com/docs/latest/install.html
+[steps]: https://github.com/NervanaSystems/ngraph/blob/master/python/README.md
