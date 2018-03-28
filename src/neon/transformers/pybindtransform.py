@@ -127,8 +127,8 @@ class PybindComputation(Computation):
                 print("In: " + var.name)
                 print(self.transformer.neon_variable_buffer[var])
         """
-        self.cf.call(self.param_primary_tensor_view_list + self.variable_primary_tensor_view_list,
-                     self.result_primary_tensor_view_list + self.update_primary_tensor_view_list)
+        self.cf.call(self.result_primary_tensor_view_list + self.update_primary_tensor_view_list,
+                     self.param_primary_tensor_view_list + self.variable_primary_tensor_view_list)
 
         # now read the values from the computed result
         for index, result in enumerate(self.result_primary_tensor_view_list):
@@ -530,16 +530,16 @@ class PybindGPUTransformer(PybindTransformer):
         super(PybindGPUTransformer, self).__init__(**kwargs)
 
 
-class PybindARGONTransformer(PybindTransformer):
+class PybindNNPTransformer(PybindTransformer):
     """
-    Transformer for ngraph c++ with argon backend.
+    Transformer for ngraph c++ with nnp backend.
 
     """
-    transformer_name = "ngargon"
+    transformer_name = "ngnnp"
 
     def __init__(self, **kwargs):
-        self.ngraph_backend = "ARGON"
-        super(PybindARGONTransformer, self).__init__(**kwargs)
+        self.ngraph_backend = "NNP"
+        super(PybindNNPTransformer, self).__init__(**kwargs)
 
 
 set_transformer_factory(
