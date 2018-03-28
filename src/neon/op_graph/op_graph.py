@@ -901,14 +901,7 @@ def assign(lvalue, rvalue):
 
 
 def set_item(tensor, item, value):
-    shape = tensor.tensor_description().shape
-    for sl, l in zip(item, shape):
-        if not isinstance(sl, slice):
-            sl = slice(sl)
-        start, end, step = sl.indices(l)
-        if step <= 0:
-            raise ValueError('Invalid slice (negative step) in item {}'.format(item))
-    return assign(tensor_slice(tensor, item, axes=value.axes), value)
+    return replace_slice(tensor, item, value, tensor.axes)
 
 
 class ControlBlockOp(Op):
@@ -1049,48 +1042,9 @@ def computation(returns, *args):
     return ComputationOp(returns, *args)
 
 
-class Fill(Op):
-    """
-    Fill a tensor with a scalar value.
-
-    Arguments:
-        tensor (AssignableTensorOp): An assignable TensorOp.
-        scalar: A scalar value.
-    """
-
-    def __init__(self, tensor, scalar, **kwargs):
-        super(Fill, self).__init__(args=(tensor,), **kwargs)
-        if isinstance(scalar, TensorOp):
-            if scalar.is_constant:
-                scalar = scalar.const
-            else:
-                raise ValueError("{} is not a scalar constant".format(scalar))
-        else:
-            npscalar = np.asarray(scalar, dtype=tensor.dtype)
-            if 0 != len(npscalar.shape):
-                raise ValueError("{} is not a scalar".format(scalar))
-            scalar = npscalar[()]
-
-        self.scalar = scalar
-
-    @property
-    def states_written(self):
-        return self.args[0].states_read
-
-    @property
-    def states_read(self):
-        return self.args[0].states_read
-
-    @property
-    def has_side_effects(self):
-        return True
-
-    def copy_with_new_args(self, args):
-        return type(self)(args[0], self.scalar)
-
-
-def fill(x, scalar):
-    return Fill(x, scalar)
+def fill(axes, scalar):
+    op = constant(scalar)
+    return broadcast(op, axes)
 
 
 class TensorOp(Op):
@@ -1545,8 +1499,6 @@ class SequentialOp(ValueOp):
                 for op in ops[:-1]:
                     if not isinstance(op, AssignOp):
                         raise RuntimeError("Illegal child formation")
-            elif isinstance(ops[0], Fill):
-                pass
             elif isinstance(ops[0], (ParallelOp, SequentialOp)):
                 if num_children > 2:
                     raise RuntimeError("Illegal child formation")
@@ -2180,20 +2132,6 @@ class TensorSliceOp(IndexOp):
             adjoints[x] += _unslice(delta, self.slices, x.axes)
             more exactly, if x is ValueOp, should be handled by x.value_tensor
 
-        Dependencies graph:
-
-                       [0 or other initial gradients]            [first_unslice]
-                          ^                                          ^ ^ ^ ^
-                          |                                          | | | |
-                        (arg)                                        | | | |
-                          |                                          | | | |
-        adjoints[x] => [ng.add]---(arg)------------------------------- | | |
-                         | | |                                         | | |
-                         | | --(ct_dep)-> [setitem_1] -------(ct_dep)--- | |
-                         | |                                             | |
-                         | ----(ct_dep)-> [setitem_2] -------(ct_dep)----- |
-                         |                                                 |
-                         ------(ct_dep)-> [setitem_3] -------(ct_dep)-------
         """
 
         # special handling of value op, this is because in generate_add_delta,
@@ -2205,14 +2143,9 @@ class TensorSliceOp(IndexOp):
             # x not in adjoints dict, so need to allocate a new buffer with
             # _unslice
             x.first_unslice_op = _unslice(delta, self.slices, x.axes)
+            # adjoints[x] = x.first_unslice_op
+            adjoints[x] = x.first_unslice_op
 
-            # critical to add zero
-            # - if we don't add zero, in the "Dependency graph" above,
-            #   the [ng.add] node will collapse with [first_unslice] node,
-            #   creating circular dependency
-            # - after first add zero, later gradient accumulation will be doing
-            #   self add
-            adjoints[x] = x.first_unslice_op + as_op(0.)
         else:
             if not hasattr(x, 'first_unslice_op'):
                 # x has received adjoints from other operations, but not
@@ -2228,15 +2161,11 @@ class TensorSliceOp(IndexOp):
                 # A TensorValueOp that happens before the modification should never
                 # give the value after the update. so the updates need to work off a
                 # TensorValueOp after the previous update.
-                this_tv = TensorValueOp(x.first_unslice_op.value_tensor)
-                this_tv.add_control_dep(adjoints[x])
-                updated_delta = delta + tensor_slice(this_tv,
+
+                updated_delta = delta + tensor_slice(adjoints[x],
                                                      self.slices, axes=delta.axes)
-                new_setitem = set_item(this_tv,
-                                       self.slices, updated_delta)
-                final_tv = TensorValueOp(x.first_unslice_op.value_tensor)
-                final_tv.add_control_dep(new_setitem)
-                adjoints[x] = final_tv
+
+                adjoints[x] = replace_slice(adjoints[x], self.slices, updated_delta, axes=x.axes)
 
 
 def slice_along_axis(x, axis, idx):
@@ -2638,6 +2567,7 @@ class StackOp(SequentialOp):
         storage_axes = make_axes((axis,) + tuple(arg_axes))
         self.storage = temporary(axes=storage_axes, dtype=self.x_list[0].dtype)
         slices = [slice(None)] * len(arg_axes)
+        # TODO: Remove axes_with_order and use expand_dim + concat op ?
         self.ops = [
             doall([set_item(self.storage, [i] + slices, arg)
                    for i, arg in enumerate(self.x_list)
@@ -2725,6 +2655,7 @@ class ConcatOp(SequentialOp):
             )
             start += ax.length
         concat_axis.length = start
+        # TODO: we don't have to add the implementation here since nGraph has a concat op
         for item, value in sets:
             ops.append(set_item(self.storage, item, value))
         self.ops = [
@@ -2775,33 +2706,43 @@ def concat_along_axis(x_list, axis):
     return ConcatOp(x_list, [x.axes[x.axes.index(axis)] for x in x_list])
 
 
-class UnsliceOp(SequentialOp):
+class ReplaceSliceOp(TensorOp):
+    """
+    Replace a slice with value
 
-    def __init__(self, x, slices, axes, **kwargs):
-        super(UnsliceOp, self).__init__(**kwargs)
-        self.x = x
+    Args:
+        x (TensorOp): A tensor whose slice will be replaced.
+        slices: slices to be update
+        value (TensorOp): A tensor that will be written to the slice
+        axes: resulting axes
+    """
+    def __init__(self, x, slices, value, axes, dtype, **kwargs):
+        super(ReplaceSliceOp, self).__init__(args=(x, value), axes=axes, dtype=dtype, *kwargs)
         self.slices = slices
-        # Optimize case where we are unslicing axis of size 1
-        if all(sl == 0 or sl == slice(None) for sl in slices) and \
-                len(axes - x.axes) == 1 and (axes - x.axes)[0].length == 1:
-            # Add the missing dimension
-            for i, s in enumerate(slices):
-                if s == 0:
-                    dim_idx = i
-            self.ops = [expand_dims(x, axes[dim_idx], dim_idx)]
-        else:
-            temp = temporary(axes=axes, dtype=x.dtype).named('unslice')
-            self.ops = [
-                Fill(temp, 0),
-                set_item(temp, slices, x),
-                temp
-            ]
 
-        # Handle adjoint generation for the result
-        self.value_tensor.deriv_handler = self
+    def generate_adjoints(self, adjoints, delta, x, value):
+        zero_tensor = fill(value.axes, 0)
+        x.generate_add_delta(adjoints, replace_slice(delta, self.slices, zero_tensor, axes=x.axes))
+        value.generate_add_delta(adjoints, tensor_slice(delta, self.slices, axes=value.axes))
 
-    def generate_adjoints(self, adjoints, delta):
-        self.x.generate_add_delta(adjoints, tensor_slice(delta, self.slices, axes=self.x.axes))
+
+def replace_slice(x, slices, value, axes):
+    """
+    Replace a slice with value
+
+    Args:
+        x (TensorOp): A tensor whose slice will be replaced.
+        slices: slices to be update
+        value (TensorOp): A tensor that will be written to the slice
+        axes: resulting axes
+    """
+    if len(x.axes) != len(value.axes):
+        assert len(value.axes) == len(x.axes) - 1
+        for axis in x.axes:
+            if axis not in value.axes:
+                idx = x.axes.index(axis)
+        value = expand_dims(value, make_axis(name=axis.name + "_SLICE", length=1), idx)
+    return ReplaceSliceOp(x, slices, value, axes=axes, dtype=x.dtype)
 
 
 def _unslice(x, slices, axes):
@@ -2819,7 +2760,17 @@ def _unslice(x, slices, axes):
         slices: The slices.
         input_axes: The axes of the input x.
     """
-    return UnsliceOp(x, slices, axes).value_tensor
+    # Optimize case where we are unslicing axis of size 1
+    if all(sl == 0 or sl == slice(None) for sl in slices) and \
+            len(axes - x.axes) == 1 and (axes - x.axes)[0].length == 1:
+        # Add the missing dimension
+        for i, s in enumerate(slices):
+            if s == 0:
+                dim_idx = i
+        return expand_dims(x, axes[dim_idx], dim_idx)
+    else:
+        temp_tensor = fill(axes, 0)
+        return set_item(temp_tensor, slices, x)
 
 
 class RngOp(TensorOp):
