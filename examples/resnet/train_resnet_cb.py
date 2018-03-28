@@ -63,7 +63,7 @@ np.random.seed(args.rng_seed)
 # Get network parameters
 nw_params = get_network_params(args.dataset, args.size, args.batch_size)
 metric_names = nw_params['metric_names']
-en_top5 = nw_params['en_top5']
+en_top5 = True
 num_resnet_mods = nw_params['num_resnet_mods']
 args.iter_interval = nw_params['iter_interval']
 learning_schedule = nw_params['learning_schedule']
