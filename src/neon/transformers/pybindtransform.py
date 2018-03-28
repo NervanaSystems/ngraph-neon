@@ -527,16 +527,16 @@ class PybindGPUTransformer(PybindTransformer):
         super(PybindGPUTransformer, self).__init__(**kwargs)
 
 
-class PybindARGONTransformer(PybindTransformer):
+class PybindNNPTransformer(PybindTransformer):
     """
-    Transformer for ngraph c++ with argon backend.
+    Transformer for ngraph c++ with nnp backend.
 
     """
     transformer_name = "ngnnp"
 
     def __init__(self, **kwargs):
         self.ngraph_backend = "NNP"
-        super(PybindARGONTransformer, self).__init__(**kwargs)
+        super(PybindNNPTransformer, self).__init__(**kwargs)
 
 
 set_transformer_factory(
