@@ -900,8 +900,8 @@ def assign(lvalue, rvalue):
     return AssignOp(lvalue, rvalue)
 
 
-def set_item(tensor, item, value):
-    return replace_slice(tensor, item, value, tensor.axes)
+def set_item(tensor, slices, value):
+    return replace_slice(tensor, slices, value, tensor.axes)
 
 
 class ControlBlockOp(Op):
@@ -2532,62 +2532,6 @@ def variable(axes, dtype=None, initial_value=None, **kwargs):
                               **kwargs)
 
 
-class StackOp(SequentialOp):
-    """
-    Joins a list of identically-axed tensors along a new axis.
-
-    Assign each argument into the appropriate slice of the storage associated
-    with this op.
-
-    Arguments:
-        x_list: A list of identically-axed tensors to join.
-        axis: The axis to select joined tensors.
-        pos: The position within the axes of the x_list tensors to insert axis in the result.
-        **kwargs: Other args for TensorOp.
-
-    Parameters:
-        pos: The position of the join axis.
-    """
-
-    def __init__(self, x_list, axis, pos=0, **kwargs):
-        super(StackOp, self).__init__(**kwargs)
-        self.pos = pos
-        self.x_list = tuple(as_op(arg) for arg in x_list)
-        if axis.length != len(x_list):
-            raise ValueError("Axis must have the same length as x_list")
-        arg_axes = self.x_list[0].axes
-        axes_0 = arg_axes[:pos]
-        axes_1 = arg_axes[pos:]
-        # Axis layout for the result
-        result_axes = axes_0 + axis + axes_1
-
-        # With axes, we should be able to just setitem into a tensor shaped like the
-        # result, but things don't quite work that way so we use a temp that would have
-        # each arg in its own contiguous section, setitem into that, and reshape the result.
-        storage_axes = make_axes((axis,) + tuple(arg_axes))
-        self.storage = temporary(axes=storage_axes, dtype=self.x_list[0].dtype)
-        slices = [slice(None)] * len(arg_axes)
-        # TODO: Remove axes_with_order and use expand_dim + concat op ?
-        self.ops = [
-            doall([set_item(self.storage, [i] + slices, arg)
-                   for i, arg in enumerate(self.x_list)
-                   ]),
-            axes_with_order(self.storage, result_axes)
-        ]
-
-        # Handle adjoint generation for the result
-        self.value_tensor.deriv_handler = self
-
-    def generate_adjoints(self, adjoints, delta):
-        s = [slice(None)] * len(self.storage.axes)
-        for i, x in enumerate(self.x_list):
-            s[self.pos] = i
-            x.generate_add_delta(
-                adjoints,
-                axes_with_order(tensor_slice(delta, tuple(s)), x.axes)
-            )
-
-
 def stack(x_list, axis, pos=0):
     """
 
@@ -2599,10 +2543,32 @@ def stack(x_list, axis, pos=0):
     Returns:
         TensorOp: The joined tensors.
     """
-    return StackOp(x_list, axis, pos)
+
+    x_list = tuple(as_op(arg) for arg in x_list)
+    if axis.length != len(x_list):
+        raise ValueError("Axis must have the same length as x_list")
+
+    new_axis = make_axis(length=1, name=axis.name)
+    new_x_list = []
+    for x in x_list:
+        new_x_list.append(expand_dims(x, new_axis, pos))
+
+    return stack_by_concat(new_x_list, axis, new_axis)
 
 
-class ConcatOp(SequentialOp):
+def stack_by_concat(x_list, axis, new_axis):
+    """
+    Args:
+        x_list: A list of identically-axed tensors to join.
+        axis: The axis to select joined tensors.
+        new_axis: The common expanded axis.
+
+    Returns:
+        TensorOp: The joined tensors.
+    """
+    return ConcatOp(x_list, [new_axis] * len(x_list), concat_axis=axis)
+
+class ConcatOp(TensorOp):
     """
     Concatenates a list of tensors along specific axis. The axis can be different among each
     tensor, but must have a common role. All other axes should be identical.
@@ -2615,67 +2581,36 @@ class ConcatOp(SequentialOp):
                                   each tensor in x_list.
     """
 
-    def __init__(self, x_list, axis_list, **kwargs):
-        super(ConcatOp, self).__init__(**kwargs)
-        self.x_list = tuple(as_op(arg) for arg in x_list)
+    def __init__(self, x_list, axis_list, concat_axis=None, **kwargs):
+        x_list = tuple(as_op(arg) for arg in x_list)
+        super(ConcatOp, self).__init__(args=x_list, **kwargs)
         self.axis_list = axis_list
         # Get common axes from first tensor in list
-        arg_axes = self.x_list[0].axes
+        arg_axes = x_list[0].axes
         ax = axis_list[0]
-        common_axes = arg_axes - ax
 
-        # Create long axis for concatenated tens1or
-        concat_axis = make_axis(name=ax.name)
-
-        # Store the axes order equivalent to the first tensor
         ind = arg_axes.index(ax)
-        axes_0 = arg_axes[:ind]
-        axes_1 = arg_axes[ind + 1:]
-        result_axes = axes_0 + concat_axis + axes_1
+        self.ind = ind
+        if concat_axis is None:
+            concat_axis_length = 0
+            for axis in self.axis_list:
+                concat_axis_length += axis.length
+            # Create long axis for concatenated tensor
+            concat_axis = make_axis(name=ax.name)
 
-        # With axes, we should be able to just setitem into a tensor shaped like the
-        # result, but things don't quite work that way so we use a temp that would have
-        # each arg in its own contiguous section, setitem into that, and reshape the result.
-        storage_axes = make_axes([concat_axis] + list(axes_0) + list(axes_1))
-        self.storage = temporary(axes=storage_axes, dtype=self.x_list[0].dtype).named('concat')
+        pre_axes = arg_axes[:ind]
+        post_axes = arg_axes[ind + 1:]
+        self.axes = make_axes(pre_axes + concat_axis + post_axes)
 
-        slices = [slice(None)] * (len(storage_axes) - 1)
+
+    def generate_adjoints(self, adjoints, delta, *args):
+        pre_slices = [slice(None)] * self.ind
+        post_slices = [slice(None)] * (len(self.axes) - self.ind - 1)
         start = 0
-        sets = []
-        ops = []
-        for ii, (x, ax) in enumerate(zip(self.x_list, axis_list)):
-            if len(x.axes - common_axes) > 1:
-                raise RuntimeError("Tensor {} has more than 1 axis not in common with"
-                                   " other tensors".format(ii))
-            if ax.length is None:
-                raise RuntimeError("Tensor {} axis must have a specified length".format(ii))
-            sets.append(
-                ([slice(start, start + ax.length)] + slices,
-                 axes_with_order(x, [ax] + list(storage_axes[1:])))
-            )
-            start += ax.length
-        concat_axis.length = start
-        # TODO: we don't have to add the implementation here since nGraph has a concat op
-        for item, value in sets:
-            ops.append(set_item(self.storage, item, value))
-        self.ops = [
-            doall(ops),
-            axes_with_order(self.storage, result_axes)
-        ]
-
-        # Handle adjoint generation for the result
-        self.value_tensor.deriv_handler = self
-
-    def generate_adjoints(self, adjoints, delta):
-        slices = [slice(None)] * (len(self.storage.axes) - 1)
-        storage_delta = axes_with_order(delta, self.storage.axes)
-        start = 0
-        for x, ax in zip(self.x_list, self.axis_list):
-            delta_slice = tensor_slice(storage_delta,
-                                       [slice(start, start + ax.length)] + slices)
-            x.generate_add_delta(adjoints,
-                                 axes_with_order(delta_slice,
-                                                 x.axes))
+        for x, ax in zip(args, self.axis_list):
+            delta_slice = tensor_slice(delta,
+                                       pre_slices + [slice(start, start + ax.length)] + post_slices)
+            x.generate_add_delta(adjoints, delta_slice)
             start += ax.length
 
 
@@ -2717,6 +2652,8 @@ class ReplaceSliceOp(TensorOp):
         axes: resulting axes
     """
     def __init__(self, x, slices, value, axes, dtype, **kwargs):
+        if isinstance(x.tensor, AssignableTensorOp):
+            raise RuntimeError('Cannot replace slice of an AssignableTensorOp')
         super(ReplaceSliceOp, self).__init__(args=(x, value), axes=axes, dtype=dtype, *kwargs)
         self.slices = slices
 
