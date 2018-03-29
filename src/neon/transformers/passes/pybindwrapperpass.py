@@ -18,7 +18,7 @@ from __future__ import division
 from neon.transformers.passes.passes import PeepholeGraphPass
 from neon.util.generics import generic_method
 from neon.op_graph.op_graph import Op, Add, AssignableTensorOp, AssignOp, AxesCastOp, \
-    BroadcastOp, ContiguousOp, Divide, DotOp, Equal, ExpandDims, ExpOp, Flatten, \
+    BroadcastOp, ConcatOp, ContiguousOp, Divide, DotOp, Equal, ExpandDims, ExpOp, Flatten, \
     Greater, GreaterEqual, Less, LessEqual, LogOp, MapRolesOp, Max, Maximum, Minimum, \
     Multiply, NegativeOp, NotEqual, OneHotOp, ParallelOp, Power, Prod, ReciprocalOp, \
     ReductionOp, ReplaceSliceOp, ReorderAxes, RoleCastOp, SequentialOp, SqrtOp, SquareOp, \
@@ -35,6 +35,7 @@ from ngraph.impl import AxisSet
 from ngraph.impl import AxisVector
 from ngraph.impl import CoordinateDiff
 from ngraph.impl import Coordinate
+from ngraph.impl import NodeVector
 from ngraph.impl import Shape
 from ngraph.impl import Strides
 from ngraph.impl import Type
@@ -44,6 +45,7 @@ from ngraph.impl.op import BatchNorm as PyngBatchNorm
 from ngraph.impl.op import BatchNormBackprop as PyngBatchNormBackprop
 from ngraph.impl.op import Broadcast as PyngBroadcast
 from ngraph.impl.op import Constant
+from ngraph.impl.op import Concat as PyngConcat
 from ngraph.impl.op import Convert as PyngConvert
 from ngraph.impl.op import Convolution as PyngConvolution
 from ngraph.impl.op import ConvolutionBackpropData as PyngConvolutionBackpropData
@@ -1130,3 +1132,14 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         self.computation.set_op_rank(op)
         ngraph_x = self.computation.lookup_cpp_op(x)
         self.computation.register_cpp_op(op, ngraph_x)
+
+    @visit.on_type(ConcatOp)
+    def visit(self, op, *args):
+        self.computation.set_op_rank(op)
+        ngraph_x_list = []
+        for x in args:
+            ngraph_x = self.computation.lookup_cpp_op(x)
+            ngraph_x_list.append(ngraph_x)
+
+        ngraph_concat = PyngConcat(NodeVector(ngraph_x_list), op.ind)
+        self.computation.register_cpp_op(op, ngraph_concat)
