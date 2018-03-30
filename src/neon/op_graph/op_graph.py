@@ -2596,7 +2596,7 @@ class ConcatOp(TensorOp):
             for axis in self.axis_list:
                 concat_axis_length += axis.length
             # Create long axis for concatenated tensor
-            concat_axis = make_axis(name=ax.name)
+            concat_axis = make_axis(length=concat_axis_length, name=ax.name)
 
         pre_axes = arg_axes[:ind]
         post_axes = arg_axes[ind + 1:]
