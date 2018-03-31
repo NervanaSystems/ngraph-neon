@@ -34,7 +34,6 @@ def test_read_state():
         assert np.allclose(x_np, x_val)
 
 
-@pytest.mark.xfail(reason="Unknow")
 def test_write_state():
     """
     This reads back a tensor set from an argument. No code is generated.
@@ -92,7 +91,6 @@ def test_concatenate():
         ng.testing.assert_allclose(j_val, j_np)
 
 
-@pytest.mark.xfail(reason="Unknow")
 def test_specific_slice_deriv():
     #
     with ExecutorFactory() as ex:
