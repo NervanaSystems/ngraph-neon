@@ -2712,10 +2712,10 @@ def _unslice(x, slices, axes):
 
 class RngOp(TensorOp):
 
-    def __init__(self, distribution, params, x, *args, **kwargs):
+    def __init__(self, distribution, params, axes, *args, **kwargs):
         """
         Arguments:
-            x  : input tensor.
+            axes  : output tensor axes.
             distribution : either 'uniform' or 'normal'
             params: dict for specifying parameters of distribution
         Return:
@@ -2729,44 +2729,41 @@ class RngOp(TensorOp):
         self.params = params
 
         super(RngOp, self).__init__(
-            args=(x,), axes=x.axes, *args, **kwargs
+            axes=axes, *args, **kwargs
         )
-
-    def generate_adjoints(self, adjoints, delta, x):
-        x.generate_add_delta(adjoints, delta)
 
     def copy_with_new_args(self, args):
         return type(self)(self.distribution, self.params, *args)
 
 
-def uniform(x, low=0.0, high=1.0):
+def uniform(axes, low=0.0, high=1.0):
     """
     Fills x with uniform distribution between low and high.
 
     Args:
-        x (TensorOp): A tensor.
+        axes : output tensor axes.
         low (float): lower limit of distribution range
         high (float): upper limit of distribution range
 
     Returns:
         TensorOp: The  value of x.
     """
-    return RngOp(distribution='uniform', params=dict(low=low, high=high), x=x)
+    return RngOp(distribution='uniform', params=dict(low=low, high=high), axes=axes)
 
 
-def normal(x, loc=0.0, scale=1.0):
+def normal(axes, loc=0.0, scale=1.0):
     """
     Fills x with normal distribution centered around loc and scaled by scale
 
     Args:
-        x (TensorOp): A tensor.
+        axes : output tensor axes.
         loc (float): mean of distribution
         scale (float): standard deviation of distribution
 
     Returns:
         TensorOp: The  value of x.
     """
-    return RngOp(distribution='normal', params=dict(loc=loc, scale=scale), x=x)
+    return RngOp(distribution='normal', params=dict(loc=loc, scale=scale), axes=axes)
 
 
 class ElementWiseOp(TensorOp):

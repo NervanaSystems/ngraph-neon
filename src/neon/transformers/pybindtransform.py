@@ -42,6 +42,7 @@ class PybindComputation(Computation):
         # input to Function
         self.parameter_list = []
         self.variable_list = []
+        self.randomvariable_list = []
         # result from Function
         self.result_nodes_list = []
         self.update_nodes_list = []
@@ -50,12 +51,14 @@ class PybindComputation(Computation):
         # input to callframe
         self.param_primary_tensor_view_list = []
         self.variable_primary_tensor_view_list = []
+        self.randomvariable_primary_tensor_view_list = []
         # output from callframe
         self.result_primary_tensor_view_list = []
         self.update_primary_tensor_view_list = []
 
         # Interfacing with Neon Ops
         self.neon_variable_list = []
+        self.neon_randomvariable_list = []
         self.neon_update_list = []
         self.neon_return_list = []
 
@@ -120,6 +123,28 @@ class PybindComputation(Computation):
                 self.variable_primary_tensor_view_list[index].write(util.numpy_to_c(
                     self.transformer.neon_variable_buffer[op]), 0, tensor_size)
                 index += 1
+        # set tensor values for random variables
+        index = 0
+        for op in self.neon_randomvariable_list:
+            tensor_size = self.get_tensor_size(op)
+            size = op.axes.lengths
+            distribution = op.distribution
+            randparams = op.params
+            if distribution == 'uniform':
+                randval = np.random.uniform(low=randparams['low'],
+                                            high=randparams['high'],
+                                            size=size).astype(dtype=np.float32)
+            elif distribution == 'normal':
+                randval = np.random.normal(loc=randparams['loc'],
+                                           scale=randparams['scale'],
+                                           size=size).astype(dtype=np.float32)
+            else:
+                raise ValueError((
+                    'unsupported distribution: {}'
+                ).format(distribution))
+            self.randomvariable_primary_tensor_view_list[index].write(util.numpy_to_c(
+                randval), 0, tensor_size)
+            index += 1
         """
         print("Var In:")
         for var in self.transformer.neon_variable_buffer:
@@ -128,7 +153,7 @@ class PybindComputation(Computation):
                 print(self.transformer.neon_variable_buffer[var])
         """
         self.cf.call(self.result_primary_tensor_view_list + self.update_primary_tensor_view_list,
-                     self.param_primary_tensor_view_list + self.variable_primary_tensor_view_list)
+                     self.param_primary_tensor_view_list + self.variable_primary_tensor_view_list + self.randomvariable_primary_tensor_view_list)
 
         # now read the values from the computed result
         for index, result in enumerate(self.result_primary_tensor_view_list):
@@ -342,10 +367,14 @@ class PybindComputation(Computation):
                 if variable.initial_value is not None:
                     np.copyto(var_buffer, variable.initial_value)
 
+        # Add additional parameters (random numbers)
+        for randvariable in self.neon_randomvariable_list:
+            self.randomvariable_list.append(self.ngraph_cpp_ops[randvariable.tensor])
+
         # TODO - what's the role of the string argument? for now just passing 'test'
         self.function = Function(NodeVector(
             self.result_nodes_list + self.update_nodes_list),
-            self.parameter_list + self.variable_list,
+            self.parameter_list + self.variable_list + self.randomvariable_list,
             self.transformer.get_function_name())
 
     def build_callframe(self):
@@ -385,6 +414,13 @@ class PybindComputation(Computation):
                 self.variable_primary_tensor_view_list.append(
                     self.backend.make_primary_tensor_view(
                         self.element_type, Shape(shape)))
+
+        # prepare tensor_views for input variables
+        for node in self.neon_randomvariable_list:
+            shape = list(node.axes.lengths)
+            self.randomvariable_primary_tensor_view_list.append(
+                self.backend.make_primary_tensor_view(
+                    self.element_type, Shape(shape)))
 
         # prepare tensor_views for weights
         for node in self.neon_update_list:
