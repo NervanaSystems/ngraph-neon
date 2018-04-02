@@ -1316,6 +1316,7 @@ class Dropout(Layer):
         if Layer.inference_mode:
             return self.keep * in_obj
         else:
+            in_axes = in_obj.axes.sample_axes()
             self.mask = ng.uniform(axes=in_axes, low=0.0, high=1.0) <= self.keep
             return self.mask * in_obj
 
