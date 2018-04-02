@@ -2596,7 +2596,7 @@ class ConcatOp(TensorOp):
             for axis in self.axis_list:
                 concat_axis_length += axis.length
             # Create long axis for concatenated tensor
-            concat_axis = make_axis(name=ax.name)
+            concat_axis = make_axis(length=concat_axis_length, name=ax.name)
 
         pre_axes = arg_axes[:ind]
         post_axes = arg_axes[ind + 1:]
@@ -2674,11 +2674,10 @@ def replace_slice(x, slices, value, axes):
         axes: resulting axes
     """
     if len(x.axes) != len(value.axes):
-        assert len(value.axes) == len(x.axes) - 1
         for axis in x.axes:
             if axis not in value.axes:
                 idx = x.axes.index(axis)
-        value = expand_dims(value, make_axis(name=axis.name + "_SLICE", length=1), idx)
+                value = expand_dims(value, make_axis(name=axis.name + "_SLICE", length=1), idx)
     return ReplaceSliceOp(x, slices, value, axes=axes, dtype=x.dtype)
 
 

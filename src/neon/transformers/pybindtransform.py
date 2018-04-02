@@ -109,10 +109,13 @@ class PybindComputation(Computation):
             else:
                 input_arg = np.array(args[index], dtype=np.float32)
             tensor_size = self.get_tensor_size(op)
-            # print("Parameter " + op.name + " " + str(tensor_size))
+            # print("Parameter " + op.tensor.name + " " + str(tensor_size))
             # TODO - need to define dtype of numpy array's for *params based on op.dtype
             self.param_primary_tensor_view_list[index].write(util.numpy_to_c(
                 input_arg), 0, tensor_size)
+            if not op.tensor.is_placeholder:
+                np.copyto(self.transformer.neon_variable_buffer[op.tensor], input_arg)
+
         # set tensor values for weights from variable buffer
         index = 0
         for op in self.neon_variable_list:
