@@ -2737,7 +2737,7 @@ class RngOp(TensorOp):
 
 def uniform(axes, low=0.0, high=1.0):
     """
-    Fills x with uniform distribution between low and high.
+    Return tensor with uniform distribution between low and high.
 
     Args:
         axes : output tensor axes.
@@ -2745,14 +2745,14 @@ def uniform(axes, low=0.0, high=1.0):
         high (float): upper limit of distribution range
 
     Returns:
-        TensorOp: The  value of x.
+        TensorOp: tensor with uniform distribution
     """
     return RngOp(distribution='uniform', params=dict(low=low, high=high), axes=axes)
 
 
 def normal(axes, loc=0.0, scale=1.0):
     """
-    Fills x with normal distribution centered around loc and scaled by scale
+    Return tensor with normal distribution centered around loc and scaled by scale
 
     Args:
         axes : output tensor axes.
@@ -2760,7 +2760,7 @@ def normal(axes, loc=0.0, scale=1.0):
         scale (float): standard deviation of distribution
 
     Returns:
-        TensorOp: The  value of x.
+        TensorOp: tensor with normal distribution
     """
     return RngOp(distribution='normal', params=dict(loc=loc, scale=scale), axes=axes)
 
