@@ -101,12 +101,13 @@ else:
     raise NotImplementedError("Unrecognized Optimizer")
 
 # Build the main and auxiliary loss functions
+y_onehot = ng.one_hot(inputs['label'], axis=ax.Y)
 train_prob_prefix = inception.seq1(inputs['image'])
 train_prob_main = inception.seq2(train_prob_prefix)
-train_loss_main = ng.cross_entropy_multi(train_prob_main, ng.one_hot(inputs['label'], axis=ax.Y))
+train_loss_main = ng.cross_entropy_multi(train_prob_main, y_onehot)
 
 train_prob_aux = inception.seq_aux(train_prob_prefix)
-train_loss_aux = ng.cross_entropy_multi(train_prob_aux, ng.one_hot(inputs['label'], axis=ax.Y))
+train_loss_aux = ng.cross_entropy_multi(train_prob_aux, y_onehot)
 
 batch_cost = ng.sequential([optimizer(train_loss_main + 0.4 * train_loss_aux),
                             ng.mean(train_loss_main, out_axes=())])
