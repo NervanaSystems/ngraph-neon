@@ -36,43 +36,11 @@ import neon.transformers as ngt
 from neon.frontend import NeonArgparser
 from neon.frontend import Layer
 from neon.frontend import ax, RMSProp, GradientDescentMomentum
+from neon.frontend.model import make_bound_computation
+from neon.frontend.callbacks import loop_eval, loop_train, \
+    make_default_callbacks
 from data import make_aeon_loaders
 import inception
-
-
-def scale_set(image_set):
-    """
-    Given a batch of images, normalizes each image by converting pixels to [-1, +1]
-    image_set: (batch_size, C, H, W)
-    returns: scaled image_set (batch_size, C, H, W)
-    """
-    # Global means of imagenet channels [123.68, 116.779, 103.939]
-    return 2. * ((image_set / 255.) - 0.5)
-
-
-def eval_loop(dataset, computation, metric_names):
-    """
-    Function to calculate the loss metrics on the evaluation set
-    dataset: aeon iterator object
-    computation: evaluation set computations
-    metric_names: metrics to compute for evaluation set
-    """
-    dataset._dataloader.reset()
-    all_results = None
-    for data in dataset:
-        data['image'] = scale_set(data['image'])
-        feed_dict = {inputs[k]: data[k] for k in data.keys()}
-        results = computation(feed_dict=feed_dict)
-        if all_results is None:
-            all_results = {name: list(np.transpose(res)) for name, res
-                           in zip(metric_names, results)}
-        else:
-            for name, res in zip(metric_names, results):
-                all_results[name].extend(list(res))
-
-    reduced_results = {k: np.mean(v[:dataset._dataloader.ndata]) for k, v in
-                       all_results.items() if k != 'predictions'}
-    return all_results, reduced_results
 
 
 parser = NeonArgparser(description=__doc__)
@@ -134,18 +102,19 @@ else:
 
 # Build the main and auxiliary loss functions
 y_onehot = ng.one_hot(inputs['label'], axis=ax.Y)
-train_prob_main = inception.seq2(inception.seq1(inputs['image']))
+train_prob_prefix = inception.seq1(inputs['image'])
+train_prob_main = inception.seq2(train_prob_prefix)
 train_prob_main = ng.map_roles(train_prob_main, {"C": ax.Y.name})
 train_loss_main = ng.cross_entropy_multi(train_prob_main, y_onehot, enable_softmax_opt=False)
 
-train_prob_aux = inception.seq_aux(inception.seq1(inputs['image']))
+train_prob_aux = inception.seq_aux(train_prob_prefix)
 train_prob_aux = ng.map_roles(train_prob_aux, {"C": ax.Y.name})
 train_loss_aux = ng.cross_entropy_multi(train_prob_aux, y_onehot, enable_softmax_opt=False)
 
 batch_cost = ng.sequential([optimizer(train_loss_main + 0.4 * train_loss_aux),
                             ng.mean(train_loss_main, out_axes=())])
 
-train_computation = ng.computation([batch_cost], 'all')
+train_outputs = dict(batch_cost=batch_cost)
 
 # Build the computations for inference (evaluation)
 with Layer.inference_mode_on():
@@ -153,61 +122,22 @@ with Layer.inference_mode_on():
     slices = [0 if cx.name in ("H", "W") else slice(None) for cx in inference_prob.axes]
     inference_prob = ng.tensor_slice(inference_prob, slices)
     inference_prob = ng.map_roles(inference_prob, {"C": "Y"})
-    errors = ng.not_equal(ng.argmax(inference_prob, out_axes=[ax.N]), inputs['label'])
     eval_loss = ng.cross_entropy_multi(inference_prob, y_onehot, enable_softmax_opt=False)
-    eval_loss_names = ['cross_ent_loss', 'misclass', 'predictions']
-    eval_computation = ng.computation([eval_loss, errors, inference_prob], "all")
+    eval_outputs = dict(results=inference_prob, cross_ent_loss=eval_loss)
+
 
 with closing(ngt.make_transformer()) as transformer:
-    train_function = transformer.add_computation(train_computation)
-    eval_function = transformer.add_computation(eval_computation)
+    train_computation = make_bound_computation(transformer, train_outputs, inputs)
+    loss_computation = make_bound_computation(transformer, eval_outputs, inputs)
 
-    if args.no_progress_bar:
-        ncols = 0
-    else:
-        ncols = 100
+    cbs = make_default_callbacks(transformer=transformer,
+                                 output_file=args.output_file,
+                                 frequency=args.iter_interval,
+                                 train_computation=train_computation,
+                                 total_iterations=args.num_iterations,
+                                 eval_set=valid_set,
+                                 loss_computation=loss_computation,
+                                 enable_top5=True,
+                                 use_progress_bar=args.progress_bar)
 
-    tpbar = tqdm(unit="batches", ncols=ncols, total=args.num_iterations)
-    interval_cost = 0.0
-    saved_losses = {'train_loss': [], 'eval_loss': [],
-                    'eval_misclass': [], 'iteration': [], 'grads': [],
-                    'interval_loss': [], 'vars': []}
-
-    for iter_no, data in enumerate(train_set):
-        data = dict(data)
-        data['iteration'] = iter_no
-
-        # Scale the image to [-1., .1]
-        orig_image = np.copy(data['image'])
-        data['image'] = scale_set(data['image'])
-
-        # Train
-        feed_dict = {inputs[k]: data[k] for k in inputs.keys()}
-        output = train_function(feed_dict=feed_dict)
-        output = float(output[0])
-
-        tpbar.update(1)
-        tpbar.set_description("Training {:0.4f}".format(output))
-        interval_cost += output
-        # Save the training progression
-        saved_losses['train_loss'].append(output)
-        saved_losses['iteration'].append(iter_no)
-
-        if (iter_no + 1) % args.iter_interval == 0 and iter_no > 0:
-            interval_cost = interval_cost / args.iter_interval
-            tqdm.write("Interval {interval} Iteration {iteration} complete. "
-                       "Avg Train Cost {cost:0.4f}".format(
-                           interval=iter_no // args.iter_interval,
-                           iteration=iter_no,
-                           cost=interval_cost))
-            # Calculate inference on the evaluation set
-            all_results, eval_losses = eval_loop(valid_set, eval_function, eval_loss_names)
-            predictions = all_results['predictions']
-            saved_losses['eval_loss'].append(eval_losses['cross_ent_loss'])
-            saved_losses['eval_misclass'].append(eval_losses['misclass'])
-
-            # Save the training progression
-            saved_losses['interval_loss'].append(interval_cost)
-            savefile_name = "losses_%s_%s.pkl" % (args.optimizer_name, args.backend)
-            pickle.dump(saved_losses, open(savefile_name, "wb"))
-            interval_cost = 0.0
+    loop_train(train_set, cbs)

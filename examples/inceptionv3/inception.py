@@ -22,7 +22,7 @@
 """
 from neon.frontend import UniformInit, BatchNorm
 from neon.frontend import Convolution, Pooling, Sequential, Parallel
-from neon.frontend import Rectlin, Softmax, Dropout
+from neon.frontend import Rectlin, Softmax, Dropout, Preprocess
 
 
 def conv_params(filter_shape, strides=1, batch_norm=None, activation=Rectlin(),
@@ -258,6 +258,17 @@ class Inceptionv3_b5(Parallel):
         super(Inceptionv3_b5, self).__init__(name=name, branches=branches, mode='concat')
 
 
+# Image preprocessing
+def scale_set(x):
+    """
+    Given a batch of images, normalizes each image by converting pixels to [-1, +1]
+    image_set: (batch_size, C, H, W)
+    returns: scaled image_set (batch_size, C, H, W)
+    """
+    # Global means of imagenet channels [123.68, 116.779, 103.939]
+    return 2. * ((x / 255.) - 0.5)
+
+
 class Inception(object):
 
     def __init__(self, mini=False):
@@ -271,7 +282,8 @@ class Inception(object):
             This is the mini model with reduced number of filters in each layer
             """
             # Root branch of the tree
-            seq1 = Sequential([Convolution(name='conv_1a_3x3',
+            seq1 = Sequential([Preprocess(functor=scale_set),
+                               Convolution(name='conv_1a_3x3',
                                            **conv_params(filter_shape=(3, 3, 32),
                                                          padding=0, strides=2)),
                                # conv2d_1a_3x3
@@ -335,7 +347,8 @@ class Inception(object):
 
         else:
             # Root branch of the tree
-            seq1 = Sequential([Convolution(name='conv_1a_3x3',
+            seq1 = Sequential([Preprocess(functor=scale_set),
+                               Convolution(name='conv_1a_3x3',
                                            **conv_params(filter_shape=(3, 3, 32),
                                                          padding=0, strides=2)),
                                # conv2d_1a_3x3

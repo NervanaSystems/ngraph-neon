@@ -25,7 +25,7 @@ from neon.op_graph.batchnorm import BatchnormCommonOp, BatchnormBpropCommonOp
 from orderedset import OrderedSet
 from neon.transformers.passes.pybindwrapperpass \
     import PybindWrapperGenerator, PybindScopePass
-from ngraph.impl import util
+from ngraph.impl import util, serialize
 from ngraph.impl import Type, Function, NodeVector, Shape
 from ngraph.impl.runtime import Manager
 from ngraph.impl.op import Parameter
@@ -375,10 +375,19 @@ class PybindComputation(Computation):
             self.randomvariable_list.append(self.ngraph_cpp_ops[randvariable.tensor])
 
         # TODO - what's the role of the string argument? for now just passing 'test'
+        funcname = self.transformer.get_function_name()
         self.function = Function(NodeVector(
             self.result_nodes_list + self.update_nodes_list),
             self.parameter_list + self.variable_list + self.randomvariable_list,
-            self.transformer.get_function_name())
+            funcname)
+        
+        # Serialize function
+        """
+        jsonstr = serialize(self.function)
+        filename = funcname + '.json'
+        with open(filename, 'w') as f:
+            f.write(jsonstr)
+        """
 
     def build_callframe(self):
         """
