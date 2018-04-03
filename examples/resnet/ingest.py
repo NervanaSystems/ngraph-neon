@@ -19,7 +19,6 @@ from __future__ import division
 from builtins import str, zip
 from configargparse import ArgParser
 from itertools import repeat
-from neon import logger as neon_logger
 from neon.util.persist import ensure_dirs_exist
 from PIL import Image
 import logging
@@ -169,7 +168,6 @@ class IngestI1K(object):
         """
         img_dir = os.path.join(self.out_dir, setn)
 
-        neon_logger.display("Extracting %s files" % (setn))
         root_tf_path = self.tars[setn]
         if not os.path.exists(root_tf_path):
             raise IOError(("tar file {} not found. Ensure you have ImageNet downloaded"
