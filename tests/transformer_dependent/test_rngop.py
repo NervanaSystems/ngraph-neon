@@ -27,15 +27,15 @@ pytestmark = pytest.mark.transformer_dependent
 
 
 @pytest.fixture()
-def input_tensor():
+def input_tensor_axes():
     axes = ng.make_axes([ng.make_axis(length=5),
                          ng.make_axis(length=8)])
-    return ng.persistent_tensor(axes, initial_value=10.0)
+    return axes
 
 
-def test_uniform_range_pos(input_tensor):
+def test_uniform_range_pos(input_tensor_axes):
     """TODO."""
-    ng_a = ng.uniform(input_tensor, low=0.0, high=0.5)
+    ng_a = ng.uniform(input_tensor_axes, low=0.0, high=0.5)
 
     with executor(ng_a) as ex:
         result = ex()
@@ -46,9 +46,9 @@ def test_uniform_range_pos(input_tensor):
     assert not np.all(result == 0.0)
 
 
-def test_uniform_range_posneg(input_tensor):
+def test_uniform_range_posneg(input_tensor_axes):
     """TODO."""
-    ng_a = ng.uniform(input_tensor, low=-0.5, high=0.5)
+    ng_a = ng.uniform(input_tensor_axes, low=-0.5, high=0.5)
 
     with executor(ng_a) as ex:
         result = ex()
@@ -64,8 +64,7 @@ def test_rng_repetition():
     Tests rng ops, to make sure they run every execution and not just initialization
     """
     axes = ng.make_axes([ng.make_axis(2), ng.make_axis(2)])
-    x = ng.variable(initial_value=np.array([[1, 2], [3, 4]]), axes=axes)
-    y = ng.uniform(x)
+    y = ng.uniform(axes)
     mysum = ng.sum(y)
     trans = ng.transformers.make_transformer()
     rand_comp = trans.computation(mysum)
@@ -83,7 +82,7 @@ def test_normal_negative_mean():
     mean = -0.5
     std = 1.0
 
-    ng_a = ng.persistent_tensor([M, N], initial_value=10.0)
+    ng_a = [M, N]
     ng_a = ng.normal(ng_a, loc=mean, scale=std)
 
     with executor(ng_a) as ex:
