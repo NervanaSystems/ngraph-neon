@@ -23,10 +23,8 @@ pytestmark = pytest.mark.transformer_dependent
 
 
 @pytest.fixture(params=[(1, 2, 1),
-                        pytest.config.argon_disabled(
-                            (2, 3, 2), reason="Argon Transformer error"),  # TODO triage
-                        pytest.config.flex_and_argon_disabled((15, 5, 1),
-                                                              reason="Result mismatch")])
+                        (2, 3, 2),
+                        (15, 5, 1)])
 def concatenate_variables(request):
     num_vars, num_axes, concat_pos = request.param
     common_axes = [ng.make_axis(length=2) for _ in range(num_axes - 1)]
@@ -57,6 +55,7 @@ def M():
     return ng.make_axis(length=3)
 
 
+@pytest.mark.skip(reason="Not Implemented")
 def test_sign():
     x_np = np.array([-1.2, 2.3, 0.0, 1.2])
     N = ng.make_axis(len(x_np))
@@ -68,6 +67,7 @@ def test_sign():
         assert np.allclose(y_val, y_np)
 
 
+@pytest.mark.skip(reason="SequentialOp children formation not implemented")
 def test_sequential(N):
     x = ng.variable([N], initial_value=0)
     x0 = x + x
@@ -85,6 +85,7 @@ def test_sequential(N):
     assert p_val == 0
 
 
+@pytest.mark.skip(reason="SequentialOp children formation not implemented")
 def test_sequential_reduce(M):
     x = ng.variable([M], initial_value=1)
     x0 = x + x
@@ -107,6 +108,7 @@ def test_sequential_reduce(M):
         assert np.allclose(p_val, x2_np)
 
 
+@pytest.mark.skip(reason="SequentialOp children formation not implemented")
 def test_sequential_side(M):
     x1_np = 2
     x2_np = 3
