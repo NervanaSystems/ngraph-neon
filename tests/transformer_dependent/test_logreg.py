@@ -80,6 +80,9 @@ def test_logreg():
         for i in range(max_iter):
             grad_np, loss_np, thetas_np = np_logreg.optimize(alpha)
             grad_ng, loss_ng, thetas_ng = train_eval_func(xs, ys, alpha)
-            ng.testing.assert_allclose(loss_np, loss_ng)
-            ng.testing.assert_allclose(grad_np, grad_ng)
-            ng.testing.assert_allclose(thetas_np, thetas_ng)
+            ng.testing.assert_allclose(loss_np, loss_ng, rtol=1e-05, atol=1e-05, \
+                                       transformer_overwrite=False)
+            ng.testing.assert_allclose(grad_np, grad_ng,  rtol=1e-05, atol=1e-05, \
+                                       transformer_overwrite=False)
+            ng.testing.assert_allclose(thetas_np, thetas_ng, rtol=1e-05, atol=1e-05, \
+                                       transformer_overwrite=False)
