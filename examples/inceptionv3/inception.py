@@ -23,6 +23,7 @@
 from neon.frontend import UniformInit, BatchNorm
 from neon.frontend import Convolution, Pooling, Sequential, Parallel
 from neon.frontend import Rectlin, Softmax, Dropout, Preprocess
+from neon.frontend import Affine, KaimingInit, Activation, ax
 
 
 def conv_params(filter_shape, strides=1, batch_norm=None, activation=Rectlin(),
@@ -328,10 +329,9 @@ class Inception(object):
                                Pooling(pool_shape=(8, 8), padding=0, strides=2, pool_type='avg'),
                                # Last Avg Pool
                                Dropout(keep=0.8),
-                               Convolution(name='main_final_conv1x1',
-                                           **conv_params(filter_shape=(1, 1, 1000),
-                                                         activation=Softmax(),
-                                                         batch_norm=False))])
+                               Affine(name='main_fc', axes=ax.Y, weight_init=KaimingInit(),
+                                      batch_norm=False),
+                               Activation(Softmax())])
 
             # Auxiliary classifier
             seq_aux = Sequential([Pooling(pool_shape=(5, 5),
@@ -340,10 +340,9 @@ class Inception(object):
                                               **conv_params(filter_shape=(1, 1, 32))),
                                   Convolution(name='aux_conv5x5',
                                               **conv_params(filter_shape=(5, 5, 32))),
-                                  Convolution(name='aux_conv1x1_v2',
-                                              **conv_params(filter_shape=(1, 1, 1000),
-                                                            activation=Softmax(),
-                                                            batch_norm=False))])
+                                  Affine(name='aux_fc', axes=ax.Y, weight_init=KaimingInit(),
+                                         batch_norm=False),
+                                  Activation(Softmax())])
 
         else:
             # Root branch of the tree
@@ -398,20 +397,18 @@ class Inception(object):
                     Pooling(pool_shape=(8, 8), padding=0, strides=2, pool_type='avg'),
                     # Last Avg Pool
                     Dropout(keep=0.8),
-                    Convolution(name='main_final_conv1x1',
-                                **conv_params(filter_shape=(1, 1, 1000),
-                                              activation=Softmax(),
-                                              batch_norm=False))]
+                    Affine(name='main_fc', axes=ax.Y, weight_init=KaimingInit(),
+                           batch_norm=False),
+                    Activation(Softmax())]
             seq2 = Sequential(seq2)
 
             # Auxiliary classifier
             my_seq = [Pooling(pool_shape=(5, 5), padding=0, strides=3, pool_type='avg'),
-                      Convolution(name='aux_conv1x1_v1', **conv_params(filter_shape=(1, 1, 128))),
+                      Convolution(name='aux_conv1x1', **conv_params(filter_shape=(1, 1, 128))),
                       Convolution(name='aux_conv5x5', **conv_params(filter_shape=(5, 5, 768))),
-                      Convolution(name='aux_conv1x1_v2',
-                                  **conv_params(filter_shape=(1, 1, 1000),
-                                                activation=Softmax(),
-                                                batch_norm=False))]
+                      Affine(name='aux_fc', axes=ax.Y, weight_init=KaimingInit(),
+                             batch_norm=False),
+                      Activation(Softmax())]
             seq_aux = Sequential(my_seq)
 
         self.seq1 = seq1

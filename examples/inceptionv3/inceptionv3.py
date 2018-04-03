@@ -52,9 +52,9 @@ parser.add_argument("--train_manifest_file", default='train-index-tabbed.csv',
                     help="Name of tab separated Aeon training manifest file")
 parser.add_argument("--valid_manifest_file", default='val-index-tabbed.csv',
                     help="Name of tab separated Aeon validation manifest file")
-parser.add_argument("--optimizer_name", default='rmsprop',
-                    help="Name of optimizer (rmsprop or sgd)")
-parser.set_defaults(batch_size=4, num_iterations=10000000, iter_interval=2000)
+parser.add_argument("--optimizer_name", default='sgd',
+                    help="Name of optimizer (sgd or rmsprop)")
+parser.set_defaults(batch_size=32, num_iterations=10000000, iter_interval=2000)
 args = parser.parse_args()
 
 # Set the random seed
@@ -101,15 +101,12 @@ else:
     raise NotImplementedError("Unrecognized Optimizer")
 
 # Build the main and auxiliary loss functions
-y_onehot = ng.one_hot(inputs['label'], axis=ax.Y)
 train_prob_prefix = inception.seq1(inputs['image'])
 train_prob_main = inception.seq2(train_prob_prefix)
-train_prob_main = ng.map_roles(train_prob_main, {"C": ax.Y.name})
-train_loss_main = ng.cross_entropy_multi(train_prob_main, y_onehot, enable_softmax_opt=False)
+train_loss_main = ng.cross_entropy_multi(train_prob_main, ng.one_hot(inputs['label'], axis=ax.Y))
 
 train_prob_aux = inception.seq_aux(train_prob_prefix)
-train_prob_aux = ng.map_roles(train_prob_aux, {"C": ax.Y.name})
-train_loss_aux = ng.cross_entropy_multi(train_prob_aux, y_onehot, enable_softmax_opt=False)
+train_loss_aux = ng.cross_entropy_multi(train_prob_aux, ng.one_hot(inputs['label'], axis=ax.Y))
 
 batch_cost = ng.sequential([optimizer(train_loss_main + 0.4 * train_loss_aux),
                             ng.mean(train_loss_main, out_axes=())])
@@ -119,10 +116,7 @@ train_outputs = dict(batch_cost=batch_cost)
 # Build the computations for inference (evaluation)
 with Layer.inference_mode_on():
     inference_prob = inception.seq2(inception.seq1(inputs['image']))
-    slices = [0 if cx.name in ("H", "W") else slice(None) for cx in inference_prob.axes]
-    inference_prob = ng.tensor_slice(inference_prob, slices)
-    inference_prob = ng.map_roles(inference_prob, {"C": "Y"})
-    eval_loss = ng.cross_entropy_multi(inference_prob, y_onehot, enable_softmax_opt=False)
+    eval_loss = ng.cross_entropy_multi(inference_prob, ng.one_hot(inputs['label'], axis=ax.Y))
     eval_outputs = dict(results=inference_prob, cross_ent_loss=eval_loss)
 
 
