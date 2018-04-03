@@ -21,7 +21,7 @@ from neon.op_graph.op_graph import Op, Add, AssignableTensorOp, AssignOp, AxesCa
     BroadcastOp, ConcatOp, ContiguousOp, Divide, DotOp, Equal, ExpandDims, ExpOp, Flatten, \
     Greater, GreaterEqual, Less, LessEqual, LogOp, MapRolesOp, Max, Maximum, Minimum, \
     Multiply, NegativeOp, NotEqual, OneHotOp, ParallelOp, Power, Prod, ReciprocalOp, \
-    ReductionOp, ReplaceSliceOp, ReorderAxes, RoleCastOp, SequentialOp, SqrtOp, SquareOp, \
+    ReductionOp, ReplaceSliceOp, ReorderAxes, RoleCastOp, RngOp, SequentialOp, SqrtOp, SquareOp, \
     Subtract, Sum, TanhOp, TensorSliceOp, TensorSizeOp, TensorValueOp, Unflatten
 from neon.op_graph.batchnorm import BatchnormCommonOp, BatchnormBpropCommonOp, \
     BatchnormOutputOp, BatchnormMeanOp, BatchnormVarOp, \
@@ -357,7 +357,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
     @visit.on_type(AssignableTensorOp)
     def visit(self, op):
-        # Can be visited in the most trivial computation we only a variable is created
+        # Can be visited in the most trivial computation when only a variable is created
         if not self.computation.has_cpp_op(op):
             if op.is_constant:
                 # FIXME: make tensors based on data type
@@ -1143,3 +1143,10 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
         ngraph_concat = PyngConcat(NodeVector(ngraph_x_list), op.ind)
         self.computation.register_cpp_op(op, ngraph_concat)
+
+    @visit.on_type(RngOp)
+    def visit(self, op):
+        self.computation.set_op_rank(op)
+        op_element_type = Parameter(Type.f32, Shape(list(op.axes.lengths)))
+        self.computation.register_cpp_op(op, op_element_type)
+        self.computation.neon_randomvariable_list.append(op)

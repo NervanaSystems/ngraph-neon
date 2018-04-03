@@ -1316,10 +1316,8 @@ class Dropout(Layer):
         if Layer.inference_mode:
             return self.keep * in_obj
         else:
-            if self.mask is None:
-                in_axes = in_obj.axes.sample_axes()
-                self.mask = ng.persistent_tensor(axes=in_axes).named('mask')
-            self.mask = ng.uniform(self.mask, low=0.0, high=1.0) <= self.keep
+            in_axes = in_obj.axes.sample_axes()
+            self.mask = ng.uniform(axes=in_axes, low=0.0, high=1.0) <= self.keep
             return self.mask * in_obj
 
 
