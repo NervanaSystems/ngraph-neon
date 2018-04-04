@@ -55,7 +55,7 @@ parser.add_argument("--valid_manifest_file", default='val-index-tabbed.csv',
 parser.add_argument("--optimizer_name", default='rmsprop',
                     help="Name of optimizer (rmsprop or sgd)")
 num_train_images=1301000
-batch_size=32
+batch_size=128
 iter_interval=1301000 // batch_size
 num_iterations=100 * iter_interval
 
