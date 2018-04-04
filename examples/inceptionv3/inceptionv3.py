@@ -52,9 +52,14 @@ parser.add_argument("--train_manifest_file", default='train-index-tabbed.csv',
                     help="Name of tab separated Aeon training manifest file")
 parser.add_argument("--valid_manifest_file", default='val-index-tabbed.csv',
                     help="Name of tab separated Aeon validation manifest file")
-parser.add_argument("--optimizer_name", default='sgd',
-                    help="Name of optimizer (sgd or rmsprop)")
-parser.set_defaults(batch_size=32, num_iterations=10000000, iter_interval=2000)
+parser.add_argument("--optimizer_name", default='rmsprop',
+                    help="Name of optimizer (rmsprop or sgd)")
+num_train_images=1301000
+batch_size=32
+iter_interval=1301000 // batch_size
+num_iterations=100 * iter_interval
+
+parser.set_defaults(batch_size=batch_size, num_iterations=num_iterations, iter_interval=iter_interval)
 args = parser.parse_args()
 
 # Set the random seed
@@ -72,9 +77,6 @@ train_set, valid_set = make_aeon_loaders(train_manifest=args.train_manifest_file
                                          datadir=args.image_dir)
 inputs = train_set.make_placeholders(include_iteration=True)
 
-# Input size is 299 x 299 x 3
-image_size = 299
-
 # Build the network
 inception = inception.Inception(mini=args.mini)
 
@@ -91,11 +93,12 @@ if args.optimizer_name == 'sgd':
                                         iteration=inputs['iteration'])
 elif args.optimizer_name == 'rmsprop':
     learning_rate_policy = {'name': 'schedule',
-                            'schedule': list(80000 * np.arange(1, 10, 1)),
+                            'schedule': list(iter_interval * 2 * np.arange(1, 49, 1, dtype=np.int32)),
                             'gamma': 0.94,
-                            'base_lr': 0.01}
+                            'base_lr': 0.045}
     optimizer = RMSProp(learning_rate=learning_rate_policy,
                         wdecay=4e-5, decay_rate=0.9, momentum_coef=0.9,
+                        gradient_clip_value=2.,
                         epsilon=1., iteration=inputs['iteration'])
 else:
     raise NotImplementedError("Unrecognized Optimizer")

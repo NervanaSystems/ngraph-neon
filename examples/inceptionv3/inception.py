@@ -359,14 +359,16 @@ class Inception(object):
                                # conv2d_2b_3x3
                                Pooling(name='pool_1_3x3', pool_shape=(3, 3), padding=0,
                                        strides=2, pool_type='max'),  # maxpool_3a_3x3
-                               Convolution(name='conv_3b_1x1', **
-                                           conv_params(filter_shape=(1, 1, 80))),
+                               Convolution(name='conv_3b_3x3', **
+                                           conv_params(filter_shape=(3, 3, 80), padding=0)),
                                # conv2d_3b_1x1
                                Convolution(name='conv_4a_3x3', **
-                                           conv_params(filter_shape=(3, 3, 192), padding=1)),
+                                           conv_params(filter_shape=(3, 3, 192),
+                                                       padding=0, strides=2)),
                                # conv2d_4a_3x3
-                               Pooling(name='pool_2_3x3', pool_shape=(3, 3), padding=0,
-                                       strides=2, pool_type='max'),  # maxpool_5a_3x3
+                               Convolution(name='conv_5a_3x3', **
+                                           conv_params(filter_shape=(3, 3, 288), padding=1)),
+                               # conv2d_5a_3x3
                                Inceptionv3_b1([(64,), (48, 64), (64, 96, 96),
                                                (32, )], name='mixed_5b'),
                                Inceptionv3_b1([(64,), (48, 64), (64, 96, 96),
@@ -405,7 +407,6 @@ class Inception(object):
             # Auxiliary classifier
             my_seq = [Pooling(pool_shape=(5, 5), padding=0, strides=3, pool_type='avg'),
                       Convolution(name='aux_conv1x1', **conv_params(filter_shape=(1, 1, 128))),
-                      Convolution(name='aux_conv5x5', **conv_params(filter_shape=(5, 5, 768))),
                       Affine(name='aux_fc', axes=ax.Y, weight_init=KaimingInit(),
                              batch_norm=False),
                       Activation(Softmax())]

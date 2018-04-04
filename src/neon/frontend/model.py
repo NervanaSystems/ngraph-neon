@@ -106,7 +106,7 @@ class Sequential(SubGraph):
         for l in self.layers:
             """
             if hasattr(l, 'name'):
-                print(l.name)
+                print('layer', l.name)
                 print('In', in_obj.axes)
             """
             in_obj = l(in_obj, **kwargs)
