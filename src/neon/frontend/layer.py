@@ -464,8 +464,9 @@ class ConvBase(Layer):
         Arguments:
             in_obj (Op): Input op
         """
-        channel_axes = in_obj.axes.get_by_names("C")
-        if channel_axes == None:
+        try:
+            channel_axes = in_obj.axes.get_by_names("C")
+        except KeyError:
             channel_axes = ng.make_axis(length=1, name="C")
             in_obj = ng.expand_dims(in_obj, channel_axes, 1)
         spatial_axes = in_obj.axes.get_by_names(*self.spatial_keys)
