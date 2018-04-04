@@ -1,0 +1,9 @@
+#ChangeLog
+
+## v0.2.0 (TBD):
+
+* Added examples of char_rae, char_rnn, char_lstm, timeseries_lstm
+
+## v0.1.0 (2018-03-19):
+
+* Initial public release of neon 3.0.
