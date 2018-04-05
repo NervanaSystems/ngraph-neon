@@ -2006,6 +2006,11 @@ def axes_with_order(x, axes):
     axes = make_axes(axes)
     if x.axes == axes:
         return x
+    """
+    import traceback
+    print('axes_with_order:')
+    traceback.print_stack()
+    """
     return ReorderAxes(x, axes)
 
 
@@ -3060,13 +3065,15 @@ class BinaryElementWiseOp(ElementWiseOp):
         x_axes_bcast = x.axes + (y.axes - x.axes)
         y_axes_bcast = y.axes + (x.axes - y.axes)
 
-        if y_axes_bcast == y.axes:
-            axes = y_axes_bcast
-        else:
-            axes = x_axes_bcast
+        assert(x_axes_bcast.size == y_axes_bcast.size)
 
-        x = axes_with_order(broadcast(x, x_axes_bcast), axes)
-        y = axes_with_order(broadcast(y, y_axes_bcast), axes)
+        if y_axes_bcast.size == y.axes.size:
+            axes = y.axes
+        else:
+            axes = x.axes
+
+        x = axes_with_order(broadcast(x, axes), axes)
+        y = axes_with_order(broadcast(y, axes), axes)
 
         super(BinaryElementWiseOp, self).__init__(
             args=(x, y),
