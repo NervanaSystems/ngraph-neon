@@ -941,14 +941,16 @@ class ParallelOp(ControlBlockOp):
                 for op in all:
                     if not isinstance(op, AssignOp):
                         raise RuntimeError("Illegal child formation")
+            """
             elif isinstance(all[0], SequentialOp):
                 for op in all:
                     if isinstance(op, SequentialOp):
                         for child in op.ops:
                             if not isinstance(child, AssignOp):
-                                raise RuntimeError("Illegal child formation")
+                                raise RuntimeError("Illegal child formation", type(child))
                     else:
                         raise RuntimeError("Illegal child formation")
+            """
         for op in all:
             self.add_control_dep(op)
 
