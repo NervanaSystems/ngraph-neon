@@ -144,8 +144,13 @@ class PybindScopePass:
                 for child in children:
                     nodes_to_visit.append((child, childscope))
 
+        root_index = 0
+        results_set = set()
         for op in results:
-            visit_pre_order('root', op)
+            if op not in results_set:
+                results_set.add(op)
+                visit_pre_order('/root' + str(root_index), op)
+                root_index += 1
 
         # for key, val in self.computation.scopemark.items():
         #    print(key.name, val)
