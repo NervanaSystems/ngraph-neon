@@ -98,6 +98,7 @@ def ngraph_l2_norm(np_array):
 
 
 @raise_all_numpy_errors
+@pytest.config.nggpu_skip(reason="Not implemented")
 def test_dot_sum_backprop():
     delta = 1e-3
     rtol = atol = 1e-2
@@ -163,6 +164,7 @@ def test_dot_sum_backprop():
 
 
 @raise_all_numpy_errors
+@pytest.config.nggpu_skip(reason="Not implemented")
 def test_tensor_dot_tensor():
     """TODO."""
     C = ng.make_axis().named('C')
