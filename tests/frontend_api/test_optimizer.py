@@ -332,7 +332,6 @@ def test_adagrad(random_learning_rate, epsilon, select_variables):
         compare_optimizer(adagrad, adagrad_ref)
 
 
-@pytest.mark.skip(reason="FloorDivide is not implemented yet.")
 def test_learning_policy_step():
     base_learning_rate = 1.0
     drop_factor = 0.1
