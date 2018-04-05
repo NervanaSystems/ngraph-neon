@@ -3067,13 +3067,22 @@ class BinaryElementWiseOp(ElementWiseOp):
 
         assert(x_axes_bcast.size == y_axes_bcast.size)
 
-        if y_axes_bcast.size == y.axes.size:
-            axes = y.axes
-        else:
+        if x_axes_bcast.size == x.axes.size:
             axes = x.axes
+            x_axes_bcast = axes
+            y_axes_bcast_alt = (x.axes - y.axes) + y.axes
+            if y_axes_bcast_alt.lengths == axes.lengths:
+                y_axes_bcast = axes
+        else:
+            axes = y.axes
+            y_axes_bcast = axes
+            x_axes_bcast_alt = (y.axes - x.axes) + x.axes
+            if x_axes_bcast_alt.lengths == axes.lengths:
+                x_axes_bcast = axes
 
-        x = axes_with_order(broadcast(x, axes), axes)
-        y = axes_with_order(broadcast(y, axes), axes)
+        # print('x:', x.axes, 'y:', y.axes, 'bcast:', axes)
+        x = axes_with_order(broadcast(x, x_axes_bcast), axes)
+        y = axes_with_order(broadcast(y, y_axes_bcast), axes)
 
         super(BinaryElementWiseOp, self).__init__(
             args=(x, y),
