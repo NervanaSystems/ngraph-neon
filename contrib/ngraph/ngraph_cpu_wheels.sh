@@ -22,7 +22,25 @@ fi
 
 lcores=$([[ $(uname) = 'Darwin' ]] && sysctl -n hw.logicalcpu_max || lscpu -p | egrep -v '^#' | wc -l)
 
-mkdir build && cd build && cmake .. && make -j$lcores
+if [ -x "$(command -v lsb_release)" ]; then
+    DISTRIB_ID=$(lsb_release -is)
+fi
+
+if [ -n "$DISTRIB_ID" ]; then
+    if [ "$DISTRIB_ID" == "Ubuntu" ]; then
+        ubuntu_ver=$(lsb_release -rs)
+        if [ "$ubuntu_ver" == "16.04" ]; then
+            mkdir build && cd build && cmake -DNGRAPH_USE_PREBUILT_LLVM=TRUE .. && make -j$lcores
+        else
+            mkdir build && cd build && cmake .. && make -j$lcores
+        fi
+    else # Linux but not Ubuntu
+        mkdir build && cd build && cmake .. && make -j$lcores
+    fi
+else # Not Linux
+    mkdir build && cd build && cmake .. && make -j$lcores
+fi
+
 virtualenv .venv2 && . .venv2/bin/activate && pip install wheel setuptools \
     python setup.py bdist_wheel && deactivate && mv dist/*.whl ..
 python3 -m venv .venv3 && . .venv3/bin/activate && pip install wheel setuptools \
