@@ -19,8 +19,8 @@ from neon.transformers.passes.passes import PeepholeGraphPass
 from neon.util.generics import generic_method
 from neon.op_graph.op_graph import Op, Add, AssignableTensorOp, AssignOp, AxesCastOp, \
     BroadcastOp, ConcatOp, ContiguousOp, Divide, DotOp, Equal, ExpandDims, ExpOp, Flatten, \
-    Greater, GreaterEqual, Less, LessEqual, LogOp, MapRolesOp, Max, Maximum, Minimum, \
-    Multiply, NegativeOp, NotEqual, OneHotOp, ParallelOp, Power, Prod, ReciprocalOp, \
+    FloorDivide, Greater, GreaterEqual, Less, LessEqual, LogOp, MapRolesOp, Max, Maximum, \
+    Minimum, Multiply, NegativeOp, NotEqual, OneHotOp, ParallelOp, Power, Prod, ReciprocalOp, \
     ReductionOp, ReplaceSliceOp, ReorderAxes, RoleCastOp, RngOp, SequentialOp, SqrtOp, SquareOp, \
     Subtract, Sum, TanhOp, TensorSliceOp, TensorSizeOp, TensorValueOp, Unflatten
 from neon.op_graph.batchnorm import BatchnormCommonOp, BatchnormBpropCommonOp, \
@@ -51,10 +51,12 @@ from ngraph.impl.op import Convert as PyngConvert
 from ngraph.impl.op import Convolution as PyngConvolution
 from ngraph.impl.op import ConvolutionBackpropData as PyngConvolutionBackpropData
 from ngraph.impl.op import ConvolutionBackpropFilters as PyngConvolutionBackpropFilters
+from ngraph.impl.op import Divide as PyngDivide
 from ngraph.impl.op import Dot as PyngDot
 from ngraph.impl.op import Divide as PyngDivide
 from ngraph.impl.op import Equal as PyngEqual
 from ngraph.impl.op import Exp as PyngExp
+from ngraph.impl.op import Floor as PyngFloor
 from ngraph.impl.op import GetOutputElement as PyngGetOutputElement
 from ngraph.impl.op import Greater as PyngGreater
 from ngraph.impl.op import GreaterEq as PyngGreaterEq
@@ -148,8 +150,13 @@ class PybindScopePass:
                 for child in children:
                     nodes_to_visit.append((child, childscope))
 
+        root_index = 0
+        results_set = set()
         for op in results:
-            visit_pre_order('root', op)
+            if op not in results_set:
+                results_set.add(op)
+                visit_pre_order('/root' + str(root_index), op)
+                root_index += 1
 
         # for key, val in self.computation.scopemark.items():
         #    print(key.name, val)
@@ -1195,3 +1202,12 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         op_element_type = Parameter(Type.f32, Shape(list(op.axes.lengths)))
         self.computation.register_cpp_op(op, op_element_type)
         self.computation.neon_randomvariable_list.append(op)
+
+    @visit.on_type(FloorDivide)
+    def visit(self, op, x, y):
+        self.computation.set_op_rank(op)
+        ngraph_x = self.computation.lookup_cpp_op(x)
+        ngraph_y = self.computation.lookup_cpp_op(y)
+        ngraph_divide = PyngDivide(ngraph_x, ngraph_y)
+        ngraph_floordivide = PyngFloor(ngraph_divide)
+        self.computation.register_cpp_op(op, ngraph_floordivide)

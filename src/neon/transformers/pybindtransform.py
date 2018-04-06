@@ -16,6 +16,7 @@
 
 import collections
 import numpy as np
+from os.path import commonprefix, basename
 from neon.transformers.base import Computation
 from neon.transformers.base import Transformer
 from neon.transformers import set_transformer_factory, make_transformer_factory
@@ -204,7 +205,9 @@ class PybindComputation(Computation):
             tensor_op = op.tensor
             if not tensor_op.is_constant:
                 if tensor_op in self.variables_cpp_op:
-                    if self.scopemark[op] == self.variables_cpp_op[tensor_op][0]:
+                    scopeprefix = commonprefix([self.scopemark[op], self.variables_cpp_op[tensor_op][0]])
+                    lastprefix = basename(scopeprefix)
+                    if not lastprefix.startswith('par'):
                         if self.op_rank[op] > self.op_rank[self.variables_cpp_op[tensor_op][1]]:
                             """
                             print("Forwarding " + tensor_op.name + " to " + op.name +
