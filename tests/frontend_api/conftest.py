@@ -61,5 +61,5 @@ def recurrent_input(input_axis, recurrent_axis, batch_axis, extra_feature_axes):
 
 @pytest.fixture
 def conv_input_placeholder(channel_axis, spatial_axes, batch_axis):
-    axes = ng.make_axes(channel_axis) | spatial_axes | batch_axis
+    axes = ng.make_axes(batch_axis) | channel_axis | spatial_axes
     return ng.placeholder(axes)
