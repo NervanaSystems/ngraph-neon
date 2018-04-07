@@ -41,8 +41,6 @@ else # Not Linux
     mkdir build && cd build && cmake .. && make -j$lcores
 fi
 
-virtualenv .venv2 && . .venv2/bin/activate && pip install wheel setuptools \
-    python setup.py bdist_wheel && deactivate && mv dist/*.whl ..
-python3 -m venv .venv3 && . .venv3/bin/activate && pip install wheel setuptools \
-    python setup.py bdist_wheel && deactivate && mv dist/*.whl ..
+virtualenv .venv2 && . .venv2/bin/activate && pip install -U pip wheel setuptools && python setup.py bdist_wheel && deactivate && mv dist/*.whl ../../..
+python3 -m venv .venv3 && . .venv3/bin/activate && pip install -U pip wheel setuptools && python setup.py bdist_wheel && deactivate && mv dist/*.whl ../../..
 

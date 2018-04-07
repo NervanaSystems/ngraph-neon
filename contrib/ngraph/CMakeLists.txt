@@ -42,7 +42,6 @@ ExternalProject_Add(
     GIT_REPOSITORY "https://github.com/NervanaSystems/ngraph.git"
     GIT_TAG "296dbd6a"
     SOURCE_DIR ${NGRAPH_SOURCE_DIR}
-    INSTALL_COMMAND ""
     CMAKE_ARGS ${NGRAPH_CMAKE_ARGS}
     )
 
