@@ -3067,9 +3067,7 @@ class BinaryElementWiseOp(ElementWiseOp):
         x_axes_bcast = x.axes + (y.axes - x.axes)
         y_axes_bcast = y.axes + (x.axes - y.axes)
 
-        assert(x_axes_bcast.size == y_axes_bcast.size)
-
-        if x_axes_bcast.size == x.axes.size:
+        if x_axes_bcast.is_equal_set(x.axes):
             axes = x.axes
             x_axes_bcast = axes
             y_axes_bcast_alt = (x.axes - y.axes) + y.axes
