@@ -16,8 +16,10 @@ ls
 ```
 
 Then you will see two files,(X.Y.Z is a version number)
+```
 ngraph-X.Y.Z-cp27-cp27mu-linux_x86_64.whl
 ngraph-X.Y.Z-cp35-cp35m-linux_x86_64.whl
+```
 
 For python 2.7
 
