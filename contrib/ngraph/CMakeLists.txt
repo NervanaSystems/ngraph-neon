@@ -25,6 +25,10 @@ project (pyngraph)
 
 include(ExternalProject)
 
+if (NOT DEFINED NGRAPH_VERSION)
+    message(FATAL_ERROR "NGRAPH_VERSION is not defined")
+endif()
+
 set(NGRAPH_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/ngraph_dist)
 set(NGRAPH_CMAKE_ARGS "-DNGRAPH_INSTALL_PREFIX=${NGRAPH_INSTALL_PREFIX}")
 if (DEFINED NGRAPH_GPU_ENABLE)
@@ -40,7 +44,7 @@ set(NGRAPH_SOURCE_DIR ${CMAKE_BINARY_DIR}/ngraph)
 ExternalProject_Add(
     ngraph
     GIT_REPOSITORY "https://github.com/NervanaSystems/ngraph.git"
-    GIT_TAG "296dbd6a"
+    GIT_TAG ${NGRAPH_VERSION}
     SOURCE_DIR ${NGRAPH_SOURCE_DIR}
     CMAKE_ARGS ${NGRAPH_CMAKE_ARGS}
     )

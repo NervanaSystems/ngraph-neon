@@ -16,6 +16,12 @@
 # ******************************************************************************
 set -e
 
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+read NGRAPH_VERSION < "$SCRIPT_DIR/../../nGraph.version"
+
+echo "Building nGraph version $NGRAPH_VERSION"
+
 if [ -d build ]; then
     rm -rf build
 fi
@@ -30,15 +36,15 @@ if [ -n "$DISTRIB_ID" ]; then
     if [ "$DISTRIB_ID" == "Ubuntu" ]; then
         ubuntu_ver=$(lsb_release -rs)
         if [ "$ubuntu_ver" == "16.04" ]; then
-            mkdir build && cd build && cmake -DNGRAPH_USE_PREBUILT_LLVM=TRUE .. && make -j$lcores
+            mkdir build && cd build && cmake -DNGRAPH_VERSION=$NGRAPH_VERSION -DNGRAPH_USE_PREBUILT_LLVM=TRUE .. && make -j$lcores
         else
-            mkdir build && cd build && cmake .. && make -j$lcores
+            mkdir build && cd build && cmake -DNGRAPH_VERSION=$NGRAPH_VERSION .. && make -j$lcores
         fi
     else # Linux but not Ubuntu
-        mkdir build && cd build && cmake .. && make -j$lcores
+        mkdir build && cd build && cmake -DNGRAPH_VERSION=$NGRAPH_VERSION .. && make -j$lcores
     fi
 else # Not Linux
-    mkdir build && cd build && cmake .. && make -j$lcores
+    mkdir build && cd build && cmake -DNGRAPH_VERSION=$NGRAPH_VERSION .. && make -j$lcores
 fi
 
 virtualenv .venv2 && . .venv2/bin/activate && pip install -U pip wheel setuptools && python setup.py bdist_wheel && deactivate && mv dist/*.whl ../../..
