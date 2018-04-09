@@ -2,16 +2,19 @@
 
 
 ngraph_cpu_wheels.sh is a helper script that builds nGraph python wrapper wheels with CPU backend enabled.
+The script is position independent and can be called from anywhere.
+`build` directory will be created under the current directory.
+The wheel will the placed in the neon source root directory.
 
 ### Usage
 
-For example, on Ubuntu 16.04
+For example, on Ubuntu 16.04 to get neon and create a nGraph wrapper build directory parallel to neon, do
 
 ```
 git clone https://github.com/NervanaSystems/ngraph-neon.git
-pushd contrib/ngraph
-ngraph_cpu_wheels.sh
-popd ../../
+pushd ..
+./ngraph-neon/contrib/ngraph/ngraph_cpu_wheels.sh
+popd
 ls
 ```
 
