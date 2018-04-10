@@ -22,7 +22,7 @@ rng = RandomTensorGenerator(0, np.float32)
 
 pytestmark = pytest.mark.transformer_dependent
 
-
+@pytest.config.nggpu_skip(reason="Not implemented")
 def test_flatten_deriv_simplified():
     """
     Test derivative with dot and flatten

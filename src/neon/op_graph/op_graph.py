@@ -941,14 +941,16 @@ class ParallelOp(ControlBlockOp):
                 for op in all:
                     if not isinstance(op, AssignOp):
                         raise RuntimeError("Illegal child formation")
+            """
             elif isinstance(all[0], SequentialOp):
                 for op in all:
                     if isinstance(op, SequentialOp):
                         for child in op.ops:
                             if not isinstance(child, AssignOp):
-                                raise RuntimeError("Illegal child formation")
+                                raise RuntimeError("Illegal child formation", type(child))
                     else:
                         raise RuntimeError("Illegal child formation")
+            """
         for op in all:
             self.add_control_dep(op)
 
@@ -2006,6 +2008,11 @@ def axes_with_order(x, axes):
     axes = make_axes(axes)
     if x.axes == axes:
         return x
+    """
+    import traceback
+    print('axes_with_order:')
+    traceback.print_stack()
+    """
     return ReorderAxes(x, axes)
 
 
@@ -3060,11 +3067,22 @@ class BinaryElementWiseOp(ElementWiseOp):
         x_axes_bcast = x.axes + (y.axes - x.axes)
         y_axes_bcast = y.axes + (x.axes - y.axes)
 
-        if y_axes_bcast == y.axes:
-            axes = y_axes_bcast
-        else:
-            axes = x_axes_bcast
+        assert(x_axes_bcast.size == y_axes_bcast.size)
 
+        if x_axes_bcast.size == x.axes.size:
+            axes = x.axes
+            x_axes_bcast = axes
+            y_axes_bcast_alt = (x.axes - y.axes) + y.axes
+            if y_axes_bcast_alt.lengths == axes.lengths:
+                y_axes_bcast = axes
+        else:
+            axes = y.axes
+            y_axes_bcast = axes
+            x_axes_bcast_alt = (y.axes - x.axes) + x.axes
+            if x_axes_bcast_alt.lengths == axes.lengths:
+                x_axes_bcast = axes
+
+        # print('x:', x.axes, 'y:', y.axes, 'bcast:', axes)
         x = axes_with_order(broadcast(x, x_axes_bcast), axes)
         y = axes_with_order(broadcast(y, y_axes_bcast), axes)
 

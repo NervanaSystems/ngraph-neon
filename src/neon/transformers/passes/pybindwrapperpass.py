@@ -19,8 +19,8 @@ from neon.transformers.passes.passes import PeepholeGraphPass
 from neon.util.generics import generic_method
 from neon.op_graph.op_graph import Op, Add, AssignableTensorOp, AssignOp, AxesCastOp, \
     BroadcastOp, ConcatOp, ContiguousOp, Divide, DotOp, Equal, ExpandDims, ExpOp, Flatten, \
-    Greater, GreaterEqual, Less, LessEqual, LogOp, MapRolesOp, Max, Maximum, Minimum, \
-    Multiply, NegativeOp, NotEqual, OneHotOp, ParallelOp, Power, Prod, ReciprocalOp, \
+    FloorDivide, Greater, GreaterEqual, Less, LessEqual, LogOp, MapRolesOp, Max, Maximum, \
+    Minimum, Multiply, NegativeOp, NotEqual, OneHotOp, ParallelOp, Power, Prod, ReciprocalOp, \
     ReductionOp, ReplaceSliceOp, ReorderAxes, RoleCastOp, RngOp, SequentialOp, SqrtOp, SquareOp, \
     Subtract, Sum, TanhOp, TensorSliceOp, TensorSizeOp, TensorValueOp, Unflatten
 from neon.op_graph.batchnorm import BatchnormCommonOp, BatchnormBpropCommonOp, \
@@ -39,6 +39,7 @@ from ngraph.impl import NodeVector
 from ngraph.impl import Shape
 from ngraph.impl import Strides
 from ngraph.impl import Type
+from ngraph.impl.op import Add as PyngAdd
 from ngraph.impl.op import AvgPool as PyngAvgPool
 from ngraph.impl.op import AvgPoolBackprop as PyngAvgPoolBackprop
 from ngraph.impl.op import BatchNorm as PyngBatchNorm
@@ -50,9 +51,12 @@ from ngraph.impl.op import Convert as PyngConvert
 from ngraph.impl.op import Convolution as PyngConvolution
 from ngraph.impl.op import ConvolutionBackpropData as PyngConvolutionBackpropData
 from ngraph.impl.op import ConvolutionBackpropFilters as PyngConvolutionBackpropFilters
+from ngraph.impl.op import Divide as PyngDivide
 from ngraph.impl.op import Dot as PyngDot
+from ngraph.impl.op import Divide as PyngDivide
 from ngraph.impl.op import Equal as PyngEqual
 from ngraph.impl.op import Exp as PyngExp
+from ngraph.impl.op import Floor as PyngFloor
 from ngraph.impl.op import GetOutputElement as PyngGetOutputElement
 from ngraph.impl.op import Greater as PyngGreater
 from ngraph.impl.op import GreaterEq as PyngGreaterEq
@@ -64,6 +68,7 @@ from ngraph.impl.op import Maximum as PyngMaximum
 from ngraph.impl.op import MaxPool as PyngMaxPool
 from ngraph.impl.op import MaxPoolBackprop as PyngMaxPoolBackprop
 from ngraph.impl.op import Minimum as PyngMinimum
+from ngraph.impl.op import Multiply as PyngMultiply
 from ngraph.impl.op import Negative as PyngNegative
 from ngraph.impl.op import NotEqual as PyngNotEqual
 from ngraph.impl.op import OneHot as PyngOneHot
@@ -76,6 +81,7 @@ from ngraph.impl.op import ReplaceSlice as PyngReplaceSlice
 from ngraph.impl.op import Reshape as PyngReshape
 from ngraph.impl.op import Slice as PyngSlice
 from ngraph.impl.op import Sqrt as PyngSqrt
+from ngraph.impl.op import Subtract as PyngSubtract
 from ngraph.impl.op import Sum as PyngSum
 from ngraph.impl.op import Tanh as PyngTanh
 
@@ -144,8 +150,13 @@ class PybindScopePass:
                 for child in children:
                     nodes_to_visit.append((child, childscope))
 
+        root_index = 0
+        results_set = set()
         for op in results:
-            visit_pre_order('root', op)
+            if op not in results_set:
+                results_set.add(op)
+                visit_pre_order('/root' + str(root_index), op)
+                root_index += 1
 
         # for key, val in self.computation.scopemark.items():
         #    print(key.name, val)
@@ -167,6 +178,9 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         super(PybindWrapperGenerator, self).__init__(**kwargs)
         self.transformer = transformer
         self.computation = computation
+        self.constant_pool = dict()
+        self.broadcast_pool = dict()
+        self.negative_pool = dict()
 
     def np_reduction_axis(self, op):
         """
@@ -224,17 +238,34 @@ class PybindWrapperGenerator(PeepholeGraphPass):
 
         return reshape_axis_order
 
+    def get_ngraph_constant(self, ntype, axes_lengths, vals):
+        """
+        Use constant pool for common cases.
+        """
+        dim = len(axes_lengths)
+        if dim == 0:
+            if ntype == Type.f32:
+                const_pool = self.constant_pool
+                if vals[0] in const_pool:
+                    return const_pool[vals[0]]
+                else:
+                    ret_val = Constant(ntype, Shape(axes_lengths), vals)
+                    const_pool[vals[0]] = ret_val
+                    return ret_val
+
+        return Constant(ntype, Shape(axes_lengths), vals)
+
     def binary_op(self, op, x, y, is_logical=False):
 
         def pyng_binary_op(op, x, y):
             if isinstance(op, Add):
-                return x + y
+                return PyngAdd(x, y)
             elif isinstance(op, Divide):
-                return x / y
+                return PyngDivide(x, y)
             elif isinstance(op, Multiply):
-                return x * y
+                return PyngMultiply(x, y)
             elif isinstance(op, Subtract):
-                return x - y
+                return PyngSubtract(x, y)
             elif isinstance(op, Greater):
                 return PyngGreater(x, y)
             elif isinstance(op, GreaterEqual):
@@ -273,8 +304,6 @@ class PybindWrapperGenerator(PeepholeGraphPass):
                 return x * x
             elif isinstance(op, SqrtOp):
                 return PyngSqrt(x)
-            elif isinstance(op, NegativeOp):
-                return PyngNegative(x)
             elif isinstance(op, TanhOp):
                 return PyngTanh(x)
 
@@ -323,9 +352,22 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             if axis not in broadcast_args_axes:
                 axis_set.add(pos)
 
+        # Optimize for broadcasting constant and parameters
+        if isinstance(op_element_type, (Constant, Parameter)):
+            pool_key = (op_element_type.name, op.axes.lengths)
+            if pool_key in self.broadcast_pool:
+                ngraph_broadcast = self.broadcast_pool[pool_key]
+            else:
+                ngraph_broadcast = PyngBroadcast(op_element_type,
+                                                 Shape(list(op.axes.lengths)),
+                                                 AxisSet(axis_set))
+                self.broadcast_pool[pool_key] = ngraph_broadcast
+        else:
+            ngraph_broadcast = PyngBroadcast(op_element_type,
+                                             Shape(list(op.axes.lengths)),
+                                             AxisSet(axis_set))
         self.computation.register_cpp_op(
-            op, PyngBroadcast(op_element_type, Shape(list(op.axes.lengths)),
-                              AxisSet(axis_set)))
+            op, ngraph_broadcast)
 
     def flatten(self, container):
         if isinstance(container, (list, tuple)):
@@ -345,9 +387,9 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         if not self.computation.has_cpp_op(op):
             if tensor.is_constant:
                 # FIXME: make tensors based on data type
-                constant_op = Constant(Type.f32,
-                                       Shape(list(tensor.axes.lengths)),
-                                       list(self.flatten(tensor.const.tolist())))
+                constant_op = self.get_ngraph_constant(Type.f32,
+                                                       list(tensor.axes.lengths),
+                                                       list(self.flatten(tensor.const.tolist())))
                 self.computation.register_cpp_op(tensor, constant_op)
             else:
                 op_element_type = Parameter(Type.f32, Shape(list(tensor.axes.lengths)))
@@ -361,9 +403,9 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         if not self.computation.has_cpp_op(op):
             if op.is_constant:
                 # FIXME: make tensors based on data type
-                constant_op = Constant(Type.f32,
-                                       Shape(list(op.axes.lengths)),
-                                       list(self.flatten(op.const.tolist())))
+                constant_op = self.get_ngraph_constant(Type.f32,
+                                                       list(op.axes.lengths),
+                                                       list(self.flatten(op.const.tolist())))
 
                 self.computation.register_cpp_op(op, constant_op)
             else:
@@ -537,9 +579,19 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             one_hot_axis)
         self.computation.register_cpp_op(op, ngraph_cpp_onehot_op)
 
+    # optimize for '- variable`
     @visit.on_type(NegativeOp)
     def visit(self, op, x):
-        self.unary_op(op, x)
+        self.computation.set_op_rank(op)
+        if isinstance(x.tensor, AssignableTensorOp):
+            if x.tensor.name in self.negative_pool:
+                ngraph_cpp_op = self.negative_pool[x.tensor.name]
+            else:
+                ngraph_cpp_op = PyngNegative(self.computation.lookup_cpp_op(x))
+                self.negative_pool[x.tensor.name] = ngraph_cpp_op
+        else:
+            ngraph_cpp_op = PyngNegative(self.computation.lookup_cpp_op(x))
+        self.computation.register_cpp_op(op, ngraph_cpp_op)
 
     @visit.on_type(TanhOp)
     def visit(self, op, x):
@@ -562,8 +614,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         self.computation.set_op_rank(op)
         input_axes = list(input.axes.lengths)
         constant_op = Constant(Type.f32, Shape(input_axes), [1])
-        ngraph_cpp_reciprocal_op = constant_op \
-            / self.computation.lookup_cpp_op(input)
+        ngraph_cpp_reciprocal_op = PyngDivide(constant_op,
+                                              self.computation.lookup_cpp_op(input))
         self.computation.register_cpp_op(op, ngraph_cpp_reciprocal_op)
 
     @visit.on_type(TensorSizeOp)
@@ -572,8 +624,8 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         # TODO - is treating TensorSizeOp as constants, okay?
         # Construct constant list with number of elements = reduction axes size
         constant_tensor = [op.reduction_axes.size]
-        constant_op = Constant(Type.f32,
-                               Shape([]), constant_tensor)
+        constant_op = self.get_ngraph_constant(Type.f32,
+                                          [], constant_tensor)
         self.computation.register_cpp_op(op, constant_op)
 
     @visit.on_type(MapRolesOp)
@@ -1150,3 +1202,12 @@ class PybindWrapperGenerator(PeepholeGraphPass):
         op_element_type = Parameter(Type.f32, Shape(list(op.axes.lengths)))
         self.computation.register_cpp_op(op, op_element_type)
         self.computation.neon_randomvariable_list.append(op)
+
+    @visit.on_type(FloorDivide)
+    def visit(self, op, x, y):
+        self.computation.set_op_rank(op)
+        ngraph_x = self.computation.lookup_cpp_op(x)
+        ngraph_y = self.computation.lookup_cpp_op(y)
+        ngraph_divide = PyngDivide(ngraph_x, ngraph_y)
+        ngraph_floordivide = PyngFloor(ngraph_divide)
+        self.computation.register_cpp_op(op, ngraph_floordivide)

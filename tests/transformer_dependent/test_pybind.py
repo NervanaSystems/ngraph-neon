@@ -168,7 +168,7 @@ def test_dot():
         # elementwise multiplication between scalar and vector
         assert np.allclose(_dot_val, _dot_val_ref)
 
-
+@pytest.config.nggpu_skip(reason="Not implemented")
 def test_prod():
 
     H = ng.make_axis(length=2)
@@ -221,6 +221,7 @@ def test_sum():
         assert np.array_equal(_sum_val, 10)
 
 
+@pytest.config.nggpu_skip(reason="Not implemented")
 def test_tensor_dot_tensor():
     """TODO."""
     C = ng.make_axis().named('C')
@@ -307,6 +308,8 @@ def test_tensor_dot_tensor():
     (ng.LessEqual, np.less_equal),
     (ng.power, np.power)
 ])
+
+@pytest.config.nggpu_skip(reason="Not implemented")
 def test_binary_op(ng_func, np_func):
     H = ng.make_axis().named('H')
     W = ng.make_axis().named('W')
