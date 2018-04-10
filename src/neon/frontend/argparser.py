@@ -108,6 +108,11 @@ class NeonArgparser(configargparse.ArgumentParser):
         # invert no_progress_bar meaning and store in args.progress_bar
         args.progress_bar = not args.no_progress_bar
 
+        d = vars(args)
+        print("Neon CommandLine Options")
+        for options in d:
+            if d[options] is not None:
+                print('    ', options, ':', d[options])
         return args
 
     def make_and_set_transformer_factory(self, args):
