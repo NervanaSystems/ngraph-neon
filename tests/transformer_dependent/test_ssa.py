@@ -75,6 +75,7 @@ def test_modify_state():
         assert np.allclose(x_np + x_np, x_val)
 
 
+@pytest.config.nggpu_skip(reason="Not implemented")
 def test_concatenate():
     with ExecutorFactory() as ex:
         A = ng.make_axis(name='A', length=3)
@@ -90,7 +91,7 @@ def test_concatenate():
         j_val = f()
         ng.testing.assert_allclose(j_val, j_np)
 
-
+@pytest.config.nggpu_skip(reason="Not implemented")
 def test_specific_slice_deriv():
     #
     with ExecutorFactory() as ex:
@@ -113,6 +114,7 @@ def test_specific_slice_deriv():
                 ng.testing.assert_allclose(dslice_dx_val, dslice_dx_np)
 
 
+@pytest.config.nggpu_skip(reason="Not implemented")
 def test_slice_deriv():
     C = ng.make_axis(length=2)
     D = ng.make_axis(length=3)
