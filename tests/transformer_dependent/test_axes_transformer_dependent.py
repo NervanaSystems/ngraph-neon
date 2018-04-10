@@ -70,7 +70,7 @@ def test_idempotent_axes_b():
         assert cost_comp() == 6.0
         assert np.array_equal(grad_comp(), np.ones((3, 1)) * 2.)
 
-
+@pytest.config.nggpu_skip(reason="Not implemented")
 def test_idempotent_axes_c():
     """
     Test test axes transformations with autodiff, case c, with broadcast,

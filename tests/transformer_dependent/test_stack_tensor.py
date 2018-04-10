@@ -26,6 +26,7 @@ rtol = atol = 1e-2
 
 # Flex - Allowed to fail until PR2 - ref: 6714cc5
 @pytest.mark.transformer_dependent
+@pytest.config.nggpu_skip(reason="Not implemented")
 def test_stack():
     W = ng.make_axis(length=4)
     H = ng.make_axis(length=5)

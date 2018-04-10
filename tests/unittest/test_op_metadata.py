@@ -13,30 +13,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ******************************************************************************
-
-from neon.testing import check_derivative, RandomTensorGenerator
-import numpy as np
-import pytest
 import neon as ng
-rng = RandomTensorGenerator(0, np.float32)
-
-pytestmark = pytest.mark.transformer_dependent
-
-@pytest.config.nggpu_skip(reason="Not implemented")
-def test_flatten_deriv_simplified():
-    """
-    Test derivative with dot and flatten
-    """
-    ax_N = ng.make_axis(length=3)
-    ax_Y = ng.make_axis(length=2)
-
-    x = ng.placeholder(ng.make_axes([ax_N]))
-    w = ng.constant([5, 2], axes=ng.make_axes([ax_Y]))
-    logits = ng.dot(x, w)
-    cost = ng.sum(logits, reduction_axes=logits.axes)
-
-    delta = 0.001
-    u = rng.uniform(.1, 5.0, x.axes)
-    check_derivative(cost, x, delta, u, atol=1e-2, rtol=1e-2)
+from neon.util.names import NameableValue
 
 
+class Dummy(NameableValue):
+    metadata = {"layer_type": "convolution"}
+
+    @ng.with_op_metadata
+    def configure(self, input_op):
+        return ng.exp(input_op)
+
+
+def test_metadata():
+    n = ng.Op(metadata=dict(something=3))
+    m = ng.Op()
+    assert len(m.metadata) == 0
+    assert n.metadata['something'] == 3
+
+
+def test_metadata_capture():
+    layer = Dummy()
+    x = ng.constant(2)
+    ret = layer.configure(x)
+    assert ret.metadata['layer_type'] == 'convolution'
