@@ -3067,20 +3067,20 @@ class BinaryElementWiseOp(ElementWiseOp):
         x_axes_bcast = x.axes + (y.axes - x.axes)
         y_axes_bcast = y.axes + (x.axes - y.axes)
 
-        assert(x_axes_bcast.size == y_axes_bcast.size)
-
-        if x_axes_bcast.size == x.axes.size:
+        if x_axes_bcast.is_equal_set(x.axes):
             axes = x.axes
             x_axes_bcast = axes
             y_axes_bcast_alt = (x.axes - y.axes) + y.axes
             if y_axes_bcast_alt.lengths == axes.lengths:
                 y_axes_bcast = axes
-        else:
+        elif y_axes_bcast.is_equal_set(y.axes):
             axes = y.axes
             y_axes_bcast = axes
             x_axes_bcast_alt = (y.axes - x.axes) + x.axes
             if x_axes_bcast_alt.lengths == axes.lengths:
                 x_axes_bcast = axes
+        else:
+            axes = x_axes_bcast
 
         # print('x:', x.axes, 'y:', y.axes, 'bcast:', axes)
         x = axes_with_order(broadcast(x, x_axes_bcast), axes)
