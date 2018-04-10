@@ -8,7 +8,7 @@ import neon as ng
 
 pytestmark = pytest.mark.transformer_dependent
 
-
+@pytest.config.nggpu_skip(reason="Not implemented")
 def test_dimshuffle_op():
     A = ng.make_axis().named('A')
     B = ng.make_axis().named('B')
