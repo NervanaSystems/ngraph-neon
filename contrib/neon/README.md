@@ -20,8 +20,8 @@ ls
 
 Then you will see two files,(X.Y.Z is a version number)
 ```
-ngraph-neon-X.Y.Z-cp27-cp27mu-linux_x86_64.whl
-ngraph-neon-X.Y.Z-cp35-cp35m-linux_x86_64.whl
+ngraph_neon-X.Y.Z-cp27-cp27mu-linux_x86_64.whl
+ngraph_neon-X.Y.Z-cp35-cp35m-linux_x86_64.whl
 ```
 
 For python 2.7
@@ -30,7 +30,7 @@ Create and activate virtualenv and Install neon
 ```
 cd ..
 virtualenv .neon_py2 && . .neon_py2/bin/activate
-pip install build/ngraph-neon-X.Y.Z-cp27-cp27mu-linux_x86_64.whl
+pip install build/ngraph_neon-X.Y.Z-cp27-cp27mu-linux_x86_64.whl
 ```
 or
 
@@ -40,5 +40,5 @@ Create and activate virtualenv and Install neon
 ```
 cd ..
 python3 -m venv .neon_py3 && . .neon_py3/bin/activate
-pip install build/ngraph-neon-X.Y.Z-cp35-cp35m-linux_x86_64.whl
+pip install build/ngraph_neon-X.Y.Z-cp35-cp35m-linux_x86_64.whl
 ```

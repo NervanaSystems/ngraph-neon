@@ -94,7 +94,7 @@ NGRAPH_CPP_INCLUDE_DIR = '${NGRAPH_INSTALL_PREFIX}' + '/include'
 NGRAPH_CPP_LIBRARY_DIR = '${NGRAPH_INSTALL_PREFIX}' + '/lib'
 
 pyngraph_prefix = PYNGRAPH_SOURCE_DIR + '/'
-neon_src_prefix = '${NEON_ROOT}/src/'
+neon_src_prefix = os.path.normpath('${NEON_ROOT}) + '/src/'
 sources = []
 packages = []
 package_dir = dict()
