@@ -14,6 +14,7 @@
 # limitations under the License.
 # ******************************************************************************
 
+from __future__ import print_function
 import collections
 import numpy as np
 from os.path import commonprefix, basename
@@ -27,7 +28,7 @@ from orderedset import OrderedSet
 from neon.transformers.passes.pybindwrapperpass \
     import PybindWrapperGenerator, PybindScopePass
 from ngraph.impl import util
-from ngraph.impl import Type, Function, NodeVector, Shape
+from ngraph.impl import Type, Function, NodeVector, Shape, serialize
 from ngraph.impl.runtime import Manager
 from ngraph.impl.op import Parameter
 
@@ -382,6 +383,10 @@ class PybindComputation(Computation):
             self.result_nodes_list + self.update_nodes_list),
             self.parameter_list + self.variable_list + self.randomvariable_list,
             self.transformer.get_function_name())
+
+        # generate the serialzied graph
+        f1 = file(self.transformer.get_function_name() + 'serialized_graph.txt', 'w+')
+        print('Serialized graph is :', serialize(self.function, 0), file=f1)
 
     def build_callframe(self):
         """
