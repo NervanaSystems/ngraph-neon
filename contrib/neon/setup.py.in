@@ -110,7 +110,7 @@ for root, dirs, files in os.walk(pyngraph_prefix):
 
 for root, dirs, files in os.walk(neon_src_prefix):
     if '__init__.py' in files:
-        package_name = root[len(pyngraph_prefix):].replace('/', '.')
+        package_name = root[len(neon_src_prefix):].replace('/', '.')
         packages += [package_name]
         package_dir[package_name] = root
 
