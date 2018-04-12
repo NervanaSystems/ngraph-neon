@@ -113,8 +113,8 @@ else:
 
 # compute the last hidden/cell states as decoder's initial states
 rec_axis = enc_h_out.axes.recurrent_axis()
-enc_last_h_out = ng.slice_along_axis(enc_h_out, axis=rec_axis, idx=-1)
-enc_last_c_out = ng.slice_along_axis(enc_c_out, axis=rec_axis, idx=-1)
+enc_last_h_out = ng.slice_along_axis(enc_h_out, axis=rec_axis, idx=rec_axis.length-1)
+enc_last_c_out = ng.slice_along_axis(enc_c_out, axis=rec_axis, idx=rec_axis.length-1)
 
 dec_h_out = dec(dec_input, init_state=(enc_last_h_out, enc_last_c_out), return_cell_state=False)
 

@@ -4,5 +4,5 @@
 
 ## How to run
 ```
-$ python ptr-net.py -b gpu
+$ python ptr-net.py
 ```
