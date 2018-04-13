@@ -162,7 +162,7 @@ def test_sequential_side(M):
         assert np.allclose(x1_final_val, x1_np)
         assert np.allclose(x2_final_val, x2_np)
 
-
+@pytest.config.nggpu_skip(reason="Not implemented")
 def test_concatenate(concatenate_variables):
     x_list, np_list, pos = concatenate_variables
 
@@ -177,6 +177,7 @@ def test_concatenate(concatenate_variables):
         ng.testing.assert_allclose(e_d.copy(), np.ones(x_list[0].axes.lengths))
 
 
+@pytest.config.nggpu_skip(reason="Not implemented")
 def test_concat_different_axis_lengths():
     ax1 = ng.make_axis(length=3, name="concat")
     ax2 = ng.make_axis(length=2, name="concat")
@@ -216,6 +217,7 @@ def test_initial_value():
     ng.testing.assert_allclose(result, np.asarray(w, dtype=np.float32))
 
 
+@pytest.config.nggpu_skip(reason="Not implemented")
 def test_multiple_computations():
     """
     Create multiple computations for the same value.

@@ -39,7 +39,7 @@ def input_axes(request):
         ng.make_axis(length=request.param[3])
     ])
 
-
+@pytest.config.nggpu_skip(reason="Not implemented")
 def test_exit_condition(transformer_factory):
     bsz = 16
     class_num = 10
