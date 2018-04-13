@@ -29,7 +29,7 @@ import os
 import distutils.ccompiler
 
 __version__ = '${NEON_VERSION}'
-__ngraph_version__ = '0.2.1'
+__ngraph_version__ = '${NGRAPH_VERSION}'[1:]
 
 
 # Parallel build from http://stackoverflow.com/questions/11013851/speeding-up-build-process-with-distutils
