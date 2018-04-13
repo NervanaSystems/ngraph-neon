@@ -321,6 +321,11 @@ class ConvBase(Layer):
             - (tuple): specifies left and right padding values individually
             - (str): one of "same", "valid", "full" or "causal"
         dilation (dict): dilation specification -- can contain keys 'D', 'H', 'W' - defaults to 1
+        weight_norm (bool) :
+            Whether or not to apply weight normalization. Weight normalization re-parameterizes
+            the weight vector W of the convolution layer as product of the amplitude and direction.
+            W = g * v / ||v||
+            Gradient is calculated and applied to g and v.
 
     Attributes:
         W (TensorOp): The convolutional filters. Axes are ordered as:
@@ -340,7 +345,8 @@ class ConvBase(Layer):
             width: The width axis with default name "W".
     """
 
-    def __init__(self, filter_shape, init, strides, padding, dilation, **kwargs):
+    def __init__(self, filter_shape, init, strides, padding, dilation, weight_norm=False, eps=1e-3,
+                 **kwargs):
         super(ConvBase, self).__init__(**kwargs)
 
         def check_dict(obj, name, keys=None):
@@ -382,6 +388,11 @@ class ConvBase(Layer):
         self.dilation.update(dilation)
 
         self.W = None
+        self.weight_norm = weight_norm
+        if self.weight_norm:
+            self.g = None
+            self.v = None
+        self.eps = eps
 
     def _filter_axes(self, channel_axes, spatial_axes):
         """
@@ -480,9 +491,21 @@ class ConvBase(Layer):
         ])
 
         if not self.initialized:
-            self.W = ng.variable(axes=filter_axes,
+            if not self.weight_norm:
+                self.W = ng.variable(axes=filter_axes,
                                  initial_value=self.init,
                                  metadata={"label": LABELS["weight"]}).named("W")
+            else:
+                self.v = ng.variable(axes=filter_axes,
+                                     initial_value=self.init,
+                                     metadata={"label": LABELS["weight"]}).named("v")
+                out_axes = ng.make_axes([filter_axes.get_by_names("K__NG_SHADOW")])
+                v_norm = ng.mean(ng.square(self.v), out_axes=out_axes)
+                self.g = ng.variable(axes=out_axes,
+                                     initial_value=self.init,
+                                     metadata={"label": LABELS["weight"]}).named("g")
+                self.W = self.g * self.v * ng.reciprocal(ng.sqrt(v_norm + self.eps))
+
         else:
             if filter_axes != self.W.axes:
                 raise ValueError((
@@ -599,7 +622,7 @@ class DeconvBase(ConvBase):
                                 axes=output_axes)
 
 
-def make_conv(filter_shape, init, strides, padding, dilation, deconv=False,
+def make_conv(filter_shape, init, strides, padding, dilation, deconv=False, weight_norm=False,
               **kwargs):
 
     # FixMe: filter_shape does not need to be adjusted to DHWK
@@ -624,7 +647,8 @@ def make_conv(filter_shape, init, strides, padding, dilation, deconv=False,
     if deconv:
         return DeconvBase(filter_shape, init, strides, padding, dilation, **kwargs)
     else:
-        return ConvBase(filter_shape, init, strides, padding, dilation, **kwargs)
+        return ConvBase(filter_shape, init, strides, padding, dilation, weight_norm=weight_norm,
+                        **kwargs)
 
 
 class Activation(Layer):
@@ -1000,6 +1024,11 @@ class Convolution(SubGraph):
             normalization contains its own bias, so if True, bias_init should not be supplied.
             If set to True, initializes a BatchNorm layer with default parameters
             Alternatively, you can pass in an initialized BatchNorm layer with desired parameters
+        weight_norm (bool) :
+            Whether or not to apply weight normalization. Weight normalization re-parameterizes
+            the weight vector W of the convolution layer as product of the amplitude and direction.
+            W = g * v / ||v||
+            Gradient is calculated and applied to g and v.
 
     Attributes:
         conv (Layer): The `ConvBase` layer that performs the convolution
@@ -1044,7 +1073,7 @@ class Convolution(SubGraph):
     """
 
     def __init__(self, filter_shape, filter_init, strides=1, padding=0, dilation=1, bias_init=None,
-                 activation=None, batch_norm=False, **kwargs):
+                 activation=None, batch_norm=False, weight_norm=False, **kwargs):
         super(Convolution, self).__init__(**kwargs)
         self._make_conv_layer(filter_shape, filter_init, strides, padding, dilation, **kwargs)
 
@@ -1061,10 +1090,12 @@ class Convolution(SubGraph):
 
         self.bias = Bias(init=bias_init) if bias_init is not None else None
         self.activation = Activation(transform=activation)
+        self.weight_norm = weight_norm
 
-    def _make_conv_layer(self, filter_shape, filter_init, strides, padding, dilation, **kwargs):
+    def _make_conv_layer(self, filter_shape, filter_init, strides, padding, dilation,
+                         weight_norm=False, **kwargs):
         self.conv = make_conv(filter_shape, filter_init, strides, padding, dilation,
-                              deconv=False, **kwargs)
+                              deconv=False, weight_norm=weight_norm, **kwargs)
 
     @SubGraph.scope_op_creation
     def __call__(self, in_obj, **kwargs):
@@ -1322,6 +1353,39 @@ class Dropout(Layer):
         else:
             in_axes = in_obj.axes.sample_axes()
             self.mask = ng.uniform(axes=in_axes, low=0.0, high=1.0) <= self.keep
+            return self.mask * in_obj
+
+
+class Dropout2D(Layer):
+    """
+    Layer for stochastically zero-out entire channels to prevent overfitting
+    Arguments:
+        keep (float):  Number between 0 and 1 that indicates probability of any particular
+                       activation being kept.  Defaults to 0.5.
+    Example:
+        .. code-block:: python
+        # Place a Dropout layer between two conv layers
+        layers = [
+            Convolution(nout=2048, activation=Rectlin()),
+            Dropout2D(keep=0.6), # zeroes about 820 channels
+            Convolution(nout=2048, activation=Rectlin())
+        ]
+    """
+    def __init__(self, keep=0.5, **kwargs):
+        super(Dropout2D, self).__init__(**kwargs)
+        self.keep = keep
+        self.mask = None
+
+    @SubGraph.scope_op_creation
+    def __call__(self, in_obj, **kwargs):
+        if Layer.inference_mode:
+            return self.keep * in_obj
+        else:
+            if self.mask is None:
+                in_axes = in_obj.axes.sample_axes()
+                channel_axes = ng.make_axes([in_axes.channel_axis()])
+                self.mask = ng.persistent_tensor(axes=channel_axes).named('channel_mask')
+            self.mask = ng.uniform(self.mask, low=0.0, high=1.0) <= self.keep
             return self.mask * in_obj
 
 

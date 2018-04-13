@@ -74,9 +74,10 @@ def spatial_onehot(input_size, width, batch_size):
 
 
 @pytest.mark.xfail(reason='1d conv not supported')
-def test_causal_convolution(conv1d_placeholder, spatial_onehot, output_size, width):
+@pytest.mark.parametrize("weight_norm", (False, True))
+def test_causal_convolution(conv1d_placeholder, spatial_onehot, output_size, width, weight_norm):
     """ Test that causal convolutions only operate on leftward inputs"""
-    conv_layer = Convolution((3, output_size), lambda x: 1, padding="causal")
+    conv_layer = Convolution((3, output_size), lambda x: 1, padding="causal", weight_norm=weight_norm)
     output = conv_layer(conv1d_placeholder)
     output_width = output.axes.find_by_name("W")[0].length
     assert output_width == width, "Causal convolution output width != " \
@@ -89,9 +90,10 @@ def test_causal_convolution(conv1d_placeholder, spatial_onehot, output_size, wid
 
 @pytest.mark.xfail(reason='1d conv not supported')
 @pytest.mark.parametrize("stride", (1, 3))
-def test_same_convolution(conv1d_placeholder, spatial_onehot, output_size, width, stride):
+@pytest.mark.parametrize("weight_norm", (False, True))
+def test_same_convolution(conv1d_placeholder, spatial_onehot, output_size, width, stride, weight_norm):
     """ Test that 'same' always results in out_size = np.ceil(in_size / stride) """
-    conv_layer = Convolution((3, output_size), lambda x: 1, strides=stride, padding="same")
+    conv_layer = Convolution((3, output_size), lambda x: 1, strides=stride, padding="same", weight_norm=weight_norm)
     output = conv_layer(conv1d_placeholder)
     output_width = output.axes.find_by_name("W")[0].length
     assert output_width == np.ceil(width / float(stride)), ("Same convolution output width != "
@@ -155,7 +157,8 @@ def test_alternate_channel_axes(conv1d_placeholder, output_size, channel_axis):
 
 @pytest.mark.xfail(reason='resolution issue')
 @pytest.mark.parametrize('dilation', [1, 2, 3])
-def test_dilated_conv(dilation):
+@pytest.mark.parametrize("weight_norm", (False, True))
+def test_dilated_conv(dilation, weight_norm):
     """Test that the dilated convolution layer output matches expected. This test compares
     the maximum output value to an expected max output value. The expected value is computed
     based on the dilation parameter. The test also checks that the output size matches the
@@ -169,7 +172,7 @@ def test_dilated_conv(dilation):
     image_channels = 3
     model = Sequential([Convolution((conv_size, conv_size, N_filters),
                                     filter_init=ConstantInit(val=init_val),
-                                    padding=pad, dilation=dilation)])
+                                    padding=pad, dilation=dilation, weight_norm=weight_norm)])
     X = np.ones(shape=(batch_size, 3, image_size, image_size))  # Create dummy image
     data = {'image': X, 'iteration': 1}
     data_size = OrderedDict([('N', batch_size), ('C', 3), ('H', image_size), ('W', image_size)])
@@ -207,8 +210,9 @@ def test_dilated_conv(dilation):
 @pytest.mark.parametrize('time_steps', [5])
 @pytest.mark.parametrize('feature_dimension', [4])
 @pytest.mark.parametrize('batch_size', [2])
+@pytest.mark.parametrize("weight_norm", (False, True))
 def test_conv1d(transformer_factory, filter_width, num_filters, strides, padding,
-                time_steps, feature_dimension, batch_size):
+                time_steps, feature_dimension, batch_size, weight_norm):
 
     dilation = 1  # reference conv does not support dilation
 
@@ -224,7 +228,7 @@ def test_conv1d(transformer_factory, filter_width, num_filters, strides, padding
 
     conv1d = Convolution((filter_width, num_filters), filter_init,
                          strides=strides, padding=padding, dilation=dilation,
-                         bias_init=None, activation=Rectlin(), batch_norm=None)
+                         bias_init=None, activation=Rectlin(), batch_norm=None, weight_norm=weight_norm)
 
     result_op = conv1d(inputs, channel_axes='F', spatial_axes={'W': 'REC'})
 
