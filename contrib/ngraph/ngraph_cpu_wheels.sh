@@ -23,10 +23,6 @@ read NGRAPH_VERSION < "$NEON_ROOT/nGraph.version"
 
 echo "Building nGraph version $NGRAPH_VERSION"
 
-if [ -d build ]; then
-    rm -rf build
-fi
-
 lcores=$([[ $(uname) = 'Darwin' ]] && sysctl -n hw.logicalcpu_max || lscpu -p | egrep -v '^#' | wc -l)
 
 if [ -x "$(command -v lsb_release)" ]; then
@@ -37,18 +33,17 @@ if [ -n "$DISTRIB_ID" ]; then
     if [ "$DISTRIB_ID" == "Ubuntu" ]; then
         ubuntu_ver=$(lsb_release -rs)
         if [ "$ubuntu_ver" == "16.04" ]; then
-            mkdir build && cd build && cmake -DNGRAPH_VERSION=$NGRAPH_VERSION -DNGRAPH_USE_PREBUILT_LLVM=TRUE $SCRIPT_DIR && make -j$lcores
+            cmake -DNGRAPH_VERSION=$NGRAPH_VERSION -DNGRAPH_USE_PREBUILT_LLVM=TRUE $SCRIPT_DIR && make -j$lcores
         else
-            mkdir build && cd build && cmake -DNGRAPH_VERSION=$NGRAPH_VERSION $SCRIPT_DIR && make -j$lcores
+            cmake -DNGRAPH_VERSION=$NGRAPH_VERSION $SCRIPT_DIR && make -j$lcores
         fi
     else # Linux but not Ubuntu
-        mkdir build && cd build && cmake -DNGRAPH_VERSION=$NGRAPH_VERSION $SCRIPT_DIR && make -j$lcores
+        cmake -DNGRAPH_VERSION=$NGRAPH_VERSION $SCRIPT_DIR && make -j$lcores
     fi
 else # Not Linux
-    mkdir build && cd build && cmake -DNGRAPH_VERSION=$NGRAPH_VERSION $SCRIPT_DIR && make -j$lcores
+    cmake -DNGRAPH_VERSION=$NGRAPH_VERSION $SCRIPT_DIR && make -j$lcores
 fi
 
-virtualenv -p python2.7 .venv2 && . .venv2/bin/activate && pip install -U pip wheel setuptools && python setup.py bdist_wheel && deactivate && mv dist/*.whl $NEON_ROOT
-python3 -m venv .venv3 && . .venv3/bin/activate && pip install -U pip wheel setuptools && python setup.py bdist_wheel && deactivate && mv dist/*.whl $NEON_ROOT
-cd ..
+virtualenv -p python2.7 .venv2 && . .venv2/bin/activate && pip install -U pip wheel setuptools && python setup.py bdist_wheel && deactivate && mv dist/*.whl .
+python3 -m venv .venv3 && . .venv3/bin/activate && pip install -U pip wheel setuptools && python setup.py bdist_wheel && deactivate && mv dist/*.whl .
 
