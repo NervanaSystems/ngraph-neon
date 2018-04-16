@@ -112,7 +112,7 @@ class NeonArgparser(configargparse.ArgumentParser):
         print("Neon CommandLine Options")
         for options in d:
             if d[options] is not None:
-                print('    ', options, ':', d[options])
+                print('    ' + str(options) + ' : ' + str(d[options]))
         return args
 
     def make_and_set_transformer_factory(self, args):
