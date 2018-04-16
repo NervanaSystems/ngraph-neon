@@ -29,10 +29,6 @@ if (NOT DEFINED NGRAPH_VERSION)
     message(FATAL_ERROR "NGRAPH_VERSION is not defined")
 endif()
 
-if (NOT DEFINED NEON_VERSION)
-    message(FATAL_ERROR "NEON_VERSION is not defined")
-endif()
-
 if (NOT DEFINED NEON_ROOT)
     message(FATAL_ERROR "NEON_ROOT is not defined")
 endif()

@@ -17,12 +17,28 @@
 set -e
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-NEON_ROOT=$SCRIPT_DIR/../..
 
-read NGRAPH_VERSION < "$NEON_ROOT/nGraph.version"
-read NEON_VERSION < "$NEON_ROOT/VERSION"
+if [ -z "$1" ]; then
+    echo "Building nGraph master"
+    NGRAPH_VERSION="master"
+else
+    echo "Building nGraph version $1"
+    NGRAPH_VERSION="$1"
+fi
 
-echo "Building neon version $NEON_VERSION"
+if [ -z "$2" ]; then
+    echo "Building neon from current repo"
+else
+    echo "Building neon version $2"
+    NEON_VERSION="$2"
+fi
+
+if [ -z "$NEON_VERSION" ]; then
+    NEON_ROOT=$SCRIPT_DIR/../..
+else
+    git clone -b $NEON_VERSION https://github.com/NervanaSystems/ngraph-neon.git
+    NEON_ROOT=$PWD/ngraph-neon
+fi
 
 lcores=$([[ $(uname) = 'Darwin' ]] && sysctl -n hw.logicalcpu_max || lscpu -p | egrep -v '^#' | wc -l)
 
@@ -34,15 +50,15 @@ if [ -n "$DISTRIB_ID" ]; then
     if [ "$DISTRIB_ID" == "Ubuntu" ]; then
         ubuntu_ver=$(lsb_release -rs)
         if [ "$ubuntu_ver" == "16.04" ]; then
-            cmake -DNGRAPH_VERSION=$NGRAPH_VERSION -DNEON_VERSION=$NEON_VERSION -DNEON_ROOT=$NEON_ROOT -DNGRAPH_USE_PREBUILT_LLVM=TRUE $SCRIPT_DIR && make -j$lcores
+            cmake -DNGRAPH_VERSION=$NGRAPH_VERSION -DNEON_ROOT=$NEON_ROOT -DNGRAPH_USE_PREBUILT_LLVM=TRUE $SCRIPT_DIR && make -j$lcores
         else
-            cmake -DNGRAPH_VERSION=$NGRAPH_VERSION -DNEON_VERSION=$NEON_VERSION -DNEON_ROOT=$NEON_ROOT $SCRIPT_DIR && make -j$lcores
+            cmake -DNGRAPH_VERSION=$NGRAPH_VERSION -DNEON_ROOT=$NEON_ROOT $SCRIPT_DIR && make -j$lcores
         fi
     else # Linux but not Ubuntu
-        cmake -DNGRAPH_VERSION=$NGRAPH_VERSION -DNEON_VERSION=$NEON_VERSION -DNEON_ROOT=$NEON_ROOT $SCRIPT_DIR && make -j$lcores
+        cmake -DNGRAPH_VERSION=$NGRAPH_VERSION -DNEON_ROOT=$NEON_ROOT $SCRIPT_DIR && make -j$lcores
     fi
 else # Not Linux
-    cmake -DNGRAPH_VERSION=$NGRAPH_VERSION -DNEON_VERSION=$NEON_VERSION -DNEON_ROOT=$NEON_ROOT $SCRIPT_DIR && make -j$lcores
+    cmake -DNGRAPH_VERSION=$NGRAPH_VERSION -DNEON_ROOT=$NEON_ROOT $SCRIPT_DIR && make -j$lcores
 fi
 
 virtualenv -p python2.7 .venv2 && . .venv2/bin/activate && pip install -U pip wheel setuptools && python setup.py bdist_wheel && deactivate && mv dist/*.whl .
