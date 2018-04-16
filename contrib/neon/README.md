@@ -1,5 +1,27 @@
-# Helper script to build neon python2 and python3 wheels
+# Helper script to install neon python2 and python3 in virtualenv
 
+install_cpu.sh is a helper script that creates two virtualenv for python2 and python3 and installs neon with nGraph and aeon.
+The script is position independent and can be called from anywhere.
+
+### Usage
+
+For example, on Ubuntu 16.04. First checkout neon code from github.
+
+```
+git clone https://github.com/NervanaSystems/ngraph-neon.git
+```
+
+Create a work directory and change directory. Run the script.
+
+```
+mkdir build && cd build
+./ngraph-neon/contrib/ngraph/install_cpu.sh
+```
+
+neon for Python2 is installed in virtualenv `.venv2` and neon for Python3 is installed in virtualenv `.venv3`.
+Just activate the virtualenv and start using neon.
+
+# Helper script to build neon python2 and python3 wheels
 
 neon_cpu_wheels.sh is a helper script that builds python2 and python3 neon wheels called `ngraph-neon`.
 The wheels includes embedded nGraph python wrapper with CPU backend enabled.
