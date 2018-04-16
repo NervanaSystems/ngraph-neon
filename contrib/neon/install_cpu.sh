@@ -20,10 +20,11 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 ${SCRIPT_DIR}/neon_cpu_wheels.sh
 
+PY2_WHEEL="$(find . -name ngraph_neon*cp2*.whl)"
+PY3_WHEEL="$(find . -name ngraph_neon*cp3*.whl)"
+
 git clone -b v1.3.1 https://github.com/NervanaSystems/aeon.git
 
-. .venv2/bin/activate && mkdir -p aeon/build2 && pushd aeon/build2 && cmake .. && pip install -U . && deactivate && popd
-. .venv3/bin/activate && mkdir -p aeon/build3 && pushd aeon/build3 && cmake .. && pip install -U . && deactivate && popd
+. .venv2/bin/activate && pip install ${PY2_WHEEL} && mkdir -p aeon/build2 && pushd aeon/build2 && cmake .. && pip install -U . && deactivate && popd && echo "neon for python2 installed in virtualenv .venv2"
 
-echo "neon for python2 installed in virtualenv .venv2"
-echo "neon for python3 installed in virtualenv .venv3"
+. .venv3/bin/activate && pip install ${PY3_WHEEL} && mkdir -p aeon/build3 && pushd aeon/build3 && cmake .. && pip install -U . && deactivate && popd && echo "neon for python3 installed in virtualenv .venv3"
