@@ -28,7 +28,7 @@ from neon.transformers.passes.pybindwrapperpass \
     import PybindWrapperGenerator, PybindScopePass
 from ngraph.impl import util
 from ngraph.impl import Type, Function, NodeVector, Shape
-from ngraph.impl.runtime import Manager
+from ngraph.impl.runtime import Backend
 from ngraph.impl.op import Parameter
 
 
@@ -156,8 +156,10 @@ class PybindComputation(Computation):
                 print("In: " + var.name)
                 print(self.transformer.neon_variable_buffer[var])
         """
-        self.cf.call(self.result_primary_tensor_view_list + self.update_primary_tensor_view_list,
-                     self.param_primary_tensor_view_list + self.variable_primary_tensor_view_list + self.randomvariable_primary_tensor_view_list)
+        self.backend.call(
+            self.function,
+            self.result_primary_tensor_view_list + self.update_primary_tensor_view_list,
+            self.param_primary_tensor_view_list + self.variable_primary_tensor_view_list + self.randomvariable_primary_tensor_view_list)
 
         # now read the values from the computed result
         for index, result in enumerate(self.result_primary_tensor_view_list):
@@ -387,10 +389,7 @@ class PybindComputation(Computation):
         """
         Initialize Ngraph backend. Build and initialize Ngraph callframe from Function.
         """
-        self.manager = Manager.get(self.transformer.ngraph_backend)
-        self.external = self.manager.compile(self.function)
-        self.backend = self.manager.allocate_backend()
-        self.cf = self.backend.make_call_frame(self.external)
+        self.backend = Backend.create(self.transformer.ngraph_backend)
 
         # create the primary_tensor_view for result's using the ngraph++ initilized backend
         for node in self.neon_return_list:
@@ -399,7 +398,7 @@ class PybindComputation(Computation):
                 node = node.args[1]
             shape = list(node.tensor.axes.lengths)
             self.result_primary_tensor_view_list.append(
-                self.backend.make_primary_tensor_view(
+                self.backend.create_tensor(
                     self.element_type, Shape(shape)))
             # Allocate return buffer
             # TODO - need to define dtype of numpy array's for results based on result.dtype
@@ -410,7 +409,7 @@ class PybindComputation(Computation):
         for node in self.computation_op.parameters:
             shape = list(node.axes.lengths)
             self.param_primary_tensor_view_list.append(
-                self.backend.make_primary_tensor_view(
+                self.backend.create_tensor(
                     self.element_type, Shape(shape)))
 
         # prepare tensor_views for input variables
@@ -418,21 +417,21 @@ class PybindComputation(Computation):
             if node not in self.computation_op.parameters:
                 shape = list(node.axes.lengths)
                 self.variable_primary_tensor_view_list.append(
-                    self.backend.make_primary_tensor_view(
+                    self.backend.create_tensor(
                         self.element_type, Shape(shape)))
 
         # prepare tensor_views for input variables
         for node in self.neon_randomvariable_list:
             shape = list(node.axes.lengths)
             self.randomvariable_primary_tensor_view_list.append(
-                self.backend.make_primary_tensor_view(
+                self.backend.create_tensor(
                     self.element_type, Shape(shape)))
 
         # prepare tensor_views for weights
         for node in self.neon_update_list:
             shape = list(node.axes.lengths)
             self.update_primary_tensor_view_list.append(
-                self.backend.make_primary_tensor_view(
+                self.backend.create_tensor(
                     self.element_type, Shape(shape)))
 
 
