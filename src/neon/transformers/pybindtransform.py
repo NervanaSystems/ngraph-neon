@@ -14,6 +14,7 @@
 # limitations under the License.
 # ******************************************************************************
 
+import sys, traceback
 import collections
 import numpy as np
 from os.path import commonprefix, basename
@@ -24,13 +25,19 @@ from neon.op_graph.op_graph import Op, AssignableTensorOp, TensorValueOp, Sequen
     AssignOp
 from neon.op_graph.batchnorm import BatchnormCommonOp, BatchnormBpropCommonOp
 from orderedset import OrderedSet
+
+try:
+    from ngraph.impl import util
+    from ngraph.impl import Type, Function, NodeVector, Shape
+    from ngraph.impl.runtime import Manager
+    from ngraph.impl.op import Parameter
+except ImportError:
+    print("Failed to import nGraph")
+    traceback.print_stack()
+    sys.exit(1)
+
 from neon.transformers.passes.pybindwrapperpass \
     import PybindWrapperGenerator, PybindScopePass
-from ngraph.impl import util
-from ngraph.impl import Type, Function, NodeVector, Shape
-from ngraph.impl.runtime import Manager
-from ngraph.impl.op import Parameter
-
 
 class PybindComputation(Computation):
 
