@@ -1,12 +1,64 @@
-# Helper script to build neon python2 and python3 wheels
+# Helper script to install neon python2 and python3 in virtualenv
 
+install_cpu.sh is a helper script that creates two virtualenv for python2 and python3 and installs neon with nGraph and aeon.
+The script is position independent and can be called from anywhere.
+
+## Usage
+
+For example, on Ubuntu 16.04. First checkout neon code from github.
+
+```
+git clone https://github.com/NervanaSystems/ngraph-neon.git
+```
+
+Then grab Aeon's dependencies:
+
+### Ubuntu (release 16.04 LTS and later):
+
+    apt-get install git clang libcurl4-openssl-dev libopencv-dev libsox-dev libboost-filesystem-dev libboost-system-dev libssl-dev
+
+##### For Python 3.n
+
+    apt-get install python3-dev python3-pip python3-numpy
+
+### CentOS (release 7.2 and later):
+
+    yum install epel-release
+    yum install git clang gcc-c++ make cmake openssl-devel opencv-devel libcurl-devel sox-devel boost-devel boost-filesystem boost-system
+
+##### For Python 2.7
+
+    yum install python-pip python-devel
+
+##### For Python 3.n
+
+    yum install python-pip python34-pip python34-devel python34-opencv python34-numpy
+
+### OSX:
+
+    brew tap homebrew/science
+    brew install opencv
+    brew install sox
+    brew install boost
+
+Next, create a work directory and change directory. Run the script.
+
+```
+mkdir build && cd build
+./ngraph-neon/contrib/ngraph/install_cpu.sh
+```
+
+neon for Python2 is installed in virtualenv `.venv2` and neon for Python3 is installed in virtualenv `.venv3`.
+Just activate the virtualenv and start using neon.
+
+# Helper script to build neon python2 and python3 wheels
 
 neon_cpu_wheels.sh is a helper script that builds python2 and python3 neon wheels called `ngraph-neon`.
 The wheels includes embedded nGraph python wrapper with CPU backend enabled.
 The script is position independent and can be called from anywhere.
 The wheels will the placed in the current directory.
 
-### Usage (Build neon wheels)
+## Usage (Build neon wheels)
 
 For example, on Ubuntu 16.04. First checkout neon code from github.
 

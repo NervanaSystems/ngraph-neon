@@ -19,9 +19,13 @@ set -e
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 NEON_ROOT=$SCRIPT_DIR/../..
 
-read NGRAPH_VERSION < "$NEON_ROOT/nGraph.version"
-
-echo "Building nGraph version $NGRAPH_VERSION"
+if [ -z "$1" ]; then
+    echo "Building nGraph master"
+    NGRAPH_VERSION="master"
+else
+    echo "Building nGraph version $1"
+    NGRAPH_VERSION="$1"
+fi
 
 lcores=$([[ $(uname) = 'Darwin' ]] && sysctl -n hw.logicalcpu_max || lscpu -p | egrep -v '^#' | wc -l)
 
