@@ -28,8 +28,9 @@ import setuptools
 import os
 import distutils.ccompiler
 
-__version__ = '${NGRAPH_VERSION}'[1:]
-
+p = subprocess.Popen(['git', 'describe', '--tags'], cwd='{NGRAPH_SOURCE_DIR}', stdout=ngraph_version)
+p.wait()
+__version__ = ngraph_version.split('-')[0][1:]
 
 # Parallel build from http://stackoverflow.com/questions/11013851/speeding-up-build-process-with-distutils
 # monkey-patch for parallel compilation

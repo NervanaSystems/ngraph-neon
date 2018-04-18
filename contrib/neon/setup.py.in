@@ -27,9 +27,14 @@ import sys
 import setuptools
 import os
 import distutils.ccompiler
+from subprocess import Popen
 
-__version__ = '${NEON_VERSION}'
-__ngraph_version__ = '${NGRAPH_VERSION}'[1:]
+p = subprocess.Popen(['git', 'describe', '--tags'], cwd='{NEON_ROOT}', stdout=neon_version)
+p.wait()
+p = subprocess.Popen(['git', 'describe', '--tags'], cwd='{NGRAPH_SOURCE_DIR}', stdout=ngraph_version)
+p.wait()
+__version__ = neon_version.split('-')[1][1:]
+__ngraph_version__ = ngraph_version.split('-')[0][1:]
 
 
 # Parallel build from http://stackoverflow.com/questions/11013851/speeding-up-build-process-with-distutils
