@@ -1,9 +1,13 @@
 #ChangeLog
 
-## v0.2.0 (TBD):
+## ngraph-v0.3.0 (2018-04-17):
 
-* Added examples of char_rae, char_rnn, char_lstm, timeseries_lstm
+* Added examples of char_rae, char_rnn, char_lstm, timeseries_lstm, ptr-net and text generation.
+* The char-rae examples has performance enhacned by 5X compared with Neon v2.6.
+* Added multiple ops to support models
+* Added more tests including frontend api tests
+* Validated with nGraph v0.3.0.
 
-## v0.1.0 (2018-03-19):
+## ngraph-v0.1.0 (2018-03-19):
 
 * Initial public release of neon 3.0.
