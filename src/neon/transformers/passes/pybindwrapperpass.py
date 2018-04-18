@@ -31,59 +31,64 @@ from neon.op_graph.pooling import PoolingOp, BpropPoolOp
 from neon.op_graph.convolution import ConvolutionOp, bprop_conv, update_conv
 import numpy as np
 
-from ngraph.impl import AxisSet
-from ngraph.impl import AxisVector
-from ngraph.impl import CoordinateDiff
-from ngraph.impl import Coordinate
-from ngraph.impl import NodeVector
-from ngraph.impl import Shape
-from ngraph.impl import Strides
-from ngraph.impl import Type
-from ngraph.impl.op import Add as PyngAdd
-from ngraph.impl.op import AvgPool as PyngAvgPool
-from ngraph.impl.op import AvgPoolBackprop as PyngAvgPoolBackprop
-from ngraph.impl.op import BatchNorm as PyngBatchNorm
-from ngraph.impl.op import BatchNormBackprop as PyngBatchNormBackprop
-from ngraph.impl.op import Broadcast as PyngBroadcast
-from ngraph.impl.op import Constant
-from ngraph.impl.op import Concat as PyngConcat
-from ngraph.impl.op import Convert as PyngConvert
-from ngraph.impl.op import Convolution as PyngConvolution
-from ngraph.impl.op import ConvolutionBackpropData as PyngConvolutionBackpropData
-from ngraph.impl.op import ConvolutionBackpropFilters as PyngConvolutionBackpropFilters
-from ngraph.impl.op import Divide as PyngDivide
-from ngraph.impl.op import Dot as PyngDot
-from ngraph.impl.op import Divide as PyngDivide
-from ngraph.impl.op import Equal as PyngEqual
-from ngraph.impl.op import Exp as PyngExp
-from ngraph.impl.op import Floor as PyngFloor
-from ngraph.impl.op import GetOutputElement as PyngGetOutputElement
-from ngraph.impl.op import Greater as PyngGreater
-from ngraph.impl.op import GreaterEq as PyngGreaterEq
-from ngraph.impl.op import Less as PyngLess
-from ngraph.impl.op import LessEq as PyngLessEq
-from ngraph.impl.op import Log as PyngLog
-from ngraph.impl.op import Max as PyngMax
-from ngraph.impl.op import Maximum as PyngMaximum
-from ngraph.impl.op import MaxPool as PyngMaxPool
-from ngraph.impl.op import MaxPoolBackprop as PyngMaxPoolBackprop
-from ngraph.impl.op import Minimum as PyngMinimum
-from ngraph.impl.op import Multiply as PyngMultiply
-from ngraph.impl.op import Negative as PyngNegative
-from ngraph.impl.op import NotEqual as PyngNotEqual
-from ngraph.impl.op import OneHot as PyngOneHot
-from ngraph.impl.op import Parameter
-from ngraph.impl.op import Product as PyngProduct
-from ngraph.impl.op import Power as PyngPower
-from ngraph.impl.op import Relu as PyngRelu
-from ngraph.impl.op import ReluBackprop as PyngReluBackprop
-from ngraph.impl.op import ReplaceSlice as PyngReplaceSlice
-from ngraph.impl.op import Reshape as PyngReshape
-from ngraph.impl.op import Slice as PyngSlice
-from ngraph.impl.op import Sqrt as PyngSqrt
-from ngraph.impl.op import Subtract as PyngSubtract
-from ngraph.impl.op import Sum as PyngSum
-from ngraph.impl.op import Tanh as PyngTanh
+try:
+    from ngraph.impl import AxisSet
+    from ngraph.impl import AxisVector
+    from ngraph.impl import CoordinateDiff
+    from ngraph.impl import Coordinate
+    from ngraph.impl import NodeVector
+    from ngraph.impl import Shape
+    from ngraph.impl import Strides
+    from ngraph.impl import Type
+    from ngraph.impl.op import Add as PyngAdd
+    from ngraph.impl.op import AvgPool as PyngAvgPool
+    from ngraph.impl.op import AvgPoolBackprop as PyngAvgPoolBackprop
+    from ngraph.impl.op import BatchNorm as PyngBatchNorm
+    from ngraph.impl.op import BatchNormBackprop as PyngBatchNormBackprop
+    from ngraph.impl.op import Broadcast as PyngBroadcast
+    from ngraph.impl.op import Constant
+    from ngraph.impl.op import Concat as PyngConcat
+    from ngraph.impl.op import Convert as PyngConvert
+    from ngraph.impl.op import Convolution as PyngConvolution
+    from ngraph.impl.op import ConvolutionBackpropData as PyngConvolutionBackpropData
+    from ngraph.impl.op import ConvolutionBackpropFilters as PyngConvolutionBackpropFilters
+    from ngraph.impl.op import Divide as PyngDivide
+    from ngraph.impl.op import Dot as PyngDot
+    from ngraph.impl.op import Divide as PyngDivide
+    from ngraph.impl.op import Equal as PyngEqual
+    from ngraph.impl.op import Exp as PyngExp
+    from ngraph.impl.op import Floor as PyngFloor
+    from ngraph.impl.op import GetOutputElement as PyngGetOutputElement
+    from ngraph.impl.op import Greater as PyngGreater
+    from ngraph.impl.op import GreaterEq as PyngGreaterEq
+    from ngraph.impl.op import Less as PyngLess
+    from ngraph.impl.op import LessEq as PyngLessEq
+    from ngraph.impl.op import Log as PyngLog
+    from ngraph.impl.op import Max as PyngMax
+    from ngraph.impl.op import Maximum as PyngMaximum
+    from ngraph.impl.op import MaxPool as PyngMaxPool
+    from ngraph.impl.op import MaxPoolBackprop as PyngMaxPoolBackprop
+    from ngraph.impl.op import Minimum as PyngMinimum
+    from ngraph.impl.op import Multiply as PyngMultiply
+    from ngraph.impl.op import Negative as PyngNegative
+    from ngraph.impl.op import NotEqual as PyngNotEqual
+    from ngraph.impl.op import OneHot as PyngOneHot
+    from ngraph.impl.op import Parameter
+    from ngraph.impl.op import Product as PyngProduct
+    from ngraph.impl.op import Power as PyngPower
+    from ngraph.impl.op import Relu as PyngRelu
+    from ngraph.impl.op import ReluBackprop as PyngReluBackprop
+    from ngraph.impl.op import ReplaceSlice as PyngReplaceSlice
+    from ngraph.impl.op import Reshape as PyngReshape
+    from ngraph.impl.op import Slice as PyngSlice
+    from ngraph.impl.op import Sqrt as PyngSqrt
+    from ngraph.impl.op import Subtract as PyngSubtract
+    from ngraph.impl.op import Sum as PyngSum
+    from ngraph.impl.op import Tanh as PyngTanh
+except ImportError:
+    print("Failed to import nGraph")
+    traceback.print_stack()
+    sys.exit(1)
 
 
 class PybindScopePass:

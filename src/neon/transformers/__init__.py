@@ -28,7 +28,6 @@ __all__ = [
     'Transformer',
 ]
 
-try:
-    import neon.transformers.pybindtransform  # noqa
-except ImportError:
-    pass
+
+import neon.transformers.pybindtransform  # noqa
+
