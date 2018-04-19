@@ -27,9 +27,13 @@ import sys
 import setuptools
 import os
 import distutils.ccompiler
+from subprocess import Popen, PIPE
 
-__version__ = '${NGRAPH_VERSION}'[1:]
-
+p = Popen(['git', 'describe', '--tags'], cwd='${NGRAPH_SOURCE_DIR}', stdout=PIPE)
+out, err = p.communicate()
+if sys.version_info.major > 2:
+    out = str(out, 'utf-8')
+__version__ = out.split('-')[0][1:]
 
 # Parallel build from http://stackoverflow.com/questions/11013851/speeding-up-build-process-with-distutils
 # monkey-patch for parallel compilation
