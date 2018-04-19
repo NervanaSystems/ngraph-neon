@@ -47,7 +47,8 @@ fi
 PY2_WHEEL="$(find . -name ngraph_neon*cp2*.whl)"
 PY3_WHEEL="$(find . -name ngraph_neon*cp3*.whl)"
 
-git clone -b ${AEON_VERSION} https://github.com/NervanaSystems/aeon.git
+git clone -n https://github.com/NervanaSystems/aeon.git
+cd aeon && git checkout ${AEON_VERSION} && cd ..
 
 . .venv2/bin/activate && pip install ${PY2_WHEEL} && mkdir -p aeon/build2 && pushd aeon/build2 && cmake .. && pip install -U . && deactivate && popd && echo "neon for python2 installed in virtualenv .venv2"
 

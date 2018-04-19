@@ -36,7 +36,8 @@ fi
 if [ -z "$NEON_VERSION" ]; then
     NEON_ROOT=$SCRIPT_DIR/../..
 else
-    git clone -b $NEON_VERSION https://github.com/NervanaSystems/ngraph-neon.git
+    git clone -n https://github.com/NervanaSystems/ngraph-neon.git
+    cd ngraph-neon && git checkout $NEON_VERSION && cd ..
     NEON_ROOT=$PWD/ngraph-neon
 fi
 
