@@ -18,9 +18,11 @@ set -e
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-read NGRAPH_VERSION < "$SCRIPT_DIR/nGraph.version"
-read AEON_VERSION < "$SCRIPT_DIR/aeon.version"
-read NEON_VERSION < "$SCRIPT_DIR/VERSION"
+REF_VERSIONS="https://github.com/NervanaSystems/ngraph-neon/raw/master/REF_VERSIONS"
+
+NGRAPH_VERSION=$(curl -Ls ${REF_VERSIONS} | sed -n '1p')
+AEON_VERSION=$(curl -Ls ${REF_VERSIONS} | sed -n '2p')
+NEON_VERSION=$(curl -Ls ${REF_VERSIONS} | sed -n '3p')
 
 ${SCRIPT_DIR}/contrib/neon/install_cpu.sh $NGRAPH_VERSION $AEON_VERSION $NEON_VERSION
 
