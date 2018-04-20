@@ -18,11 +18,18 @@ set -e
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-REF_VERSIONS="https://github.com/NervanaSystems/ngraph-neon/raw/master/REF_VERSIONS"
+#REF_VERSIONS_URL="https://github.com/NervanaSystems/ngraph-neon/raw/master/REF_VERSIONS"
+#REF_VERSIONS=$(curl -Ls $REF_VERSIONS_URL)
+#echo $REF_VERSIONS
+REF_VERSIONS=$(cat $SCRIPT_DIR/REF_VERSIONS)
+#echo $REF_VERSIONS
+NGRAPH_VERSION=$(echo $REF_VERSIONS | awk '{print $2}')
+AEON_VERSION=$(echo $REF_VERSIONS | awk '{print $4}')
+NEON_VERSION=$(echo  $REF_VERSIONS | awk '{print $6}')
 
-NGRAPH_VERSION=$(curl -Ls ${REF_VERSIONS} | sed -n '1p')
-AEON_VERSION=$(curl -Ls ${REF_VERSIONS} | sed -n '2p')
-NEON_VERSION=$(curl -Ls ${REF_VERSIONS} | sed -n '3p')
+#echo $NGRAPH_VERSION
+#echo $AEON_VERSION
+#echo $NEON_VERSION
 
 ${SCRIPT_DIR}/contrib/neon/install_cpu.sh $NGRAPH_VERSION $AEON_VERSION $NEON_VERSION
 
