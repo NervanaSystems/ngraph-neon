@@ -14,13 +14,21 @@
 # limitations under the License.
 # ******************************************************************************
 from setuptools import setup, find_packages
+from subprocess import Popen, PIPE
+import os, sys
+
+p = Popen(['git', 'describe', '--tags'], cwd=os.getcwd(), stdout=PIPE)
+out, err = p.communicate()
+if sys.version_info.major > 2:
+    out = str(out, 'utf-8')
+__version__ = out.split('-')[0][1:]
 
 with open('requirements.txt') as req:
     requirements = req.read().splitlines()
 
 setup(
-    name="neon",
-    version="3.0",
+    name="ngraph-neon",
+    version=__version__,
     packages=find_packages(where='src'),
     package_dir={'': 'src'},
     install_requires=requirements,

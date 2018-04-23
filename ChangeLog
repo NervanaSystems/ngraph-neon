@@ -1,5 +1,9 @@
 #ChangeLog
 
+## v0.3.0 (2018-04-23):
+
+* Started semantic versoning. See version ngraph-v0.3.0 below for updates.
+
 ## ngraph-v0.3.0 (2018-04-17):
 
 * Added examples of char_rae, char_rnn, char_lstm, timeseries_lstm, ptr-net and text generation.
