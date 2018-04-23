@@ -33,7 +33,7 @@ p = Popen(['git', 'describe', '--tags'], cwd='${NEON_ROOT}', stdout=PIPE)
 out, err = p.communicate()
 if sys.version_info.major > 2:
     out = str(out, 'utf-8')
-__version__ = out.split('-')[1][1:]
+__version__ = out.split('-')[0][1:]
 p = Popen(['git', 'describe', '--tags'], cwd='${NGRAPH_SOURCE_DIR}', stdout=PIPE)
 out, err = p.communicate()
 if sys.version_info.major > 2:
