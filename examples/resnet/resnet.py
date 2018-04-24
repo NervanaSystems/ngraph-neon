@@ -26,19 +26,19 @@ from neon.frontend import ax
 
 # Helpers
 def cifar10_mean_subtract(x):
-    bgr_mean = ng.persistent_tensor(
+    bgr_mean = ng.constant(
         axes=[x.axes.channel_axis()],
-        initial_value=np.array([113.9, 123.0, 125.3]))
-    bgr_std = ng.persistent_tensor(
+        const=np.array([113.9, 123.0, 125.3]))
+    bgr_std = ng.constant(
         axes=[x.axes.channel_axis()],
-        initial_value=np.array([66.7, 62.1, 63.0]))
+        const=np.array([66.7, 62.1, 63.0]))
     return (x - bgr_mean) / bgr_std
 
 
 def i1k_mean_subtract(x):
-    bgr_mean = ng.persistent_tensor(
+    bgr_mean = ng.constant(
         axes=[x.axes.channel_axis()],
-        initial_value=np.array([127.0, 119.0, 104.0]))
+        const=np.array([127.0, 119.0, 104.0]))
     return (x - bgr_mean)
 
 
