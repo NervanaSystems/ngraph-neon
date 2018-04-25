@@ -779,6 +779,7 @@ class PybindWrapperGenerator(PeepholeGraphPass):
             CoordinateDiff([op.conv_params['pad_h'], op.conv_params['pad_w']]),
             CoordinateDiff([op.conv_params['pad_h'], op.conv_params['pad_w']]),
             Strides([1, 1]))
+
         ngraph_conv.name = op.name.replace('/', '_') + "_Convolution"
         self.computation.register_cpp_op(op, ngraph_conv, set_name=False)
 

@@ -1385,7 +1385,7 @@ class Dropout2D(Layer):
                 in_axes = in_obj.axes.sample_axes()
                 channel_axes = ng.make_axes([in_axes.channel_axis()])
                 self.mask = ng.persistent_tensor(axes=channel_axes).named('channel_mask')
-            self.mask = ng.uniform(self.mask, low=0.0, high=1.0) <= self.keep
+            self.mask = ng.uniform(self.mask.axes, low=0.0, high=1.0) <= self.keep
             return self.mask * in_obj
 
 
