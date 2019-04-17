@@ -9,7 +9,7 @@ h5py==2.6.0
 six==1.10.0
 
 # other requirements
-requests==2.13.0
+requests==2.20.0
 frozendict==1.2
 orderedset==2.0
 tqdm==4.11.2
